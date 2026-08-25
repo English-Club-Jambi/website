@@ -1,7 +1,7 @@
 # English Club Work Log
 
 Updated: 26 August 2026
-Status: Admin CMS and Assessment Lab integrated and synced to Convex development cloud; private media, real-owner, content-review, and production gates remain open
+Status: Admin CMS and Assessment Lab integrated and synced to Convex development cloud; private media, role-matrix, content-review, and production gates remain open
 
 This log records the research, redesign, Member extension, cloud integration, Admin CMS, Assessment Lab, repairs, and verification. Product requirements live in the root documents. File-level evidence lives in the audit ledgers. `QA-REPORT.md` now separates the current 26 August integrated release run from the retained 25 August public-site baseline.
 
@@ -12,8 +12,8 @@ The repository now contains two major product lanes beyond the public organisati
 ### Protected Admin CMS
 
 - Convex Auth provides Password identities for administrators. The Next.js server resolves the deployment from `CONVEX_URL` and passes it to the scoped provider; a duplicated `NEXT_PUBLIC_CONVEX_URL` is not required.
-- Auth identity creation and CMS authorization are separate. The controlled first identity exposes its complete `tokenIdentifier`; a one-time internal `adminUsers:bootstrapOwner` call creates the first active owner only while the table is empty.
-- Production account creation is disabled unless `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1` opens a supervised bootstrap window. An identity with no active `adminUsers` row receives no protected data.
+- Administrator identity creation and CMS authorization now happen through one internal deployment-operator action. The browser exposes sign-in only and rejects Password `signUp` even when called directly.
+- Provisioned administrators are bound through the Auth issuer plus Auth user ID, with the legacy complete-token lookup retained for existing records. An identity with no active `adminUsers` row receives no protected data.
 - Server-owned roles are `editor`, `publisher`, and `owner`. Publishers can publish general content and review/publish Assessments but cannot author Assessment questions; owners also manage administrators.
 - The workspace contains Overview, Pages, Journal, Assessments, Members, Media, Appearance, and Activity. It uses a rounded semi-neobrutal register with reusable custom selects, dialogs, pagination, status chips, and short supporting motion.
 - Page copy keeps code-owned keys/component structure and supports at most 200 entries per page/locale. Convex rejects entry 201 and detects an already-invalid 201-row page.
@@ -22,29 +22,33 @@ The repository now contains two major product lanes beyond the public organisati
 
 ### English Club Assessment Lab
 
-- Public routes now cover `/practice`, full practice, three quick-skill briefings, owned attempt, and owned result. Public navigation calls the area `Practice`.
-- Full practice follows the product's original ITP Level 1-aligned shape: Listening 50/35 minutes, Structure & Written Expression 40/25 minutes, and Reading 50/55 minutes. The product makes no ETS affiliation, equivalence, official score, predicted score, CEFR, certificate, placement, or admission claim.
+- Public routes cover `/practice`, one full practice briefing, four quick-skill briefings, an owned attempt, and an owned result. Public navigation calls the area `Practice`.
+- The current form has 120 original tasks across Reading, Listening, Writing, and Speaking. It is fixed rather than adaptive. Legacy ITP-shaped records remain `raw-objective`; the four-skill profile uses only `practice-estimate-v1`.
+- Exact practice points come from the published bank. Any band or 0-120 value is an uncalibrated English Club estimate for that fixed form. The product makes no ETS affiliation, equivalence, official score, exact prediction, CEFR, certificate, placement, or admission claim.
 - The Home programme quiz has four local questions grounded in Activities copy and creates no identity. Persisted practice creates/reuses Anonymous Convex Auth only after Start.
 - Every attempt is bound to `identity.tokenIdentifier`. `resolveMine` normalizes a string route ID before typed lookup and gives malformed, missing, and cross-owner IDs the same unavailable result.
-- Player projections omit answer keys. Submission is allowed only from the final eligible section. Results report raw correct, possible, and omitted counts with section/time/mode context; answer review is cursor-paginated at 20.
+- Player projections omit answer keys. Submission is allowed only from the final eligible section. Results report exact bank outcomes with section, time, mode, and estimate limits; answer review is cursor-paginated at 20.
 - The authoring backend separates definitions, immutable versions, validation/provenance checks, four approval types, sections, stimuli, items, answer keys, attempts, responses, and immutable result revisions.
 - Public Assessment media must be explicit `public`, ready, correct-purpose, same-version media. Confidential sources require a separate private R2 bucket, distinct credentials, checksum verification, and publisher-only public derivative.
 
 ### Integration gates still open
 
-- A real non-production Password identity → token identifier → one-time owner bootstrap → sign-in/role/audit round trip has not yet been recorded as a complete integrated gate.
-- Original Assessment content must pass the current validation/provenance check plus all four current-revision academic, rights, accessibility, and bias approvals before a public version exists. The honest unavailable state remains valid until then.
+- Real editor and publisher identities have not yet exercised the negative permission matrix against the cloud deployment. The same matrix is green in isolated Convex tests.
+- The development-only four-skill seed has published one full form and four quick forms from the typed original bank. It bypasses the human review workflow by design and cannot be promoted as production approval. Production content must still pass the current validation/provenance check plus all four current-revision academic, rights, accessibility, and bias approvals.
 - The private Assessment R2 bucket is **not configured**. Its exact CORS, SHA-256 PUT/`HeadObject`, 180-second preview, and public derivative path remain unverified.
 - Production retention periods for contact, attempts/results, audit events, and private media remain an organizational decision.
 
 ### 26 August release closeout
 
 - The missing `adminUsers:bootstrapState` runtime contract was removed from the client and backend surface, generated bindings were refreshed, and `/admin` returned HTTP 200 without console or page errors.
-- The first manual sign-in attempt correctly exposed that no Password identity existed, but Convex surfaced its internal `InvalidAccountId` code. The client now treats that code and related credential failures as one non-enumerating message, points supervised first-time operators to the explicit setup mode, persists the selected `signIn`/`signUp` flow in form data, and keeps unknown server details out of the page.
-- The current Convex function/schema bundle was pushed only to development deployment `perfect-greyhound-270`. Direct Admin and Assessment queries resolve, while the public Assessment catalogue honestly returns no entries until a reviewed version publishes.
+- Manual testing exposed two setup defects: Convex surfaced its internal `InvalidAccountId` code for an unknown email, and the first allowlist row was accidentally bound to the literal `TOKEN_DARI_UI`. The client now emits one non-enumerating sign-in message, has no sign-up mode, and the internal provisioning path can repair only that exact sole placeholder while recording an audit event.
+- The development deployment now has one internally provisioned active owner with a stable Auth-user binding. A real browser completed sign-in, sign-out, and a second sign-in without setup controls, console errors, or role loss. The earlier misspelled Password identity remains unprivileged and was not deleted implicitly.
+- The current Convex function/schema bundle was pushed only to development deployment `perfect-greyhound-270`. Direct Admin and Assessment queries resolve. The public development catalogue returns one full form and four quick forms from the explicit dev-only original-bank seed.
 - Public R2 returned `{ "ok": true }`; the custom domain serves reviewed derivatives. The separate confidential Assessment bucket remains deliberately unavailable rather than falling back to public storage.
 - Four browser-native admin confirmations were replaced by one reusable async rounded-neobrutal modal shared with Assessment. A first browser run found a native-dialog Tab escape; focus containment was repaired and rerun clean.
-- Final static and behavior gates passed: TypeScript, ESLint, 140 unit tests, 39 Convex tests, 142 browser cases with 20 intentional skips, Convex codegen/type validation, zero dependency vulnerabilities, and an isolated 30-route production build.
+- Real-phone LAN access had returned HTML while Next.js denied JavaScript chunks with HTTP 403. The exact-host development allowlist now includes detected LAN IPv4 addresses and optional validated hosts. Public and authenticated Admin touch traces pass at Pixel 7 and 320 px without failed Next assets.
+- The Journal mobile archive now aligns metadata above a title-and-thumbnail row. The former 50.47 px disconnect is 12 px, and the title and image begin on the same horizontal line.
+- Final static and behavior gates passed: TypeScript, ESLint, 116 unit tests, 45 Convex tests, 145 browser cases with 23 intentional skips, Convex codegen/type validation, zero dependency vulnerabilities, and a 30-entry production build.
 - Port 3987 remained live throughout the closeout and returned HTTP 200 for Home and Admin.
 
 ## 25 August public and Member baseline
@@ -77,9 +81,9 @@ Delivered:
 | Browser verification | 75 cases: 69 passed, 6 intentional viewport-specific skips, 0 failed | Complete |
 | Visual review | Fifteen light, dark, mobile, 320 px, selected-role, roster-detail, menu, Activity, and Journal files inspected | Complete |
 | Repair and rerun | Initial visual, backend, pointer, motion, and seed findings fixed; full gates rerun | Complete |
-| Admin CMS source integration | Auth boundary, role map, content/journal/Member/media/theme workspaces, and audit functions | Implemented; cloud owner round trip pending |
+| Admin CMS source integration | Auth boundary, role map, content/journal/Member/media/theme workspaces, and audit functions | Implemented; cloud owner round trip complete, real editor/publisher negative checks pending |
 | Assessment source integration | Practice routes, Anonymous ownership, player/result, authoring, raw-result contract, and media split | Implemented; content/private-R2/release gates pending |
-| Integrated release verification | Full static, backend, browser, accessibility, current Convex development functions, and public R2 evidence from current source | Complete; real owner, private R2, reviewed content, retention, and production remain separate gates |
+| Integrated release verification | Full static, backend, browser, accessibility, current Convex development functions, and public R2 evidence from current source | Complete; role matrix, private R2, reviewed content, retention, and production remain separate gates |
 
 ## Evidence and research
 

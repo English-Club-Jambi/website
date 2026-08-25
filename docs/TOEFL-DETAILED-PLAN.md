@@ -1,5 +1,7 @@
 # English Club Assessment Lab — Detailed Delivery Plan
 
+> Historical baseline (25 August 2026): the three-section runtime described below is retained only for legacy `ec-itp-level-1-aligned-v1` compatibility. The current four-skill implementation contract is [`PRACTICE-IBT-IMPLEMENTATION.md`](PRACTICE-IBT-IMPLEMENTATION.md). The original rights, trademark, calibration, accessibility, privacy, and publication gates still apply.
+
 - Status: implementation-ready product plan, pending owner decisions and legal/academic review
 - Date: 25 August 2026
 - Related research: [`TOEFL-PRODUCT-RESEARCH.md`](TOEFL-PRODUCT-RESEARCH.md)

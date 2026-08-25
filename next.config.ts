@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { getAllowedDevOrigins } from "./src/config/dev-origins";
+
 const useLocalMediaForQa =
   process.env.NEXT_PUBLIC_MEDIA_LOCAL_FALLBACK?.trim() === "1";
 const mediaBaseUrl = useLocalMediaForQa
@@ -11,7 +13,7 @@ const remotePatterns = mediaBaseUrl
   : [];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: getAllowedDevOrigins(),
   devIndicators: false,
   poweredByHeader: false,
   reactStrictMode: true,

@@ -232,6 +232,17 @@ function cloneItemValues(
       };
     case "sentence-build":
       return { ...base, type: source.type, tokens: source.tokens };
+    case "constructed-response":
+      return {
+        ...base,
+        type: source.type,
+        responseMode: source.responseMode,
+        minimumWords: source.minimumWords,
+        recommendedWords: source.recommendedWords,
+        maximumCharacters: source.maximumCharacters,
+        preparationSeconds: source.preparationSeconds,
+        responseSeconds: source.responseSeconds,
+      };
   }
 }
 
@@ -326,6 +337,7 @@ export const cloneItemsBatch = internalMutation({
         versionId: draft._id,
         itemId: draftItemId,
         scoringMode: sourceKey.scoringMode,
+        points: sourceKey.points,
       };
       switch (sourceKey.kind) {
         case "choice":
@@ -354,6 +366,17 @@ export const cloneItemsBatch = internalMutation({
             ...keyBase,
             kind: sourceKey.kind,
             acceptedTokenOrders: sourceKey.acceptedTokenOrders,
+          });
+          break;
+        case "text-rubric":
+          await ctx.db.insert("assessmentAnswerKeys", {
+            ...keyBase,
+            kind: sourceKey.kind,
+            rubricMode: sourceKey.rubricMode,
+            maxPoints: sourceKey.maxPoints,
+            minimumWords: sourceKey.minimumWords,
+            targetTerms: sourceKey.targetTerms,
+            sampleResponse: sourceKey.sampleResponse,
           });
           break;
       }

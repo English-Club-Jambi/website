@@ -16,10 +16,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@convex-dev/auth/react", () => ({
   useAuthActions: () => ({ signIn: mocks.signIn }),
-  useConvexAuth: () => ({ isAuthenticated: mocks.authenticated, isLoading: false }),
 }));
 
 vi.mock("convex/react", () => ({
+  useConvexAuth: () => ({ isAuthenticated: mocks.authenticated, isLoading: false }),
   useMutation: () => mocks.start,
 }));
 
@@ -61,7 +61,7 @@ afterEach(() => {
 describe("StartAssessment", () => {
   it("creates Anonymous Convex Auth only after the acknowledged Start press", async () => {
     const user = userEvent.setup();
-    render(<StartAssessment assessment={assessment} copy={copy} />);
+    const view = render(<StartAssessment assessment={assessment} copy={copy} />);
 
     expect(mocks.signIn).not.toHaveBeenCalled();
     expect(mocks.start).not.toHaveBeenCalled();
@@ -70,6 +70,9 @@ describe("StartAssessment", () => {
     await user.click(screen.getByRole("button", { name: copy.startButton }));
 
     await waitFor(() => expect(mocks.signIn).toHaveBeenCalledWith("anonymous"));
+    expect(mocks.start).not.toHaveBeenCalled();
+    mocks.authenticated = true;
+    view.rerender(<StartAssessment assessment={assessment} copy={copy} />);
     await waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(1));
     expect(mocks.push).toHaveBeenCalledWith(
       "/practice/attempt/assessmentattempt00000000001",

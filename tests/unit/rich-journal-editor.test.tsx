@@ -1,5 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { FormEvent } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { RichJournalEditor } from "@/components/admin/editor/rich-journal-editor";
@@ -148,6 +149,45 @@ describe("RichJournalEditor", () => {
     });
   });
 
+  it("ignores IME Enter and prevents duplicate image uploads while one is pending", async () => {
+    const user = userEvent.setup();
+    let releaseUpload: (() => void) | undefined;
+    const uploadGate = new Promise<void>((resolve) => {
+      releaseUpload = resolve;
+    });
+    const onImageUpload = vi.fn(async () => {
+      await uploadGate;
+      return {
+        mediaId: "media_01jtouchgate",
+        publicUrl: "https://r2.mukhtada.my.id/journal/2026/touch-gate.webp",
+      };
+    });
+
+    render(<RichJournalEditor onImageUpload={onImageUpload} />);
+    await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(screen.getByRole("button", { name: "Add image" }));
+    await user.upload(
+      screen.getByLabelText("Image file"),
+      new File([new Uint8Array([1, 2, 3])], "touch-gate.webp", {
+        type: "image/webp",
+      }),
+    );
+    const alt = screen.getByRole("textbox", { name: "Alternative text" });
+    await user.type(alt, "Members sharing a listening prompt");
+
+    fireEvent.keyDown(alt, { key: "Enter", isComposing: true });
+    expect(onImageUpload).not.toHaveBeenCalled();
+
+    await user.keyboard("{Enter}{Enter}");
+    await waitFor(() => expect(onImageUpload).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Uploading…" })).toBeDisabled();
+
+    releaseUpload?.();
+    expect(
+      await screen.findByAltText("Members sharing a listening prompt"),
+    ).toBeVisible();
+  });
+
   it("rejects insecure editorial links", async () => {
     const user = userEvent.setup();
     render(<RichJournalEditor />);
@@ -160,6 +200,37 @@ describe("RichJournalEditor", () => {
     expect(
       screen.getByText("Use an HTTPS address or an email link.")
     ).toHaveAttribute("role", "alert");
+  });
+
+  it("keeps insertion panels valid inside the story form and contains Enter", async () => {
+    const user = userEvent.setup();
+    const submitStory = vi.fn((event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+
+    render(
+      <form aria-label="Story revision" onSubmit={submitStory}>
+        <RichJournalEditor />
+      </form>,
+    );
+    await screen.findByRole("textbox", { name: "Journal body" });
+
+    await user.click(screen.getByRole("button", { name: "Link" }));
+    const panel = screen.getByRole("group", { name: "Add a link" });
+    expect(panel.tagName).toBe("DIV");
+    expect(panel.querySelector("form")).toBeNull();
+
+    const destination = screen.getByRole("textbox", { name: "Destination" });
+    fireEvent.keyDown(destination, { key: "Enter", isComposing: true });
+    expect(submitStory).not.toHaveBeenCalled();
+
+    await user.type(destination, "http://example.com");
+    await user.keyboard("{Enter}");
+
+    expect(
+      screen.getByText("Use an HTTPS address or an email link."),
+    ).toHaveAttribute("role", "alert");
+    expect(submitStory).not.toHaveBeenCalled();
   });
 
   it("offers only the heading levels accepted by the journal backend", async () => {

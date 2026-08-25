@@ -141,8 +141,10 @@ async function requireAdminUpload(ctx: ActionCtx) {
   if (identity === null) {
     throw new Error("Authentication is required.");
   }
-  const admin = await ctx.runQuery(internal.adminUsers.getActiveByTokenIdentifier, {
+  const admin = await ctx.runQuery(internal.adminUsers.getActiveForIdentity, {
     tokenIdentifier: identity.tokenIdentifier,
+    subject: identity.subject,
+    issuer: identity.issuer,
   });
   if (admin === null || !adminHasPermission(admin, "media:upload")) {
     throw new Error("Admin media permission is required.");

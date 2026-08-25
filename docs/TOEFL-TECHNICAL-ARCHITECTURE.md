@@ -1,5 +1,7 @@
 # Assessment Lab and Club Quiz Technical Architecture
 
+> Historical baseline (25 August 2026): its three-section profile remains the legacy raw-objective path. The additive four-skill profile, fixed-form estimate model, and current route contract are documented in [`PRACTICE-IBT-IMPLEMENTATION.md`](PRACTICE-IBT-IMPLEMENTATION.md). All security, rights, trademark, calibration, accessibility, and release gates below remain applicable.
+
 Status: implementation plan; no application source changed
 Date: 25 August 2026
 Target stack: Next.js 16.3.2, React 19, Convex cloud, Cloudflare R2

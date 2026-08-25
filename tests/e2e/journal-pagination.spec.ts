@@ -69,8 +69,12 @@ test("archive rows stay dense, readable, and free of media overlap", async ({
   const geometry = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll("#journal-archive ol > li"));
     const rectangles = rows.map((row) => {
+      const meta = row.querySelector("article > p")?.getBoundingClientRect();
       const title = row.querySelector("h3")?.getBoundingClientRect();
-      const image = row.querySelector('a[aria-hidden="true"]')?.getBoundingClientRect();
+      const titleLink = row.querySelector("h3 a")?.getBoundingClientRect();
+      const image = row
+        .querySelector('a[aria-hidden="true"], article > div[aria-hidden="true"]')
+        ?.getBoundingClientRect();
       const intersection =
         title && image
           ? Math.max(0, Math.min(title.right, image.right) - Math.max(title.left, image.left)) *
@@ -80,6 +84,11 @@ test("archive rows stay dense, readable, and free of media overlap", async ({
       return {
         height: row.getBoundingClientRect().height,
         intersection,
+        imageWidth: image?.width ?? 0,
+        metaTitleGap: meta && title ? title.top - meta.bottom : Number.POSITIVE_INFINITY,
+        titleImageTopDelta:
+          title && image ? Math.abs(title.top - image.top) : Number.POSITIVE_INFINITY,
+        titleTargetHeight: titleLink?.height ?? 0,
       };
     });
     const archiveHeading = document.querySelector("#journal-archive-title")?.getBoundingClientRect();
@@ -99,6 +108,19 @@ test("archive rows stay dense, readable, and free of media overlap", async ({
   expect(geometry.archiveHeadingTop).toBeLessThan(geometry.viewportHeight);
   expect(geometry.rectangles.every((row) => row.intersection === 0)).toBe(true);
 
+  if (testInfo.project.name !== "desktop-chromium") {
+    expect(
+      geometry.rectangles.every(
+        (row) =>
+          row.titleImageTopDelta <= 1 &&
+          row.metaTitleGap >= 8 &&
+          row.metaTitleGap <= 20 &&
+          row.titleTargetHeight >= 44 &&
+          row.imageWidth >= 72,
+      ),
+    ).toBe(true);
+  }
+
   const maximumRowHeight =
     testInfo.project.name === "desktop-chromium"
       ? 190
@@ -115,9 +137,13 @@ test("archive rows stay dense, readable, and free of media overlap", async ({
   });
 
   const articleLinks = page.locator("#journal-archive ol h3 a");
-  await articleLinks.first().focus();
-  await expect(articleLinks.first()).toBeFocused();
-  await page.keyboard.press("Enter");
+  if (testInfo.project.name === "desktop-chromium") {
+    await articleLinks.first().focus();
+    await expect(articleLinks.first()).toBeFocused();
+    await page.keyboard.press("Enter");
+  } else {
+    await articleLinks.first().tap();
+  }
   await expect(page).toHaveURL(/\/journal\/leeds-the-way-bridging-england-and-indonesia$/);
   await expect(
     page.getByRole("heading", {
@@ -147,27 +173,28 @@ test("journal archive passes WCAG A and AA checks in both themes", async ({
     .analyze();
   expect(darkResults.violations).toEqual([]);
 
-  if (testInfo.project.name === "desktop-chromium") {
-    await page.screenshot({
-      path: "docs/evidence/journal-pagination-desktop-chromium-dark.png",
-      fullPage: true,
-    });
-  }
+  await page.screenshot({
+    path: `docs/evidence/journal-pagination-${testInfo.project.name}-dark.png`,
+    fullPage: true,
+  });
 });
 
 test("reduced motion removes archive transforms without hiding content", async ({
   page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-chromium", "One motion contract covers every viewport");
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/journal");
 
   const firstTitle = page.locator("#journal-archive ol h3 a").first();
   const firstImage = page.locator("#journal-archive ol img").first();
+  const firstArrow = firstTitle.locator("svg");
   await expect(firstTitle).toBeVisible();
-  await firstTitle.hover();
+  await firstTitle.focus();
 
   await expect
     .poll(() => firstImage.evaluate((image) => getComputedStyle(image).transform))
+    .toBe("none");
+  await expect
+    .poll(() => firstArrow.evaluate((arrow) => getComputedStyle(arrow).transform))
     .toBe("none");
 });

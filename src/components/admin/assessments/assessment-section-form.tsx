@@ -11,7 +11,7 @@ import { AdminError } from "../admin-ui";
 export type AssessmentSectionInput = {
   sectionId?: string;
   sectionKey: string;
-  skill: "listening" | "structure" | "reading";
+  skill: "listening" | "structure" | "reading" | "writing" | "speaking";
   order: number;
   title: string;
   instructions: string;
@@ -73,6 +73,8 @@ export function AssessmentSectionForm({
               { value: "listening", label: "Listening" },
               { value: "structure", label: "Structure and written expression" },
               { value: "reading", label: "Reading" },
+              { value: "writing", label: "Writing" },
+              { value: "speaking", label: "Speaking" },
             ]}
             onValueChange={(value) => setSkill(value as AssessmentSectionInput["skill"])}
           />

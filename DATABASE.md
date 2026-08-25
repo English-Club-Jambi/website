@@ -96,7 +96,7 @@ The 15 fictional showcase profiles live only in source. They are not seeded, cou
 
 | Table | Purpose | Key invariant |
 | --- | --- | --- |
-| `adminUsers` | Maps an Auth `tokenIdentifier` to display data, `editor | publisher | owner`, and `active | disabled` access | Identity is unique by token identifier; the last active owner cannot be demoted or disabled |
+| `adminUsers` | Maps a stable Auth issuer + `users` ID (plus a legacy token field) to display data, `editor | publisher | owner`, and `active | disabled` access | Stable binding is unique by issuer/user ID; the last active owner cannot be demoted or disabled |
 | `cmsAuditEvents` | Append-only actor, area, action, resource, summary, and timestamp | Written by protected mutations after authorization |
 | `siteContentEntries` | One draft value per page, locale, and code-owned content key | Field kind and key come from the source manifest |
 | `siteContentVersions` | Immutable published value for an entry revision | Published pointer lives on the entry |
@@ -111,15 +111,17 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 | Table | Purpose | Public rule |
 | --- | --- | --- |
 | `assessmentDefinitions` | Stable slug, kind/profile, administrative title, draft/published pointers, visibility, and next version | A definition is discoverable only through its published pointer and visibility |
-| `assessmentVersions` | Immutable-version candidate with timing, resume, review, raw-score, mode, attempt-limit, revision, checksum, and publication data | Published projection uses one reviewed revision |
+| `assessmentVersions` | Immutable-version candidate with timing, resume, review, score policy, mode, attempt-limit, revision, checksum, and publication data | Published projection uses one reviewed revision; profile and score policy must be a supported pair |
 | `assessmentVersionChecks` | Validation run tied to a content revision, with blocking/warning counts and report JSON | A stale check cannot approve a newer revision |
 | `assessmentVersionApprovals` | Academic, rights, accessibility, and bias review decision by reviewer and revision | All four current-revision approvals must pass; original-content/provenance is enforced by validation and the content ledger |
-| `assessmentSections` | Ordered Listening, Structure, or Reading section with timer/replay policy and item count | Public order is stable |
+| `assessmentSections` | Ordered Listening, Structure, Reading, Writing, or Speaking section with timer/replay policy and item count | Public order is stable and must match the definition profile |
 | `assessmentStimuli` | Passage, audio, image, transcript, alt text, provenance, and optional media link | Protected/private media never resolves publicly |
 | `assessmentItems` | Ordered prompt and choices linked to version/section/stimulus | Bounded to 200 per version |
 | `assessmentAnswerKeys` | Correct answer and scoring data | Never included in a pre-submit public DTO |
 
-Full-form validation requires the original ITP Level 1-aligned shape used by this product: 50 Listening, 40 Structure & Written Expression, and 50 Reading items. It validates the product's authored format; it does not confer ETS affiliation or an official score.
+Full-form validation follows the definition profile. Legacy `ec-itp-level-1-aligned-v1` uses 50 Listening, 40 Structure & Written Expression, and 50 Reading items with `raw-objective`. The current `ec-ibt-style-2026-v1` uses 50 Reading, 47 Listening, 12 Writing, and 11 Speaking tasks with `practice-estimate-v1`. Cross-paired profile and score-policy values fail server validation.
+
+The four-skill bank is fixed rather than adaptive. Its weighted practice points and external-scale values are deterministic but uncalibrated. They are English Club estimates for this bank, not official, equivalent, certificate, admission, or predicted TOEFL results.
 
 The authoring lifecycle is:
 
@@ -138,8 +140,8 @@ A publisher can review and publish Assessments but cannot edit Assessment conten
 | `assessmentAttempts` | Version snapshot, owner token, idempotency keys, mode, timer, lifecycle, current cursor, result pointer, and activity timestamps | `ownerTokenIdentifier` must equal the current Auth identity |
 | `assessmentAttemptSections` | Per-section start, deadline, completion, elapsed, answered, and flagged state | Parent attempt ownership is checked first |
 | `assessmentResponses` | One selected answer/flag state per owned item | Indexed by attempt and item |
-| `assessmentResults` | Immutable raw-result revision: correct, possible, omitted, status, completion, supersession, and claim contract | Available only after submit to the owner |
-| `assessmentSectionResults` | Skill-level raw totals, answered/item counts, and elapsed seconds | Child of one owned result revision |
+| `assessmentResults` | Immutable result revision with objective totals, optional weighted points and fixed-form estimates, status, completion, supersession, and claim contract | Available only after submit to the owner; legacy raw results project `estimate: null` |
+| `assessmentSectionResults` | Skill totals, answered/item counts, elapsed seconds, optional weighted points, and bounded estimate fields | Child of one owned result revision |
 
 Persisted practice creates or reuses Anonymous Convex Auth only after Start. Reading `/practice` or the Home programme quiz does not create an identity.
 
@@ -176,18 +178,18 @@ Convex Auth config enables two providers:
 - `Password` for named administrators;
 - `Anonymous` for owned Assessment attempts.
 
-Password identity creation validates a normalized email and a 12–128-character password containing upper-case, lower-case, and numeric characters. Creating a Password identity does not create an administrator.
+Password sign-in is browser-facing; Password identity creation is internal-only. The internal provisioning action validates a normalized email and a 12–128-character password containing upper-case, lower-case, and numeric characters, creates or verifies the Password account through Convex Auth, and binds its Auth user record to `adminUsers` in one operator workflow.
 
-The first-owner sequence is deliberately separate:
+The first-owner sequence is:
 
-1. An operator opens the controlled account-creation window only where intended.
-2. The person creates the Auth identity.
-3. The operator obtains that identity's exact `tokenIdentifier` through the authenticated identity view.
-4. The operator invokes the internal `adminUsers:bootstrapOwner` mutation with the token identifier and reviewed profile data.
-5. The mutation succeeds only while `adminUsers` is empty. Every later invocation fails.
-6. Production account creation is disabled again; the owner grants later access through protected owner operations.
+1. The operator announces the intended Convex deployment.
+2. The operator runs `npm run admin:provision` from a trusted terminal.
+3. The internal action creates/verifies the Password account and resolves its `users` ID.
+4. The binding mutation verifies the account/user/email relationship and inserts the first active owner.
+5. Browser `flow=signUp` calls fail; `/admin` accepts sign-in only.
+6. Sign-out and a later sign-in resolve the same owner through issuer + Auth user ID.
 
-Every protected function calls `requireAdmin(permission)`, which resolves the current Auth identity, queries `adminUsers` by `identity.tokenIdentifier`, requires `active`, and checks the server-owned role matrix. The client cannot self-assign a role.
+Every protected function calls `requireAdmin(permission)`, which resolves the current signed identity, first supports an exact legacy token record and then queries the stable issuer/Auth-user binding, requires `active`, and checks the server-owned role matrix. The client cannot self-assign a role.
 
 | Capability | Editor | Publisher | Owner |
 | --- | :---: | :---: | :---: |
@@ -288,7 +290,7 @@ Published immutable revisions are not rewritten in place. A journal slug change 
 | Contract | Required evidence |
 | --- | --- |
 | Auth boundary | Unauthenticated and identity-only callers cannot read protected data; each role matrix edge is tested |
-| First owner | Non-production Password identity plus one internal bootstrap succeeds once; the second bootstrap fails |
+| First owner | Browser sign-up fails; internal Password provisioning creates one owner and survives a second Auth session |
 | Last owner | Demotion/disable fails while only one active owner remains |
 | CMS ceiling | Row 200 succeeds, row 201 fails, and an existing 201-row corruption is detected |
 | Journal publication | Draft revision remains private; publish pointer updates public detail; archive removes it; six-row cursor pages remain stable |

@@ -173,6 +173,8 @@ export default defineSchema({
 
   adminUsers: defineTable({
     tokenIdentifier: v.string(),
+    authIssuer: v.optional(v.string()),
+    authUserId: v.optional(v.id("users")),
     displayName: v.string(),
     email: v.optional(v.string()),
     role: adminRoleValidator,
@@ -182,6 +184,7 @@ export default defineSchema({
     lastSeenAt: v.optional(v.number()),
   })
     .index("by_token_identifier", ["tokenIdentifier"])
+    .index("by_auth_issuer_and_auth_user_id", ["authIssuer", "authUserId"])
     .index("by_status_and_updated_at", ["status", "updatedAt"])
     .index("by_role_and_status_and_updated_at", [
       "role",
@@ -503,6 +506,12 @@ export default defineSchema({
     correct: v.number(),
     possible: v.number(),
     omitted: v.number(),
+    earnedPoints: v.optional(v.number()),
+    possiblePoints: v.optional(v.number()),
+    scoringModel: v.optional(v.literal("ec-ibt-style-v1")),
+    overallBandEstimate: v.optional(v.number()),
+    comparableTotalEstimate: v.optional(v.number()),
+    estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
     supersedesResultId: v.optional(v.id("assessmentResults")),
     adjustmentReason: v.optional(v.string()),
     completedAt: v.number(),
@@ -521,6 +530,11 @@ export default defineSchema({
     answeredCount: v.number(),
     itemCount: v.number(),
     elapsedSeconds: v.number(),
+    earnedPoints: v.optional(v.number()),
+    possiblePoints: v.optional(v.number()),
+    bandEstimate: v.optional(v.number()),
+    comparableScoreEstimate: v.optional(v.number()),
+    estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
   })
     .index("by_result_id_and_section_id", ["resultId", "sectionId"])
     .index("by_result_id", ["resultId"]),

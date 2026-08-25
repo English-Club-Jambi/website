@@ -87,6 +87,8 @@ export function reviewResponseText(
       return response.tokenOrder
         .map((key) => item.tokens.find((token) => token.key === key)?.label ?? key)
         .join(" ");
+    case "text":
+      return response.text.trim().length === 0 ? omittedLabel : response.text;
   }
 }
 
@@ -162,16 +164,21 @@ function ReviewedAnswers({
   return (
     <div className={styles.reviewList} aria-busy={status === "LoadingFirstPage"}>
       {results.map((entry, index) => {
-        const state = entry.correct
-          ? copy.reviewCorrect
-          : entry.answered
-            ? copy.reviewIncorrect
-            : copy.reviewOmitted;
-        const StateIcon = entry.correct
-          ? CheckCircleIcon
-          : entry.answered
-            ? XCircleIcon
-            : MinusCircleIcon;
+        const constructed = entry.item.type === "constructed-response";
+        const state = constructed && entry.answered
+          ? copy.reviewScored
+          : entry.correct
+            ? copy.reviewCorrect
+            : entry.answered
+              ? copy.reviewIncorrect
+              : copy.reviewOmitted;
+        const StateIcon = constructed && entry.answered
+          ? DocumentTextIcon
+          : entry.correct
+            ? CheckCircleIcon
+            : entry.answered
+              ? XCircleIcon
+              : MinusCircleIcon;
         return (
           <article className={styles.reviewItem} key={entry.item.id}>
             <div className={styles.reviewItemHeading}>
@@ -189,7 +196,7 @@ function ReviewedAnswers({
                 <dd>{reviewResponseText(entry.item, entry.response, copy.reviewOmitted)}</dd>
               </div>
               <div>
-                <dt>{copy.correctAnswer}</dt>
+                <dt>{constructed ? copy.exampleResponse : copy.correctAnswer}</dt>
                 <dd>{reviewResponseText(entry.item, entry.correctAnswer, copy.reviewOmitted)}</dd>
               </div>
             </dl>
@@ -223,6 +230,13 @@ function ResultReport({
   const possible = result.objective.possible;
   const elapsed = result.sections.reduce((total, section) => total + section.elapsedSeconds, 0);
   const selected = result.sections[sectionIndex];
+  const estimatedBand =
+    result.estimate?.overallBand ?? result.sections[0]?.bandEstimate ?? null;
+  const comparableScore =
+    result.estimate?.comparableTotal ??
+    result.sections[0]?.comparableScoreEstimate ??
+    null;
+  const confidence = result.estimate?.confidence ?? result.sections[0]?.confidence ?? null;
 
   return (
     <div className={styles.resultPage}>
@@ -239,14 +253,38 @@ function ResultReport({
       <main className={`page-container ${styles.resultBody}`}>
         <section className={styles.rawResult} aria-label={result.label}>
           <div className={styles.rawResultLead}>
-            <strong>{result.objective.correct}</strong>
-            <span>{copy.rawCount} / {possible}</span>
+            <strong>{estimatedBand ?? result.objective.correct}</strong>
+            <span>
+              {estimatedBand === null
+                ? `${copy.rawCount} / ${possible}`
+                : `${copy.estimatedBand} / 6`}
+            </span>
           </div>
           <dl>
+            <div>
+              <dt>{copy.practicePoints}</dt>
+              <dd>{result.weighted.earned.toFixed(2)} / {result.weighted.possible.toFixed(2)}</dd>
+            </div>
+            {comparableScore !== null ? (
+              <div>
+                <dt>{copy.comparableScore}</dt>
+                <dd>{comparableScore} / {result.estimate?.comparableTotal !== null ? 120 : 30}</dd>
+              </div>
+            ) : null}
             <div><dt>{copy.omitted}</dt><dd>{result.objective.omitted}</dd></div>
             <div><dt>{copy.timeUsed}</dt><dd>{formatElapsed(elapsed)}</dd></div>
+            {confidence !== null ? (
+              <div>
+                <dt>{copy.estimateConfidence}</dt>
+                <dd>{confidence === "moderate" ? copy.confidenceModerate : copy.confidenceLow}</dd>
+              </div>
+            ) : null}
           </dl>
         </section>
+
+        {result.estimate !== null ? (
+          <p className={styles.ruleBasedNote}>{copy.ruleBasedNote}</p>
+        ) : null}
 
         <section className={styles.sectionResults} aria-labelledby="section-results-title">
           <h2 id="section-results-title">{copy.sectionResults}</h2>
@@ -257,7 +295,11 @@ function ResultReport({
                   <h3>{section.title}</h3>
                   <p>{section.answered} / {section.items} {copy.answered.toLowerCase()}</p>
                 </div>
-                <strong>{section.correct} / {section.possible}</strong>
+                <strong>
+                  {section.bandEstimate === null
+                    ? `${section.correct} / ${section.possible}`
+                    : `${section.bandEstimate} / 6`}
+                </strong>
                 <span><ClockIcon width={18} height={18} strokeWidth={1.8} aria-hidden />{formatElapsed(section.elapsedSeconds)}</span>
               </div>
             ))}

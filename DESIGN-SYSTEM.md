@@ -14,7 +14,7 @@ The system must produce a clean, bright first impression without becoming a gene
 The three visual registers share typography discipline, Heroicons, visible focus, 44px targets, and reduced-motion behavior:
 
 - **Public brand:** The Conversation Relay, asymmetric whitespace, language-led interaction, and sparse documentary proof.
-- **Practice:** The Answer Line, with ruled response rows and unusually clear save, timer, transcript, section, and raw-result states.
+- **Practice:** The Answer Line, with ruled response rows and clear save, timer, transcript, section, practice-point, and estimate states.
 - **Administration:** rounded operational neobrutalism with dense tools, 2px edges, short hard shadows, and namespaced tokens that never inherit a public preview.
 
 ## 2. Design dials
@@ -332,7 +332,7 @@ The composition may change on hover or focus, but no JavaScript is needed.
 ### Assessment briefing and runner
 
 - Overview and briefings are useful server HTML even when no reviewed assessment is published.
-- Start exposes timing and Listening modes, the raw-result claim, and an acknowledgement before Anonymous Auth begins.
+- Start exposes timing and Listening modes, the fixed-form result limits, and an acknowledgement before Anonymous Auth begins.
 - One current prompt and at most one related stimulus occupy the reading field. Audio never autoplays.
 - Answer selection does not move focus. Explicit navigation moves focus to the next prompt heading.
 - The current-section navigator is a focus-contained dialog; answered, unanswered, flagged, and current states use text and shape in addition to colour.
@@ -358,7 +358,7 @@ The composition may change on hover or focus, but no JavaScript is needed.
 | Journal | Typographic title field | Journal Relay and honest empty state | Global footer |
 | Story | Calm article title and metadata | Optional cover and narrow Markdown body | Journal return |
 | Contact | Direct route phrase | Context plus existing form cycle | Form success state |
-| Practice | Assessment Lab statement and claim boundary | Published full/quick paths, briefing, owned Answer Line runner, raw result/review | Back to Practice or another reviewed path |
+| Practice | Assessment Lab statement and claim boundary | Published full/quick paths, briefing, owned Answer Line runner, bounded result/review | Back to Practice or another reviewed path |
 | Admin | Compact workspace identity and current access | Pages, Journal, Assessments, Members, Media, Appearance, and Activity tools | Save/publish state rather than a marketing close |
 
 No shared route masthead selector should force these openings into the same geometry.

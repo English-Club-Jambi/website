@@ -196,7 +196,10 @@ function validateVersionMetadata(args: {
   ) {
     throw new ConvexError({ code: "UNSUPPORTED_ASSESSMENT_CONTRACT" as const });
   }
-  if (args.scorePolicy !== "raw-objective") {
+  if (
+    args.scorePolicy !== "raw-objective" &&
+    args.scorePolicy !== "practice-estimate-v1"
+  ) {
     throw new ConvexError({ code: "UNSUPPORTED_ASSESSMENT_CONTRACT" as const });
   }
   return {
@@ -221,6 +224,18 @@ function validateVersionMetadata(args: {
       "maxAttemptsPerDay",
     ),
   };
+}
+
+function profileSupportsScorePolicy(
+  profile: Doc<"assessmentDefinitions">["profile"],
+  scorePolicy: Doc<"assessmentVersions">["scorePolicy"],
+) {
+  return (
+    (profile === "ec-itp-level-1-aligned-v1" &&
+      scorePolicy === "raw-objective") ||
+    (profile === "ec-ibt-style-2026-v1" &&
+      scorePolicy === "practice-estimate-v1")
+  );
 }
 
 export const listPage = query({
@@ -458,7 +473,9 @@ export const create = mutation({
     const actor = await requireAdmin(ctx, "assessment:edit");
     if (
       args.kind === "club-program-quiz" ||
-      args.profile !== "ec-itp-level-1-aligned-v1" ||
+      (args.profile !== "ec-itp-level-1-aligned-v1" &&
+        args.profile !== "ec-ibt-style-2026-v1") ||
+      !profileSupportsScorePolicy(args.profile, args.scorePolicy) ||
       (args.kind === "full-practice" && args.timePolicy !== "per-section")
     ) {
       throw new ConvexError({ code: "UNSUPPORTED_ASSESSMENT_CONTRACT" as const });
@@ -546,8 +563,9 @@ export const updateMetadata = mutation({
       };
     }
     if (
-      definition.kind === "full-practice" &&
-      args.timePolicy !== "per-section"
+      !profileSupportsScorePolicy(definition.profile, args.scorePolicy) ||
+      (definition.kind === "full-practice" &&
+        args.timePolicy !== "per-section")
     ) {
       throw new ConvexError({ code: "UNSUPPORTED_ASSESSMENT_CONTRACT" as const });
     }
@@ -1253,11 +1271,17 @@ export const validateDraft = mutation({
       blocking.push("answer-key-coverage");
     }
     if (definition.kind === "full-practice") {
-      const exactSkills = ["listening", "structure", "reading"] as const;
-      const exactCounts = [50, 40, 50];
-      const exactTimes = [2_100, 1_500, 3_300];
+      const ibtStyle = definition.profile === "ec-ibt-style-2026-v1";
+      const exactSkills = ibtStyle
+        ? (["reading", "listening", "writing", "speaking"] as const)
+        : (["listening", "structure", "reading"] as const);
+      const exactCounts = ibtStyle ? [50, 47, 12, 11] : [50, 40, 50];
+      const exactTimes = ibtStyle
+        ? [1_800, 1_740, 1_380, 480]
+        : [2_100, 1_500, 3_300];
+      const exactItemCount = ibtStyle ? 120 : 140;
       if (
-        sections.length !== 3 ||
+        sections.length !== exactSkills.length ||
         sections.some(
           (section, index) =>
             section.skill !== exactSkills[index] ||
@@ -1265,7 +1289,7 @@ export const validateDraft = mutation({
             section.timeLimitSeconds !== exactTimes[index],
         ) ||
         version.timePolicy !== "per-section" ||
-        items.length !== 140
+        items.length !== exactItemCount
       ) {
         blocking.push("full-practice-blueprint");
       }

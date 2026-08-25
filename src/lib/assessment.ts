@@ -100,11 +100,12 @@ export function getFullPracticeAssessment() {
 
 const backendSkillByRoute: Record<
   PracticeSkill,
-  "listening" | "structure" | "reading"
+  "listening" | "reading" | "writing" | "speaking"
 > = {
   listening: "listening",
-  structure: "structure",
   reading: "reading",
+  writing: "writing",
+  speaking: "speaking",
 };
 
 export function getQuickPracticeAssessment(skill: PracticeSkill) {

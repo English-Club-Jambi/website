@@ -97,6 +97,7 @@ async function seedPublishedFixture(
     kind?: "full-practice" | "skill-quiz" | "club-program-quiz";
     timed?: boolean;
     multipleSelect?: boolean;
+    scorePolicy?: "raw-objective" | "practice-estimate-v1";
   } = {},
 ) {
   const now = Date.now();
@@ -112,7 +113,10 @@ async function seedPublishedFixture(
     const definitionId = await ctx.db.insert("assessmentDefinitions", {
       slug: `internal-fixture-${Math.random().toString(36).slice(2)}`,
       kind: options.kind ?? "full-practice",
-      profile: "ec-itp-level-1-aligned-v1",
+      profile:
+        options.scorePolicy === "practice-estimate-v1"
+          ? "ec-ibt-style-2026-v1"
+          : "ec-itp-level-1-aligned-v1",
       adminTitle: "Internal assessment fixture",
       nextVersion: 2,
       visibility: "draft",
@@ -132,7 +136,7 @@ async function seedPublishedFixture(
       timePolicy: options.timed ? "per-section" : "untimed",
       allowResume: true,
       reviewPolicy: "after-submit",
-      scorePolicy: "raw-objective",
+      scorePolicy: options.scorePolicy ?? "raw-objective",
       defaultTimingMode: options.timed ? "standard" : "untimed",
       defaultListeningMode: "audio-primary",
       maxAttemptsPerDay: options.maxAttemptsPerDay ?? 4,
@@ -548,6 +552,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
         "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.",
     });
     expect(result?.disclaimer).not.toMatch(/TOEFL/i);
+    expect(result?.estimate).toBeNull();
     expect(result?.sections.map((section) => section.order)).toEqual([0, 1]);
     await expect(
       learner.mutation(api.assessmentAttempts.enableTranscript, {
@@ -580,6 +585,60 @@ describe("assessment lifecycle, transcript support, and review", () => {
         paginationOpts: { cursor: null, numItems: 21 },
       }),
     ).rejects.toThrow();
+  });
+
+  it("uses bounded estimate wording only for the fixed-form estimate model", async () => {
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t, {
+      scorePolicy: "practice-estimate-v1",
+    });
+    const learner = await anonymousIdentity(t, "estimate-wording-owner");
+    const attempt = await startAttempt(
+      learner,
+      fixture,
+      "estimate-wording-start-0001",
+    );
+    const firstBegun = await learner.mutation(
+      api.assessmentAttempts.beginSection,
+      { attemptId: attempt.attemptId },
+    );
+    const firstDone = await learner.mutation(
+      api.assessmentAttempts.finalizeCurrentSection,
+      {
+        attemptId: attempt.attemptId,
+        expectedRevision: firstBegun.revision,
+      },
+    );
+    if (!firstDone.ok) throw new Error("section revision conflicted");
+    const secondBegun = await learner.mutation(
+      api.assessmentAttempts.beginSection,
+      { attemptId: attempt.attemptId },
+    );
+    const submitted = await learner.mutation(api.assessmentAttempts.submit, {
+      attemptId: attempt.attemptId,
+      submitRequestId: "estimate-wording-submit-0001",
+      expectedRevision: secondBegun.revision,
+    });
+    if (!submitted.ok) throw new Error("submit revision conflicted");
+
+    const result = await learner.query(api.assessmentAttempts.getResult, {
+      attemptId: attempt.attemptId,
+    });
+    expect(result).toMatchObject({
+      estimate: {
+        model: "ec-ibt-style-v1",
+        overallBand: null,
+        comparableTotal: null,
+        confidence: "low",
+      },
+      disclaimer:
+        "This is an English Club estimate from an original fixed-form practice bank. It is not an official ETS score, an exact test prediction, a certificate, or evidence for admission.",
+    });
+    expect(result?.disclaimer).toMatch(/not an official ETS score/i);
+    expect(result?.disclaimer).not.toMatch(/predicted TOEFL score/i);
+    expect(result?.disclaimer).not.toMatch(
+      /(?:is|reports|provides) an? (?:official|predicted) (?:ETS|TOEFL)? ?score/i,
+    );
   });
 
   it("closes only the expired current section and leaves the next section unstarted", async () => {
@@ -1038,6 +1097,51 @@ describe("assessment media boundary", () => {
 });
 
 describe("assessment administration and immutable publication", () => {
+  it("binds each supported content profile to its matching score policy", async () => {
+    const t = createHarness();
+    const { editor } = await bootstrapAdmins(t);
+    const ibtInput = {
+      kind: "skill-quiz" as const,
+      profile: "ec-ibt-style-2026-v1" as const,
+      adminTitle: "Reading estimate practice",
+      title: "Reading Estimate Practice",
+      summary:
+        "A short original fixed-form reading practice for English Club learners.",
+      instructions:
+        "Read each original passage and answer every question before submitting.",
+      locale: "en",
+      timePolicy: "untimed" as const,
+      allowResume: true,
+      reviewPolicy: "after-submit" as const,
+      defaultTimingMode: "standard" as const,
+      defaultListeningMode: "transcript-supported" as const,
+      maxAttemptsPerDay: 3,
+    };
+
+    await expect(
+      editor.mutation(api.adminAssessments.create, {
+        ...ibtInput,
+        slug: "reading-estimate-practice",
+        scorePolicy: "practice-estimate-v1",
+      }),
+    ).resolves.toMatchObject({ contentRevision: 1 });
+    await expect(
+      editor.mutation(api.adminAssessments.create, {
+        ...ibtInput,
+        slug: "reading-estimate-with-raw-policy",
+        scorePolicy: "raw-objective",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      editor.mutation(api.adminAssessments.create, {
+        ...ibtInput,
+        slug: "legacy-profile-with-estimate-policy",
+        profile: "ec-itp-level-1-aligned-v1",
+        scorePolicy: "practice-estimate-v1",
+      }),
+    ).rejects.toThrow();
+  });
+
   it("enforces roles, server readiness, publication, and next-draft cloning", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-26T12:00:00.000Z"));

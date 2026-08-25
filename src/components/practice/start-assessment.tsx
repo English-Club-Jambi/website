@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -9,8 +9,8 @@ import {
 } from "@heroicons/react/24/outline";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
-import { useMutation } from "convex/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useConvexAuth, useMutation } from "convex/react";
 
 import { api } from "../../../convex/_generated/api";
 import type { PublicContentFor } from "@content/public-content";
@@ -53,6 +53,7 @@ export function StartAssessment({
   const [status, setStatus] = useState<"idle" | "signing-in" | "starting">("idle");
   const [error, setError] = useState<string | null>(null);
   const startingRef = useRef(false);
+  const pendingStartRef = useRef<StartConfiguration | null>(null);
   const retryRef = useRef<{ signature: string; requestId: string } | null>(null);
   const includesListening = assessment.skills.includes("listening");
 
@@ -84,6 +85,14 @@ export function StartAssessment({
     }, [assessment.definitionId, assessment.versionId, copy.startError, router, startAttempt],
   );
 
+  useEffect(() => {
+    if (!isAuthenticated || status !== "signing-in") return;
+    const configuration = pendingStartRef.current;
+    if (configuration === null) return;
+    pendingStartRef.current = null;
+    void createAttempt(configuration);
+  }, [createAttempt, isAuthenticated, status]);
+
   async function handleStart() {
     if (!acknowledged || authLoading || status !== "idle") {
       return;
@@ -112,11 +121,12 @@ export function StartAssessment({
       return;
     }
 
+    pendingStartRef.current = configuration;
     setStatus("signing-in");
     try {
       await signIn("anonymous");
-      await createAttempt(configuration);
     } catch {
+      pendingStartRef.current = null;
       setStatus("idle");
       setError(copy.sessionError);
     }

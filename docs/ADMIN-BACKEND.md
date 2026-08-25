@@ -1,17 +1,17 @@
 # Admin backend, authentication, and R2 runbook
 
-Status: backend implementation complete; cloud configuration and first-owner bootstrap remain operator gates
-Last verified: 25 August 2026
+Status: internal-only administrator provisioning and real development-owner round trip verified; real non-owner and production gates remain
+Last verified: 26 August 2026
 Runtime: Next.js 16.3.2, Convex 1.45.0, Convex Auth 0.0.95, Cloudflare R2
 
 ## What this backend guarantees
 
-The CMS boundary lives in Convex, not in a hidden Next.js route. Every admin query, mutation, and R2 action reads the signed identity from `ctx.auth`, looks up an active `adminUsers` row by the identity's complete `tokenIdentifier`, and checks a server-owned permission map. Email, display name, route visibility, and browser-supplied role values are never authority.
+The CMS boundary lives in Convex, not in a hidden Next.js route. Every admin query, mutation, and R2 action reads the signed identity from `ctx.auth`, resolves an active `adminUsers` row through the stable Auth issuer plus Auth user ID (with a legacy complete-token fallback), and checks a server-owned permission map. Email, display name, route visibility, and browser-supplied role values are never authority.
 
 The implementation adds:
 
-- Convex Auth with an email/password provider, twelve-character password minimum, and ASCII-normalized email validation;
-- a one-time, internal-only first-owner bootstrap;
+- Convex Auth with browser sign-in only, internal Password account creation, a twelve-character password minimum, and normalized email validation;
+- an internal-only account-and-access provisioning action with exact placeholder recovery;
 - owner, publisher, and editor permissions;
 - member review, consent, archive, and bounded directory management;
 - page-copy drafts, optimistic concurrency, immutable published versions, and a public published-only query;
@@ -20,7 +20,7 @@ The implementation adds:
 - immutable public-theme versions, server-authoritative colour derivation and accessibility checks, atomic publish/rollback pointers, and theme events;
 - a separate CMS audit trail.
 
-No admin identity is seeded. No secret is stored in source. Existing journal posts and public member reads remain valid.
+No reusable default credential is stored in source. Existing journal posts and public member reads remain valid.
 
 ## Authorization matrix
 
@@ -106,20 +106,17 @@ Apply an origin-specific CORS policy to the bucket. Add the production origin wh
 
 The upload action returns `requiredHeaders.contentType` and `requiredHeaders.cacheControl`. The browser must send both exact values with the PUT. A mismatched content type or cache control fails the signature or the verification step.
 
-## First owner setup
+## Internal administrator provisioning
 
-Do this only after the auth UI can complete a real sign-in round trip.
-
-1. Create the first real account through Convex Auth.
-2. While signed in, call `api.adminUsers.whoAmI`. Copy its complete `tokenIdentifier`; do not substitute the email or the JWT `sub` claim.
-3. Announce the target deployment.
-4. Run the internal bootstrap once:
+The `/admin` route has no sign-up state. Announce the deployment, then run:
 
 ```bash
-npx convex run adminUsers:bootstrapOwner '{"tokenIdentifier":"<complete tokenIdentifier>","displayName":"<real name>","email":"<real email>"}'
+npm run admin:provision
 ```
 
-The mutation reads the existing admin table through an index and refuses to run after the first record exists. Later owners, publishers, and editors are managed through the owner-only `api.adminUsers.setAccess` mutation.
+The terminal prompts for the profile and hides password input. Automation may use `--generate-password`; the generated password is shown once after success and must go directly into a password manager. The script invokes only `internal.adminProvisioning.provisionPasswordAdmin`, which creates or verifies the Password account and binds the corresponding Auth user to an active `adminUsers` row. The first administrator must be an owner.
+
+The narrow `--repair-placeholder <exact-value>` option can rebind a sole active legacy owner only when its token identifier exactly matches, it has no Auth user binding, and the requested role remains owner. It cannot replace an arbitrary or multi-admin deployment.
 
 ## API contract
 
@@ -129,7 +126,9 @@ The mutation reads the existing admin table through an index and refuses to run 
 | --- | --- | --- |
 | `api.adminUsers.whoAmI` | signed or unsigned caller | returns only the caller's identity |
 | `api.adminUsers.me` | signed caller | active admin record or `null` |
-| `internal.adminUsers.bootstrapOwner` | deployment operator only | one successful call for an empty table |
+| `internal.adminProvisioning.provisionPasswordAdmin` | deployment operator only | creates/verifies Password identity and binds reviewed role |
+| `internal.adminUsers.bindProvisionedPasswordAccount` | internal action only | verifies exact account/user/issuer before insert or guarded repair |
+| `internal.adminUsers.bootstrapOwner` | legacy internal seam | retained for migration/tests; not the account workflow |
 | `api.adminUsers.listPage` | owner | cursor page of exactly 20 |
 | `api.adminUsers.setAccess` | owner | target token identifier is management data, never caller identity |
 
@@ -239,15 +238,15 @@ The backend is deliberately not deployed or bootstrapped by this lane. Before ca
 
 1. set Convex Auth and R2 variables on the intended cloud deployment;
 2. push the functions/schema to the announced non-production target first;
-3. complete a real browser sign-in and sign-out round trip;
-4. bootstrap one real owner and verify editor/publisher negative permissions with real JWTs;
+3. repeat the proven development owner flow on the explicitly approved production deployment;
+4. verify editor/publisher negative permissions with real cloud identities;
 5. run an actual presigned PUT with the returned required headers, then HEAD verification and custom-domain GET;
 6. render the published Tiptap JSON through an allowlisted React renderer—never `dangerouslySetInnerHTML`;
 7. protect the Next admin layout for navigation and noindex UX while retaining Convex as the real authorization boundary;
 8. add production origins to R2 CORS and use separate production auth keys;
 9. run the integrated E2E, Axe, screenshot, and deployment checks in the root workflow.
 
-Convex Auth is currently a beta library. The admin allowlist prevents ordinary signed-up users from reaching the CMS, but the club should decide whether production account creation uses the current password flow, verified email, or an institutional OAuth provider before launch. That choice does not change the `tokenIdentifier` authorization boundary.
+Convex Auth is currently a beta library. Public Password sign-up is disabled; account creation is a deployment-operator operation. Before production, the club should still decide whether to retain internal Password provisioning or move to a verified institutional identity provider.
 
 ## Primary references
 

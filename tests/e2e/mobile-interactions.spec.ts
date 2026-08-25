@@ -246,6 +246,35 @@ test.describe("mobile touch interaction contract", () => {
   test("page controls remain touchable after scrolling and route changes", async ({
     page,
   }) => {
+    await page.goto("/about");
+    await waitForHydration(page);
+    await touchLinkAndWait(
+      page,
+      page.locator(".evidence-boundary-copy .text-link"),
+      /\/journal$/,
+    );
+    await waitForHydration(page);
+
+    const journalStory = page.locator("#journal-archive h3 a").first();
+    if ((await journalStory.count()) > 0) {
+      const storyHref = await journalStory.getAttribute("href");
+      expect(storyHref).toMatch(/^\/journal\//);
+      await touchLinkAndWait(page, journalStory, /\/journal\/[^/?#]+$/);
+      await waitForHydration(page);
+    }
+
+    await page.goto("/practice");
+    await waitForHydration(page);
+    const practiceAction = page.locator("#main-content a").first();
+    const practiceHref = await practiceAction.getAttribute("href");
+    expect(practiceHref).toMatch(/^(?:\/practice|#practice)/);
+    await touchLinkAndWait(
+      page,
+      practiceAction,
+      /\/practice(?:\/[^?#]+|#practice-paths)?$/,
+    );
+    await waitForHydration(page);
+
     await page.goto("/members");
     await waitForHydration(page);
     const filterButton = page.getByRole("button", { name: /Filter/ }).first();

@@ -108,26 +108,26 @@ Convex remains the application database and authorization boundary. Cloudflare R
 ### Administration CMS
 
 - [x] Add Convex Auth Password identities and a server-owned `adminUsers` allowlist.
-- [x] Keep account creation separate from authorization: an identity alone never opens the CMS.
-- [x] Add the one-time internal owner bootstrap and owner/editor/publisher permission map.
+- [x] Remove browser account creation and provision Password identity plus authorization through one internal operator action.
+- [x] Add stable Auth-account binding, guarded placeholder recovery, and the owner/editor/publisher permission map.
 - [x] Build the protected `/admin` shell, Pages, Journal, Members, Media, Appearance, Assessments, and Activity workspaces.
 - [x] Replace code-only journal maintenance with immutable structured revisions, reviewed covers/inline media, safe coordinate map nodes, publish, archive, and cursor pagination.
 - [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 200 entries per page and locale.
 - [x] Add browser-to-R2 reviewed media upload, metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.
 - [x] Add structured public theme drafts, server-side OKLCH derivation and contrast validation, immutable versions, atomic publish/rollback pointers, and a checked-in fallback.
 - [x] Keep admin symbols on Heroicons, controls at least 44px, dialogs focus-contained, and motion reduced under `prefers-reduced-motion`.
-- [ ] Complete a real first-owner creation and bootstrap round trip on the announced non-production cloud deployment.
+- [x] Complete a real internal owner provisioning, sign-in, sign-out, and second-session round trip on the announced non-production cloud deployment.
 
 ### Assessment Lab
 
 - [x] Publish the canonical `/practice` route family under the English Club Assessment Lab name.
-- [x] Implement reviewed catalog reads, full-form and quick-quiz briefings, an owned attempt runner, raw-result report, and paginated post-submit review.
+- [x] Implement reviewed catalog reads, four-skill full-form and quick-quiz briefings, an owned attempt runner, exact-result report with bounded optional estimates, and paginated post-submit review.
 - [x] Keep the Home programme quiz local and derive its questions from reviewed Activities wording; it creates no visitor identity or Convex attempt.
 - [x] Add Anonymous Convex Auth only after the visitor presses Start on a persisted assessment.
 - [x] Derive participant ownership from server auth, normalize route IDs before typed access, and return the same unavailable state for malformed, missing, and cross-owner IDs.
 - [x] Keep answer keys, explanations, provenance, draft media, admin IDs, and scoring authority out of pre-submit public payloads.
 - [x] Implement per-section deadlines, revision conflicts, idempotent Start/Submit, transcript-supported mode, owned deletion, and bounded result snapshots.
-- [x] Report only raw correct, possible, and omitted counts with time and mode labels; never publish an official, predicted, CEFR, certificate, or admission result.
+- [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep four-skill estimates explicitly fixed-form, non-official, and unusable as certificates or admission evidence.
 - [x] Add assessment authoring, current-revision validation, academic/rights/accessibility/bias approvals, immutable publication, safe reorder/delete, and bounded next-draft cloning.
 - [x] Add a separate private-source/public-derivative media contract and a UI configuration gate.
 - [ ] Create and configure the separate private Assessment R2 bucket, apply exact-origin CORS, and prove checksum-aware PUT, preview, verification, and public derivative delivery against Cloudflare.
@@ -135,7 +135,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 
 ### Integrated release gate
 
-- [x] Remove the stale client call to `adminUsers:bootstrapState`; the admin setup choice is now controlled by the Next.js environment and does not depend on a newly deployed public query.
+- [x] Remove the stale `adminUsers:bootstrapState` call and every browser setup choice; `/admin` is sign-in only.
 - [x] Use server-side `CONVEX_URL` for Next adapters and pass the resolved deployment URL into scoped browser providers. `NEXT_PUBLIC_CONVEX_URL` is not required.
 - [x] Preserve port `3987` while running focused admin, public mobile, journal, and Practice checks.
 - [ ] Push the final integrated Convex schema/functions to the announced development deployment after all lanes are stable.
@@ -154,7 +154,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 8. Each verification gate runs explicitly and leaves evidence.
 9. Production media remains blocked until consent is cleared, regardless of local preview quality.
 10. Every admin capability rechecks the signed identity and permission inside Convex; route visibility is never authority.
-11. Assessment results describe original English Club practice only. Raw counts cannot be relabelled as an official or predicted score.
+11. Assessment results describe original English Club practice only. Fixed-form estimates cannot be relabelled as an official score, predicted TOEFL score, calibrated equivalent, certificate, or admission evidence; legacy raw results retain their separate raw-only disclaimer.
 12. Public R2 media and confidential Assessment sources use separate access boundaries. Missing private configuration blocks the write before a reservation row is created.
 
 ## Workflow
@@ -241,16 +241,17 @@ Exit condition: screenshots and machine checks agree that the final experience i
 
 ### Gate H: Admin CMS
 
-- [x] Add the auth provider, allowlist, permission checks, and one-time owner bootstrap.
+- [x] Add the auth provider, internal provisioning action, stable allowlist binding, and permission checks.
 - [x] Add reusable admin shell, custom form controls, structured journal editor, media flow, public-copy editor, theme editor, and assessment workspace.
 - [x] Validate admin layout at desktop, Pixel 7, and 320px through focused tests and an authenticated data-isolated visual harness.
-- [ ] Exercise initial identity creation, owner bootstrap, sign-in, sign-out, and negative role permissions against the selected cloud deployment.
+- [x] Exercise internal identity provisioning, owner binding, sign-in, sign-out, and second-session access against the selected cloud deployment.
+- [ ] Verify editor and publisher negative permissions with real cloud identities; the isolated authorization matrix is already green.
 
 Exit condition: a real owner can sign in and manage reviewed content without any browser-supplied value becoming authorization.
 
 ### Gate I: Assessment vertical slice
 
-- [x] Add the additive assessment schema, bounded APIs, Anonymous Auth ownership, original-content publication gates, and raw-result contract.
+- [x] Add the additive assessment schema, bounded APIs, Anonymous Auth ownership, original-content publication gates, legacy raw-result compatibility, and the separate fixed-form estimate contract.
 - [x] Build `/practice`, full/quick briefings, runner, result review, Home programme quiz, and the assessment authoring workspace.
 - [x] Verify malformed/cross-owner IDs, key privacy, section lifecycle, transcript persistence, deletion, publication approvals, clone recovery, and media relationship guards in isolated tests.
 - [ ] Configure and smoke-test the private Assessment R2 bucket without falling back to the public bucket.
@@ -283,9 +284,9 @@ Exit condition: source, cloud behavior, documents, and evidence describe the sam
 | Unconsented profile or portrait reaches production | Low | High | Indexed profile-consent gate and a separate portrait-consent gate |
 | New navigation link crowds tablet widths | Medium | Medium | Explicit 880, 900, 1024, and 1440 px shell checks |
 | Backend extension regresses existing data | Low | Medium | Additive member table, generated types, Convex push, and complete backend regression suite |
-| First admin identity is mistaken for authorization | Low | High | Explicit setup flag, identity-only copy, one-time internal owner bootstrap, and server permission checks |
+| Browser account creation is mistaken for authorization | Low | High | No browser sign-up, internal account-and-role provisioning, stable server binding, and permission checks |
 | An assessment draft leaks through the public R2 bucket | Medium until configured | High | Separate private bucket and credentials; confidential reservation and upload controls stay blocked when absent |
-| Practice wording implies an official score | Low | High | Raw-count DTO and fixed claim contract; no scale, percentage, CEFR, certificate, or admission conversion |
+| Practice wording implies an official score | Medium until copy review | High | Exact bank outcomes, model-specific disclaimers, no predicted-TOEFL claim, and an explicit warning that the linear/rule-based estimate is uncalibrated |
 | Anonymous attempts outlive the promised retention period | Medium | High | Do not promise automatic deletion; approve and test cleanup before public launch |
 | CMS page growth truncates Practice copy | Low | Medium | Indexed read of 201, explicit failure above 200, and refusal to create a 201st entry |
 

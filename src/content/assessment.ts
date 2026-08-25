@@ -1,10 +1,10 @@
 import type { ActivityTheme } from "./site-copy";
 
-export type PracticeSkill = "listening" | "structure" | "reading";
+export type PracticeSkill = "listening" | "reading" | "writing" | "speaking";
 
 export const practiceSkills: ReadonlyArray<{
   key: PracticeSkill;
-  backendSkill: "listening" | "structure" | "reading";
+  backendSkill: "listening" | "reading" | "writing" | "speaking";
   href: `/practice/quick/${PracticeSkill}`;
 }> = [
   {
@@ -13,14 +13,19 @@ export const practiceSkills: ReadonlyArray<{
     href: "/practice/quick/listening",
   },
   {
-    key: "structure",
-    backendSkill: "structure",
-    href: "/practice/quick/structure",
-  },
-  {
     key: "reading",
     backendSkill: "reading",
     href: "/practice/quick/reading",
+  },
+  {
+    key: "writing",
+    backendSkill: "writing",
+    href: "/practice/quick/writing",
+  },
+  {
+    key: "speaking",
+    backendSkill: "speaking",
+    href: "/practice/quick/speaking",
   },
 ] as const;
 

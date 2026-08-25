@@ -8,6 +8,7 @@ export const assessmentKindValidator = v.union(
 
 export const assessmentProfileValidator = v.union(
   v.literal("ec-itp-level-1-aligned-v1"),
+  v.literal("ec-ibt-style-2026-v1"),
   v.literal("club-program-v1"),
 );
 
@@ -31,6 +32,8 @@ export const assessmentSkillValidator = v.union(
   v.literal("listening"),
   v.literal("structure"),
   v.literal("reading"),
+  v.literal("writing"),
+  v.literal("speaking"),
 );
 
 export const timePolicyValidator = v.union(
@@ -48,6 +51,7 @@ export const reviewPolicyValidator = v.union(
 export const scorePolicyValidator = v.union(
   v.literal("feedback-only"),
   v.literal("raw-objective"),
+  v.literal("practice-estimate-v1"),
 );
 
 export const audioReplayPolicyValidator = v.union(
@@ -67,6 +71,7 @@ export const itemTypeValidator = v.union(
   v.literal("multiple-select"),
   v.literal("cloze-select"),
   v.literal("sentence-build"),
+  v.literal("constructed-response"),
 );
 
 export const attemptOwnerKindValidator = v.union(
@@ -105,6 +110,7 @@ export const responseKindValidator = v.union(
   v.literal("multi-choice"),
   v.literal("cloze"),
   v.literal("token-order"),
+  v.literal("text"),
 );
 
 export const resultStatusValidator = v.union(
@@ -142,11 +148,24 @@ export const answerKeyKindValidator = v.union(
   v.literal("multi-choice"),
   v.literal("cloze"),
   v.literal("token-order"),
+  v.literal("text-rubric"),
+);
+
+export const constructedResponseModeValidator = v.union(
+  v.literal("writing"),
+  v.literal("speaking-repeat"),
+  v.literal("speaking-interview"),
+);
+
+export const scoreConfidenceValidator = v.union(
+  v.literal("low"),
+  v.literal("moderate"),
 );
 
 export const answerScoringModeValidator = v.union(
   v.literal("exact"),
   v.literal("all-or-nothing"),
+  v.literal("rubric-v1"),
 );
 
 export const assessmentOptionValidator = v.object({
@@ -200,12 +219,22 @@ export const assessmentItemValidator = v.union(
     type: v.literal("sentence-build"),
     tokens: v.array(assessmentOptionValidator),
   }),
+  assessmentItemBaseValidator.extend({
+    type: v.literal("constructed-response"),
+    responseMode: constructedResponseModeValidator,
+    minimumWords: v.number(),
+    recommendedWords: v.number(),
+    maximumCharacters: v.number(),
+    preparationSeconds: v.optional(v.number()),
+    responseSeconds: v.optional(v.number()),
+  }),
 );
 
 const assessmentAnswerKeyBaseValidator = v.object({
   versionId: v.id("assessmentVersions"),
   itemId: v.id("assessmentItems"),
   scoringMode: answerScoringModeValidator,
+  points: v.optional(v.number()),
 });
 
 export const assessmentAnswerKeyValidator = v.union(
@@ -225,6 +254,14 @@ export const assessmentAnswerKeyValidator = v.union(
     kind: v.literal("token-order"),
     acceptedTokenOrders: v.array(v.array(v.string())),
   }),
+  assessmentAnswerKeyBaseValidator.extend({
+    kind: v.literal("text-rubric"),
+    rubricMode: constructedResponseModeValidator,
+    maxPoints: v.number(),
+    minimumWords: v.number(),
+    targetTerms: v.array(v.string()),
+    sampleResponse: v.string(),
+  }),
 );
 
 export const assessmentResponseInputValidator = v.union(
@@ -243,6 +280,10 @@ export const assessmentResponseInputValidator = v.union(
   v.object({
     kind: v.literal("token-order"),
     tokenOrder: v.array(v.string()),
+  }),
+  v.object({
+    kind: v.literal("text"),
+    text: v.string(),
   }),
 );
 
@@ -274,6 +315,10 @@ export const assessmentResponseValidator = v.union(
   assessmentResponseBaseValidator.extend({
     kind: v.literal("token-order"),
     tokenOrder: v.array(v.string()),
+  }),
+  assessmentResponseBaseValidator.extend({
+    kind: v.literal("text"),
+    text: v.string(),
   }),
 );
 
@@ -308,6 +353,18 @@ export const publicAssessmentItemValidator = v.union(
     prompt: v.string(),
     required: v.boolean(),
     tokens: v.array(assessmentOptionValidator),
+  }),
+  v.object({
+    id: v.id("assessmentItems"),
+    type: v.literal("constructed-response"),
+    prompt: v.string(),
+    required: v.boolean(),
+    responseMode: constructedResponseModeValidator,
+    minimumWords: v.number(),
+    recommendedWords: v.number(),
+    maximumCharacters: v.number(),
+    preparationSeconds: v.union(v.number(), v.null()),
+    responseSeconds: v.union(v.number(), v.null()),
   }),
 );
 
@@ -389,6 +446,19 @@ export const attemptResultValidator = v.object({
     possible: v.number(),
     omitted: v.number(),
   }),
+  weighted: v.object({
+    earned: v.number(),
+    possible: v.number(),
+  }),
+  estimate: v.union(
+    v.object({
+      model: v.literal("ec-ibt-style-v1"),
+      overallBand: v.union(v.number(), v.null()),
+      comparableTotal: v.union(v.number(), v.null()),
+      confidence: scoreConfidenceValidator,
+    }),
+    v.null(),
+  ),
   sections: v.array(
     v.object({
       order: v.number(),
@@ -399,6 +469,11 @@ export const attemptResultValidator = v.object({
       answered: v.number(),
       items: v.number(),
       elapsedSeconds: v.number(),
+      earnedPoints: v.number(),
+      possiblePoints: v.number(),
+      bandEstimate: v.union(v.number(), v.null()),
+      comparableScoreEstimate: v.union(v.number(), v.null()),
+      confidence: v.union(scoreConfidenceValidator, v.null()),
     }),
   ),
   disclaimer: v.string(),

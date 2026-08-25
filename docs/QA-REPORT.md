@@ -4,7 +4,7 @@ Verified: 26 August 2026
 Scope: integrated public site, Admin CMS, Assessment Lab, production Next.js build, Convex Cloud development deployment, Cloudflare R2 public delivery, responsive Chromium automation, accessibility, motion, focus, security, and manual screenshot inspection
 Verdict: **integrated development release candidate complete; no known P0 or P1 source defect**
 
-This verdict does not authorize a public production release. A real first-owner Auth round trip, a separate private Assessment R2 bucket, reviewed Assessment content, retention decisions, real Member consent, and verified organisation facts remain release inputs.
+This verdict does not authorize a public production release. The development owner round trip is complete. Real editor and publisher permission checks, a separate private Assessment R2 bucket, reviewed Assessment content, retention decisions, real Member consent, and verified organisation facts remain release inputs.
 
 ## 26 August integrated verification
 
@@ -12,20 +12,23 @@ This verdict does not authorize a public production release. A real first-owner 
 | --- | --- | --- |
 | Type safety | `npm run typecheck` | Passed |
 | Static analysis | `npm run lint` | Passed |
-| Unit and component behavior | `npm test` | 37 files / 140 tests passed |
-| Convex behavior | `npm run test:backend` | 3 files / 39 tests passed |
-| Complete browser matrix | `npm run test:e2e` | 162 cases: 142 passed, 20 intentional viewport-specific skips, 0 failed |
-| Production build | `npm run build` in an isolated source copy | Passed; 30 App Router entries generated. The live development `.next` directory was not touched. |
+| Complete Vitest suite | `npm test` | 41 files / 161 tests passed |
+| Unit and component behavior | `npm run test:unit` | 37 files / 116 tests passed |
+| Convex behavior | `npm run test:backend` | 4 files / 45 tests passed |
+| Complete browser matrix | `npm run test:e2e` | 168 cases: 145 passed, 23 intentional viewport-specific skips, 0 failed |
+| Authenticated LAN touch | `ADMIN_TOUCH_BASE_URL=http://192.168.1.7:3987` gated Playwright run | Pixel 7 and 320 px passed sign-in, menu, select, theme, editor controls, and touch event checks with no failed Next assets |
+| Production build | `npm run build` | Passed; 30 App Router entries generated while port 3987 remained live |
 | Convex bundle | `npx convex codegen --dry-run --typecheck=enable` | Schema, functions, generated bindings, and TypeScript validation passed |
 | Convex Cloud development sync | `npm run convex:push` | Functions ready on `perfect-greyhound-270` for team `nasution`, project `english-club` |
 | Former Admin runtime failure | Direct cloud query plus `/admin` browser smoke | `bootstrapState` is absent from the client and generated bindings; `/admin` returns 200 with no page or console error |
-| Public Assessment catalogue | Direct `assessments:listPublished` query | Function exists and returns a valid empty page because no reviewed Assessment version is published |
+| Public Assessment catalogue | Direct `assessments:listPublished` query after the development sync | One full four-skill form and four quick forms resolve from the explicit development seed |
 | Public R2 | `npm run r2:check` plus custom-domain object read | Bucket check returned `{ "ok": true }`; `r2.mukhtada.my.id` returned the reviewed WebP derivative over HTTPS |
 | Admin confirmation | Unit plus three-project Playwright | One reusable async modal covers Journal, Member, Media, Theme, and Assessment actions; pending, retry, focus trap/return, Escape, touch, Axe, and 320 px geometry passed |
+| Security scan | Claude Flow deep scan plus manual source review | 0 actionable finding. Three hardcoded-password hits are isolated test values; the fourth high hit and related script findings are inside ignored Playwright output. JSON-LD escapes `<`, U+2028, and U+2029; published theme CSS serializes normalized numeric OKLCH channels only. |
 | Dependency audit | `npm audit --omit=dev` | 0 vulnerabilities |
-| Development server | listener and HTTP probes after every final gate | Port 3987 remained live; Home and Admin returned HTTP 200 |
+| Development server | listener and HTTP probes after every final gate | Port 3987 remained live; Home returned HTTP 200 and authenticated Admin touch tests passed through its LAN address |
 
-The public Assessment catalogue intentionally remains in its reviewed-empty state. Confidential Assessment uploads intentionally remain disabled while `R2_ASSESSMENT_*` credentials are absent. No administrator identity or owner row was fabricated merely to make a screenshot look complete.
+The five Assessment entries are development fixtures built from the typed original bank. The internal seed publishes them without pretending that the production human-review gate ran. Confidential Assessment uploads remain disabled while `R2_ASSESSMENT_*` credentials are absent. The owner account is the internally provisioned operator identity, not a screenshot-only account.
 
 ## 25 August public-site baseline
 
@@ -63,7 +66,7 @@ Next development, production start, SEO fallback, R2 local CORS example, and Pla
 | `mobile-chromium` | Pixel 7 | All routes, Axe, native-dialog focus containment, Member composition, contact persistence, theme, reduced motion, and mobile evidence |
 | `narrow-chromium` | 320 x 800 | All routes, heading bounds, zero horizontal overflow, Member composition, Axe, contact persistence, theme, reduced motion, and full-page evidence |
 
-Six skips are intentional: mobile navigation runs only on the Pixel 7 project, while intermediate desktop header geometry and the Journal reading-line companion each run only on desktop. The skipped layouts still retain complete source content and normal links.
+The 23 skips are deliberate project gates. Authenticated Admin touch runs separately with private credentials. Phone-only geometry, touch, and programme-quiz cases do not run on desktop; the LAN hydration test runs on Pixel 7; intermediate header geometry and the Journal reading line run on desktop. The skipped projects still retain complete source content and normal links.
 
 ## Reproduced defects and final repairs
 
@@ -82,6 +85,9 @@ Six skips are intentional: mobile navigation runs only on the Pixel 7 project, w
 | Upload network failure could expose a URL through an unhandled exception | Security review of the operator helper | Wrapped direct PUT in a generic failure branch that never includes the signed URL | Lint, type, tests, and source inspection passed |
 | Staggered roster opacity weakened text contrast during entry | Axe caught intermediate blended colors in the former roster list | Kept the transform stagger but removed text opacity animation and reset delay for reduced motion | Axe passed on Members in all three projects |
 | A stale `next dev` process made visual tests wait on the R2 development host | Targeted screenshot run reused the previous app port | Stopped the stale process and ran final evidence against `next start` with byte-identical local derivatives | Complete browser suite and serial visual retakes passed |
+| Real phones showed the page but every button was inert | LAN HTML returned 200 while Next.js chunks returned 403, leaving `data-hydrated` unset | Added an exact-host development-origin parser for localhost, loopback, detected LAN IPv4 addresses, and validated operator entries | Pixel 7 public touch and Pixel 7 plus 320 px authenticated Admin touch passed with zero failed Next assets |
+| Journal covers looked detached from their titles on phones | The cover shared the metadata row while the title started on the next row, leaving a 50.47 px visual gap | Moved metadata to a full-width row and aligned the title with the cover in the next row | Journal browser suite passed across all three projects; measured gap is 12 px and title-cover top offset is 0 |
+| Journal editor controls failed to hydrate in the Admin workspace | Link, image, and map forms were nested inside the parent post form | Replaced nested forms with labelled groups, contained Enter and IME behavior, and added a synchronous upload lock | Rich editor unit tests and authenticated LAN touch checks passed without hydration errors or duplicate uploads |
 
 ## Manual visual audit
 
@@ -90,7 +96,7 @@ Six skips are intentional: mobile navigation runs only on the Pixel 7 project, w
 | Direction | Pass | Language remains the primary identity; the generated scene supplies atmosphere and fades into the page |
 | Hierarchy | Pass | The hero, role atlas, companion panel, member contact sheet, and join close have distinct jobs |
 | Alignment | Pass | Five role channels, copy columns, sticky companion, shared card rules, roster heading, and shell align at the inspected widths |
-| Mobile | Pass | The 320 px H1 stays at two lines, the role rows retain labels and support copy, the roster remains a readable two-column grid, and no horizontal overflow appears |
+| Mobile | Pass | The 320 px H1 stays bounded, role and roster layouts remain readable, Journal covers align with their titles, and LAN-delivered controls hydrate before touch input |
 | Theme | Pass | Light remains bright without becoming blank; dark preserves emphasis and text contrast |
 | Motion | Pass | Selection motion is deterministic and limited to transform/opacity; reduced motion removes spatial movement |
 | Iconography | Pass | Heroicons supply controls and role symbols; punctuation remains text only |
@@ -118,6 +124,11 @@ Six skips are intentional: mobile navigation runs only on the Pixel 7 project, w
 | `redesign-home-320-light.png` | Narrow homepage composition and overflow boundary |
 | `redesign-journal-preview-first.png` | First story selected at the desktop reading line |
 | `redesign-journal-preview-second.png` | Later wheel step selects the next story image |
+| `journal-pagination-mobile-chromium-light.png` | Pixel 7 Journal metadata, title, and cover alignment in the light theme |
+| `journal-pagination-narrow-chromium-dark.png` | The 320 px Journal composition and arrow contrast in the dark theme |
+| `mobile-lan-touch-pixel7.png` | Hydrated public shell reached through the development LAN origin |
+| `admin/admin-owner-touch-mobile-chromium.png` | Authenticated Admin controls operated through touchscreen input on Pixel 7 |
+| `admin/admin-owner-touch-narrow-chromium.png` | Authenticated Admin controls operated without horizontal overflow at 320 px |
 
 All evidence lives under `docs/evidence/`. Full-page files prove document hierarchy. The two viewport Journal captures are authoritative for sticky state because stitched full-page capture does not represent one sticky viewport.
 

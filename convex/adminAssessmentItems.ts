@@ -162,6 +162,12 @@ export const listPage = query({
             tokenOrder: key.acceptedTokenOrders[0],
           };
           break;
+        case "text-rubric":
+          correctAnswer = {
+            kind: "text" as const,
+            text: key.sampleResponse,
+          };
+          break;
       }
       page.push({
         item: publicItemFromDoc(item),

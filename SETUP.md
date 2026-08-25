@@ -79,8 +79,7 @@ CONVEX_SITE_URL=
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3987
 NEXT_PUBLIC_MEDIA_BASE_URL=https://r2.mukhtada.my.id
-
-ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0
+# NEXT_ALLOWED_DEV_ORIGINS=http://192.168.1.20:3987,qa-phone.local
 
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
@@ -100,6 +99,7 @@ Rules:
 
 - `CONVEX_URL` is sufficient for Next.js/Convex integration.
 - `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_MEDIA_BASE_URL` are intentionally public origins.
+- Next.js detects the machine's exact non-internal IPv4 interface hosts when the development server starts, so a phone on the same LAN can load and hydrate `/_next` assets. `NEXT_ALLOWED_DEV_ORIGINS` may add exact HTTP(S) origins or hostnames when discovery cannot see a QA interface. The parser rejects wildcards, credentials, paths, query strings, and fragments; restart the development server after changing this value.
 - Account IDs, API endpoints, bucket names, access keys, secrets, auth tokens, JWT keys, and presigned URLs are not public client variables.
 - `R2_AUTH_TOKEN` is an optional Cloudflare management token for operators. Application upload functions use S3 credentials and do not read it.
 - `R2_PUBLIC_DEV` is a development fallback only. Production public reads use the custom domain.
@@ -127,28 +127,38 @@ Convex Auth providers in this project:
 - Password: administrator identity.
 - Anonymous: owned Practice attempts, created only after Start.
 
-Password account creation normalizes/validates email and requires 12–128 characters with upper-case, lower-case, and numeric characters. Identity creation is not authorization.
+Password sign-in is browser-facing. Password account creation is internal-only, normalizes and validates email, and requires 12–128 characters with upper-case, lower-case, and numeric characters. Identity creation and CMS authorization happen in one deployment-operator command.
 
-## 6. Secure first-owner bootstrap
+## 6. Internal administrator provisioning
 
-The initial owner flow has two independent steps: create an Auth identity, then grant that exact identity an administrator record.
+The browser never exposes Password sign-up. A deployment operator creates the Auth account and its `adminUsers` authorization record together through one internal Convex action.
 
-1. Confirm the target is the intended non-production cloud deployment.
-2. Open `/admin` and create the first Password identity. Outside production, the setup control is available for this purpose. In production it appears only while the Next.js server has `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1`.
-3. The identity-only screen shows the complete `tokenIdentifier` from `adminUsers.whoAmI`. Copy that value; do not substitute an email or JWT `sub` value.
-4. Run the one-time internal mutation against the same deployment:
+1. Confirm and announce the intended Convex deployment.
+2. Run the interactive operator command from a trusted terminal:
 
 ```bash
-npx convex run adminUsers:bootstrapOwner '{"tokenIdentifier":"<complete tokenIdentifier>","displayName":"<reviewed real name>","email":"<reviewed email>"}'
+npm run admin:provision
 ```
 
-5. Refresh `/admin` and confirm the active owner workspace appears.
-6. Confirm a second bootstrap call fails because the table is no longer empty.
-7. In production, restore `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0` and restart/redeploy only through the approved release process.
+The command prompts for display name, email, role, and a hidden password. For an operator-generated password, use explicit arguments:
 
-Creating an account while bootstrap is open still grants no CMS permission. Every protected Convex function looks up an active `adminUsers` row from `identity.tokenIdentifier`. Later editors, publishers, and owners are granted by an existing owner. The last active owner cannot be demoted or disabled.
+```bash
+npm run admin:provision -- \
+  --name "Reviewed administrator" \
+  --email "admin@example.com" \
+  --role owner \
+  --generate-password
+```
 
-The client must not call `adminUsers:bootstrapState`; that deployment-era public function is not part of the current UI contract.
+`--generate-password` prints the temporary password once after a successful run. Store it in a password manager. Do not put a password in shell arguments, source, Markdown, or Git.
+
+3. Open `/admin` and sign in with that issued account.
+4. Confirm the owner workspace appears, sign out, sign in again, and verify the stable Auth-account binding survives the new session.
+5. Verify editor and publisher negative permissions and the audit event.
+
+The internal action uses the installed Password provider to hash the credential and then verifies the resulting Password account before binding it. Browser calls with `flow=signUp` are rejected. Protected functions resolve the signed identity against the stable issuer plus Convex Auth user ID, with the legacy complete-token lookup retained only for existing records. The last active owner cannot be demoted or disabled.
+
+The client must not call `adminUsers:bootstrapState`; that deployment-era public function is not part of the current UI contract. `adminUsers:bootstrapOwner` remains a legacy internal migration seam and is not the operator account-creation workflow.
 
 ## 7. Configure the public R2 bucket
 
@@ -319,7 +329,7 @@ The integrated evidence must cover:
 - 200-entry CMS ceiling and publication freshness;
 - theme save/publish/rollback and safe root serialization;
 - Anonymous identity created only after Practice Start;
-- malformed/missing/cross-owner attempt parity, answer-key privacy, final-section submit, raw-result reproduction, 20-item review, and owned deletion;
+- malformed/missing/cross-owner attempt parity, answer-key privacy, final-section submit, legacy raw-result reproduction, fixed-form estimate limits, 20-item review, and owned deletion;
 - public R2 upload/read and separate private Assessment upload/checksum/derivative flows.
 
 Do not claim a final green integrated run from an earlier pre-Admin/pre-Assessment snapshot. Current evidence and open gates are recorded in `docs/WORKLOG.md` and `docs/INTEGRATION-REVIEW.md`.
@@ -333,7 +343,6 @@ CONVEX_URL=https://your-production-deployment.convex.cloud
 CONVEX_SITE_URL=https://your-production-deployment.convex.site
 NEXT_PUBLIC_SITE_URL=https://YOUR-EXACT-PRODUCTION-ORIGIN
 NEXT_PUBLIC_MEDIA_BASE_URL=https://r2.mukhtada.my.id
-ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0
 ```
 
 Convex production deployment:
@@ -359,7 +368,7 @@ Use a production-only Auth key pair, exact HTTPS origin, least-privilege bucket 
 - [ ] Target production Convex deployment is named, approved, and has the intended functions/schema.
 - [ ] Production Auth keys are separate from development; `SITE_URL` is the exact HTTPS origin.
 - [ ] One real owner provisioning round trip, role-negative checks, and last-owner guard pass.
-- [ ] `ADMIN_BOOTSTRAP_ACCOUNT_CREATION` is back to `0` after any supervised bootstrap window.
+- [ ] Browser Password sign-up is rejected and the internal provisioning command succeeds only on the named target.
 - [ ] Public R2 bucket connection, browser CMS upload, `HeadObject`, immutable key, and custom-domain read pass.
 - [ ] Separate private Assessment bucket and least-privilege credentials are configured.
 - [ ] Private bucket exact dev/prod CORS, SHA-256 metadata, PUT, verification, preview, and derivative release path pass.

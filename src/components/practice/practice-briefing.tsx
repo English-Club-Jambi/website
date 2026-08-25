@@ -24,6 +24,8 @@ export function PracticeBriefing({
     listening: copy.skillListening,
     structure: copy.skillStructure,
     reading: copy.skillReading,
+    writing: copy.skillWriting,
+    speaking: copy.skillSpeaking,
   } as const;
   const time =
     assessment.approximateMinutes === null

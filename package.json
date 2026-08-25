@@ -19,8 +19,10 @@
     "test:e2e:update": "playwright test --update-snapshots",
     "convex:dev": "convex dev",
     "convex:push": "CONVEX_AGENT_MODE=anonymous convex dev --once",
+    "admin:provision": "node scripts/admin-provision.mjs",
     "r2:check": "convex run r2:checkConnection '{}'",
     "r2:upload-reviewed": "node scripts/r2-upload-reviewed.mjs",
+    "practice:seed": "node --experimental-strip-types --env-file=.env.local scripts/seed-ibt-practice.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

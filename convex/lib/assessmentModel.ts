@@ -153,14 +153,28 @@ export function normalizeResponseForItem(
     };
   }
 
-  if (response.kind !== "token-order" || response.tokenOrder.length > 30) {
+  if (item.type === "sentence-build") {
+    if (response.kind !== "token-order" || response.tokenOrder.length > 30) {
+      throw new ConvexError({ code: "RESPONSE_KIND_MISMATCH" as const });
+    }
+    assertUnique(response.tokenOrder, "DUPLICATE_TOKEN");
+    if (response.tokenOrder.some((key) => !item.tokens.some((token) => token.key === key))) {
+      throw new ConvexError({ code: "INVALID_TOKEN" as const });
+    }
+    return { kind: "token-order", tokenOrder: [...response.tokenOrder] };
+  }
+
+  if (response.kind !== "text") {
     throw new ConvexError({ code: "RESPONSE_KIND_MISMATCH" as const });
   }
-  assertUnique(response.tokenOrder, "DUPLICATE_TOKEN");
-  if (response.tokenOrder.some((key) => !item.tokens.some((token) => token.key === key))) {
-    throw new ConvexError({ code: "INVALID_TOKEN" as const });
+  const text = response.text.trim().replace(/\r\n/g, "\n");
+  if (
+    text.length > item.maximumCharacters ||
+    /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)
+  ) {
+    throw new ConvexError({ code: "INVALID_RESPONSE_TEXT" as const });
   }
-  return { kind: "token-order", tokenOrder: [...response.tokenOrder] };
+  return { kind: "text", text };
 }
 
 export function responseIsAnswered(response: AssessmentResponseInput) {
@@ -173,6 +187,8 @@ export function responseIsAnswered(response: AssessmentResponseInput) {
       return response.gapAnswers.length > 0;
     case "token-order":
       return response.tokenOrder.length > 0;
+    case "text":
+      return response.text.trim().length > 0;
   }
 }
 
@@ -190,6 +206,8 @@ export function publicResponseFromDoc(
       return { kind: "cloze", gapAnswers: response.gapAnswers };
     case "token-order":
       return { kind: "token-order", tokenOrder: response.tokenOrder };
+    case "text":
+      return { kind: "text", text: response.text };
   }
 }
 
@@ -210,6 +228,17 @@ export function publicItemFromDoc(item: Doc<"assessmentItems">) {
       return { ...base, type: item.type, stemParts: item.stemParts, gaps: item.gaps };
     case "sentence-build":
       return { ...base, type: item.type, tokens: item.tokens };
+    case "constructed-response":
+      return {
+        ...base,
+        type: item.type,
+        responseMode: item.responseMode,
+        minimumWords: item.minimumWords,
+        recommendedWords: item.recommendedWords,
+        maximumCharacters: item.maximumCharacters,
+        preparationSeconds: item.preparationSeconds ?? null,
+        responseSeconds: item.responseSeconds ?? null,
+      };
   }
 }
 

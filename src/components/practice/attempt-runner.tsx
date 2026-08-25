@@ -10,7 +10,9 @@ import {
   DocumentTextIcon,
   FlagIcon,
   ListBulletIcon,
+  PlayIcon,
   SpeakerWaveIcon,
+  StopIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "convex/react";
@@ -75,6 +77,49 @@ function PracticeLoading({ label }: { label: string }) {
       <p>{label}</p>
       <div className={styles.loadingRule} />
       <div className={`${styles.loadingRule} ${styles.loadingRuleShort}`} />
+    </div>
+  );
+}
+
+function GeneratedPracticeAudio({ text }: { text: string }) {
+  const { copy } = usePracticeContext();
+  const [playing, setPlaying] = useState(false);
+  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  useEffect(() => () => {
+    if (supported) window.speechSynthesis.cancel();
+  }, [supported]);
+
+  function stop() {
+    window.speechSynthesis.cancel();
+    setPlaying(false);
+  }
+
+  function play() {
+    if (!supported) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 0.92;
+    utterance.addEventListener("end", () => setPlaying(false), { once: true });
+    utterance.addEventListener("error", () => setPlaying(false), { once: true });
+    window.speechSynthesis.speak(utterance);
+    setPlaying(true);
+  }
+
+  if (!supported) return <p>{copy.audioUnavailable}</p>;
+
+  return (
+    <div className={styles.generatedAudio}>
+      <button type="button" onClick={playing ? stop : play}>
+        {playing ? (
+          <StopIcon width={19} height={19} aria-hidden />
+        ) : (
+          <PlayIcon width={19} height={19} aria-hidden />
+        )}
+        {playing ? copy.stopPracticeAudio : copy.playPracticeAudio}
+      </button>
+      <small>{copy.generatedAudioNote}</small>
     </div>
   );
 }
@@ -154,7 +199,11 @@ function Stimulus({
               {copy.audioUnavailable}
             </audio>
           ) : (
-            <p>{copy.audioUnavailable}</p>
+            stimulus.transcript === null ? (
+              <p>{copy.audioUnavailable}</p>
+            ) : (
+              <GeneratedPracticeAudio text={stimulus.transcript} />
+            )
           )}
         </div>
       ) : null}
@@ -187,8 +236,13 @@ function Stimulus({
         </div>
       ) : null}
 
-      {stimulus.transcript !== null ? (
-        <details className={styles.transcript} open>
+      {stimulus.transcript !== null &&
+      (player.section.skill !== "listening" ||
+        player.listeningMode === "transcript-supported") ? (
+        <details
+          className={styles.transcript}
+          open={player.listeningMode === "transcript-supported"}
+        >
           <summary>{copy.transcript}</summary>
           <p>{stimulus.transcript}</p>
         </details>

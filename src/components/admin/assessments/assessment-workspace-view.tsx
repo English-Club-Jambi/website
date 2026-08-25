@@ -37,7 +37,7 @@ export type AssessmentWorkspaceSection = {
   id: string;
   sectionKey: string;
   title: string;
-  skill: "listening" | "structure" | "reading";
+  skill: "listening" | "structure" | "reading" | "writing" | "speaking";
   order: number;
   itemCount: number;
   timeLimitSeconds?: number;

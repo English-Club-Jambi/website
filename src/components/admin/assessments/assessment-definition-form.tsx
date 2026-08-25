@@ -16,7 +16,10 @@ export type CreateAssessmentDefinitionInput = {
   adminTitle: string;
   slug: string;
   kind: AssessmentKind;
-  profile: "ec-itp-level-1-aligned-v1" | "club-program-v1";
+  profile:
+    | "ec-itp-level-1-aligned-v1"
+    | "ec-ibt-style-2026-v1"
+    | "club-program-v1";
   title: string;
   summary: string;
   instructions: string;
@@ -24,19 +27,20 @@ export type CreateAssessmentDefinitionInput = {
   timePolicy: "untimed" | "per-section";
   allowResume: boolean;
   reviewPolicy: "none" | "after-section" | "after-submit";
-  scorePolicy: "raw-objective";
+  scorePolicy: "raw-objective" | "practice-estimate-v1";
   defaultTimingMode: "standard" | "extended" | "untimed";
   defaultListeningMode: "audio-primary" | "transcript-supported";
   maxAttemptsPerDay: number;
 };
 
 const kindOptions = [
-  { value: "full-practice", label: "Full three-section practice" },
+  { value: "full-practice", label: "Full four-skill practice" },
   { value: "skill-quiz", label: "Short skill quiz" },
 ] as const;
 
 const profileLabels: Record<CreateAssessmentDefinitionInput["profile"], string> = {
   "ec-itp-level-1-aligned-v1": "English proficiency practice, revision 1",
+  "ec-ibt-style-2026-v1": "Four-skill iBT-style practice, 2026 blueprint",
   "club-program-v1": "Reviewed English Club programme facts",
 };
 
@@ -45,7 +49,7 @@ function profileForKind(
 ): CreateAssessmentDefinitionInput["profile"] {
   return kind === "club-program-quiz"
     ? "club-program-v1"
-    : "ec-itp-level-1-aligned-v1";
+    : "ec-ibt-style-2026-v1";
 }
 
 function normalizeSlug(value: string) {
@@ -105,7 +109,7 @@ export function AssessmentDefinitionForm({
       timePolicy,
       allowResume: true,
       reviewPolicy: "after-submit",
-      scorePolicy: "raw-objective",
+      scorePolicy: "practice-estimate-v1",
       defaultTimingMode,
       defaultListeningMode,
       maxAttemptsPerDay,

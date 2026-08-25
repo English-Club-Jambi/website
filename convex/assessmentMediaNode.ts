@@ -131,8 +131,12 @@ async function requireAssessmentMediaAdmin(
   const identity = await ctx.auth.getUserIdentity();
   if (identity === null) throw new Error("Authentication is required.");
   const admin: ActiveAdminView | null = await ctx.runQuery(
-    internal.adminUsers.getActiveByTokenIdentifier,
-    { tokenIdentifier: identity.tokenIdentifier },
+    internal.adminUsers.getActiveForIdentity,
+    {
+      tokenIdentifier: identity.tokenIdentifier,
+      subject: identity.subject,
+      issuer: identity.issuer,
+    },
   );
   if (
     admin === null ||

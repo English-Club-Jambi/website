@@ -113,7 +113,7 @@ export const listPublished = query({
         timePolicy: projected.version.timePolicy,
         approximateMinutes: projected.approximateMinutes,
         resultLabel:
-          projected.version.scorePolicy === "raw-objective"
+          projected.version.scorePolicy !== "feedback-only"
             ? ("Practice result" as const)
             : ("Feedback only" as const),
       });

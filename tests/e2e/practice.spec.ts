@@ -29,7 +29,9 @@ test.describe("public Practice routes", () => {
     await expect(
       page.getByRole("heading", { name: "English Club Assessment Lab" }),
     ).toBeVisible();
-    await expect(page.getByText(/not official scores or admission evidence/i)).toBeVisible();
+    await expect(
+      page.getByText(/not official (?:ETS )?scores or admission evidence/i).first(),
+    ).toBeVisible();
     await expect(page.locator("main")).not.toContainText(/TOEFL prediction|CEFR|certificate awarded/i);
 
     const practiceLink = page.getByRole("link", { name: "Practice", exact: true }).first();

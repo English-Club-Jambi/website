@@ -24,7 +24,7 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
   type ChangeEvent,
-  type FormEvent,
+  type KeyboardEvent,
   type ReactNode,
   useEffect,
   useId,
@@ -191,6 +191,7 @@ export function RichJournalEditor({
   const editorId = useId();
   const imageInputId = useId();
   const onChangeRef = useRef(onChange);
+  const imageUploadPendingRef = useRef(false);
   const [openPanel, setOpenPanel] = useState<PanelName>(null);
   const [linkValue, setLinkValue] = useState("");
   const [linkError, setLinkError] = useState("");
@@ -307,8 +308,7 @@ export function RichJournalEditor({
     setImageMessage("");
   };
 
-  const submitLink = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitLink = () => {
     if (editor === null) {
       return;
     }
@@ -338,8 +338,10 @@ export function RichJournalEditor({
     setImageMessage("");
   };
 
-  const submitImage = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitImage = async () => {
+    if (imageUploadPendingRef.current) {
+      return;
+    }
     if (editor === null || imageFile === null || onImageUpload === undefined) {
       setImageStatus("error");
       setImageMessage("Choose an image before uploading.");
@@ -356,6 +358,7 @@ export function RichJournalEditor({
       return;
     }
 
+    imageUploadPendingRef.current = true;
     setImageStatus("uploading");
     setImageMessage("Uploading image…");
 
@@ -396,11 +399,12 @@ export function RichJournalEditor({
       setImageMessage(
         error instanceof Error ? error.message : "The image could not be uploaded.",
       );
+    } finally {
+      imageUploadPendingRef.current = false;
     }
   };
 
-  const submitMap = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitMap = () => {
     if (editor === null) {
       return;
     }
@@ -438,6 +442,27 @@ export function RichJournalEditor({
   };
 
   const toolbarDisabled = disabled || editor === null;
+
+  function handlePanelEnter(
+    event: KeyboardEvent<HTMLDivElement>,
+    submit: () => void | Promise<void>,
+  ) {
+    if (event.key !== "Enter" || event.defaultPrevented) {
+      return;
+    }
+
+    if (event.nativeEvent.isComposing) {
+      event.preventDefault();
+      return;
+    }
+
+    if (!(event.target instanceof HTMLInputElement) || event.target.type === "file") {
+      return;
+    }
+
+    event.preventDefault();
+    void submit();
+  }
 
   return (
     <section className={styles.editorShell} aria-labelledby={`${editorId}-label`}>
@@ -558,10 +583,15 @@ export function RichJournalEditor({
       </div>
 
       {openPanel === "link" ? (
-        <form className={styles.insertPanel} onSubmit={submitLink}>
+        <div
+          className={styles.insertPanel}
+          role="group"
+          aria-labelledby={`${editorId}-link-panel-title`}
+          onKeyDown={(event) => handlePanelEnter(event, submitLink)}
+        >
           <div className={styles.insertPanelHeading}>
             <div>
-              <strong>Add a link</strong>
+              <strong id={`${editorId}-link-panel-title`}>Add a link</strong>
               <span>Select text first, then enter its destination.</span>
             </div>
             <button type="button" onClick={() => setOpenPanel(null)} aria-label="Close link panel">
@@ -584,19 +614,24 @@ export function RichJournalEditor({
             </p>
           ) : null}
           <div className={styles.panelActions}>
-            <button type="submit">Apply link</button>
+            <button type="button" onClick={submitLink}>Apply link</button>
             <button type="button" onClick={removeLink} disabled={!editorState?.link}>
               Remove current link
             </button>
           </div>
-        </form>
+        </div>
       ) : null}
 
       {openPanel === "image" ? (
-        <form className={styles.insertPanel} onSubmit={submitImage}>
+        <div
+          className={styles.insertPanel}
+          role="group"
+          aria-labelledby={`${editorId}-image-panel-title`}
+          onKeyDown={(event) => handlePanelEnter(event, submitImage)}
+        >
           <div className={styles.insertPanelHeading}>
             <div>
-              <strong>Add an image</strong>
+              <strong id={`${editorId}-image-panel-title`}>Add an image</strong>
               <span>The file is stored in the club&apos;s R2 media library.</span>
             </div>
             <button type="button" onClick={() => setOpenPanel(null)} aria-label="Close image panel">
@@ -633,7 +668,11 @@ export function RichJournalEditor({
             </label>
           </div>
           <div className={styles.panelActions}>
-            <button type="submit" disabled={imageStatus === "uploading"}>
+            <button
+              type="button"
+              disabled={imageStatus === "uploading"}
+              onClick={() => void submitImage()}
+            >
               {imageStatus === "uploading" ? "Uploading…" : "Upload and insert"}
             </button>
           </div>
@@ -643,14 +682,19 @@ export function RichJournalEditor({
           >
             {imageMessage}
           </p>
-        </form>
+        </div>
       ) : null}
 
       {openPanel === "map" ? (
-        <form className={styles.insertPanel} onSubmit={submitMap}>
+        <div
+          className={styles.insertPanel}
+          role="group"
+          aria-labelledby={`${editorId}-map-panel-title`}
+          onKeyDown={(event) => handlePanelEnter(event, submitMap)}
+        >
           <div className={styles.insertPanelHeading}>
             <div>
-              <strong>Add a map</strong>
+              <strong id={`${editorId}-map-panel-title`}>Add a map</strong>
               <span>Store a place and coordinates, never pasted embed code.</span>
             </div>
             <button type="button" onClick={() => setOpenPanel(null)} aria-label="Close map panel">
@@ -711,9 +755,9 @@ export function RichJournalEditor({
           </div>
           {mapError ? <p className={styles.formError} role="alert">{mapError}</p> : null}
           <div className={styles.panelActions}>
-            <button type="submit">Insert map</button>
+            <button type="button" onClick={submitMap}>Insert map</button>
           </div>
-        </form>
+        </div>
       ) : null}
 
       <div className={styles.editorCanvas} data-disabled={disabled ? "true" : "false"}>

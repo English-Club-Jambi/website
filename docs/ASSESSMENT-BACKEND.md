@@ -6,11 +6,12 @@ Status: implemented and tested locally on 26 August 2026. This document covers t
 
 - Public route: `/practice`.
 - Supported definitions: `full-practice` and `skill-quiz`.
-- The full form follows the original English Club ITP Level 1-aligned blueprint: Listening, Structure, and Reading.
-- Results contain raw objective counts. They are not official, certified, predicted, equivalent, or valid for admission.
+- New definitions use `ec-ibt-style-2026-v1`: an original fixed-form Reading, Listening, Writing, and Speaking practice bank with `practice-estimate-v1`.
+- Existing `ec-itp-level-1-aligned-v1` definitions remain compatible and must keep `raw-objective`; they are not silently reinterpreted by the new model.
+- Every result preserves exact correct/possible/omitted and earned/possible practice values. Only the four-skill profile may add bounded fixed-form estimates, and a quick form never receives an overall estimate.
+- The fixed-form estimates are not adaptive or psychometrically calibrated. They are not official ETS scores, exact test predictions, certificates, equivalence claims, or evidence for admission.
 - `club-program-quiz` stays local to Home and cannot enter the attempt engine.
-- Writing is outside this result model.
-- No public seed contains real or fake questions. Synthetic content exists only inside `tests/convex/assessment-backend.test.ts`.
+- The checked-in four-skill bank is original project content, but its internal seed does not authorize release. Academic, rights, accessibility, bias, media, and deployment gates still apply before publication.
 
 ## Identity and ownership
 
@@ -66,6 +67,8 @@ Attempt lifecycle:
 Section deadlines are calculated on the server. A late save finalises only the current section. It cannot complete an unstarted section. `submit` works only from the final active section.
 
 `enableTranscript` is owned and idempotent. Once enabled, the attempt stays `transcript-supported`; the transcript becomes visible and the final result uses the matching label.
+
+`getResult` always projects exact objective and practice-point values. It returns `estimate: null` for legacy `raw-objective` results. A `practice-estimate-v1` result may add section estimates and adds an overall value only when all four skills are present. The disclaimer is model-specific: legacy results keep raw-result wording, while estimate results identify the original fixed form and reject official-score, exact-prediction, certificate, and admission use.
 
 Post-submit review is section-ordered and paginated. Correct answers and explanations do not have a pre-submit query path.
 
@@ -237,6 +240,8 @@ Focused evidence in `tests/convex/assessment-backend.test.ts` covers:
 - private, wrong-purpose, wrong-MIME, wrong-version, missing, and unsafe media;
 - missing private R2 configuration without an orphan row;
 - admin role separation, four approvals, publish readiness, immutable publication, and draft cloning;
+- exact profile-to-policy binding (`ec-itp-level-1-aligned-v1` to `raw-objective`; `ec-ibt-style-2026-v1` to `practice-estimate-v1`);
+- legacy raw-result wording and fixed-form estimate wording as separate result contracts;
 - safe delete/reorder authoring contracts;
 - React-hook-shaped pagination with server hard caps;
 - 142-field Practice CMS reads and the 200-entry ceiling.

@@ -106,6 +106,8 @@ const attemptStateValidator = v.union(
         v.literal("listening"),
         v.literal("structure"),
         v.literal("reading"),
+        v.literal("writing"),
+        v.literal("speaking"),
       ),
       order: v.number(),
       totalSections: v.number(),
@@ -127,6 +129,8 @@ const attemptStateValidator = v.union(
         v.literal("listening"),
         v.literal("structure"),
         v.literal("reading"),
+        v.literal("writing"),
+        v.literal("speaking"),
       ),
       order: v.number(),
       totalSections: v.number(),
@@ -1005,6 +1009,12 @@ export const getResult = query({
         answered: sectionResult.answeredCount,
         items: sectionResult.itemCount,
         elapsedSeconds: sectionResult.elapsedSeconds,
+        earnedPoints: sectionResult.earnedPoints ?? sectionResult.correct,
+        possiblePoints: sectionResult.possiblePoints ?? sectionResult.possible,
+        bandEstimate: sectionResult.bandEstimate ?? null,
+        comparableScoreEstimate:
+          sectionResult.comparableScoreEstimate ?? null,
+        confidence: sectionResult.estimateConfidence ?? null,
       });
     }
     sections.sort((left, right) => left.order - right.order);
@@ -1017,6 +1027,11 @@ export const getResult = query({
           : attempt.timingMode === "extended"
             ? ("Extended-time practice result" as const)
             : ("Practice result" as const);
+    const disclaimer =
+      result.scoringModel === "ec-ibt-style-v1"
+        ? "This is an English Club estimate from an original fixed-form practice bank. It is not an official ETS score, an exact test prediction, a certificate, or evidence for admission."
+        : "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.";
+
     return {
       status: result.status,
       timingMode: attempt.timingMode,
@@ -1027,9 +1042,21 @@ export const getResult = query({
         possible: result.possible,
         omitted: result.omitted,
       },
+      weighted: {
+        earned: result.earnedPoints ?? result.correct,
+        possible: result.possiblePoints ?? result.possible,
+      },
+      estimate:
+        result.scoringModel === "ec-ibt-style-v1"
+          ? {
+              model: result.scoringModel,
+              overallBand: result.overallBandEstimate ?? null,
+              comparableTotal: result.comparableTotalEstimate ?? null,
+              confidence: result.estimateConfidence ?? "low",
+            }
+          : null,
       sections,
-      disclaimer:
-        "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.",
+      disclaimer,
     };
   },
 });

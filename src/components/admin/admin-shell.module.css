@@ -836,33 +836,6 @@
   font-size: clamp(2.25rem, 5vw, 4.3rem);
 }
 
-.identityBox {
-  min-width: 0;
-  display: grid;
-  gap: 0.55rem;
-  border: 2px solid var(--admin-line);
-  border-radius: var(--admin-radius-small);
-  padding: 0.9rem;
-  background: var(--admin-cobalt-wash);
-}
-
-.identityBox > span {
-  color: var(--admin-muted);
-  font-size: 0.75rem;
-  font-weight: 740;
-}
-
-.identityBox code {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
-  line-height: 1.45;
-}
-
-.identityBox .secondaryButton {
-  width: fit-content;
-}
-
 .mobileMenuDialog {
   width: 100%;
   max-width: none;
@@ -1587,7 +1560,7 @@
 }
 
 .segmentedControl button {
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   border-radius: 6px;
   padding: 0.45rem 0.7rem;
@@ -1696,7 +1669,7 @@
 .channelGrid input {
   width: 100%;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--admin-soft-line);
   border-radius: 7px;
   padding: 0.45rem 0.5rem;

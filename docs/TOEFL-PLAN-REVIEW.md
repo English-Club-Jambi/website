@@ -1,5 +1,7 @@
 # Assessment Lab Plan Review
 
+> Historical review (25 August 2026): the corrected three-section MVP remains the legacy `raw-objective` contract. A later user-directed roadmap change introduced a separate four-skill profile and bounded fixed-form estimate model; see [`PRACTICE-IBT-IMPLEMENTATION.md`](PRACTICE-IBT-IMPLEMENTATION.md). The review's warnings against trademark-led naming, copied material, official-score claims, and uncalibrated prediction claims remain release gates.
+
 - Review date: 25 August 2026
 - Scope: product research, detailed delivery plan, technical architecture, root planning documents, current Next.js route tree, Convex schema/auth/validators, and R2 boundary
 - Verdict: ready for an internal synthetic vertical slice after the corrections in this review; not ready for public assessment content or trademark-led navigation

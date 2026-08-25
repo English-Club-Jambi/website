@@ -2,7 +2,7 @@
 
 ## What shipped
 
-The admin assessment lane is a Convex-backed authoring and release workspace. It does not contain sample assessment rows, calculate an unofficial score, or write to a published version.
+The admin assessment lane is a Convex-backed authoring and release workspace. New private definitions use the four-skill `ec-ibt-style-2026-v1` profile and its bounded `practice-estimate-v1` policy. The workspace never writes to a published version, and creating a draft does not bypass the content or review gates.
 
 Routes:
 
@@ -27,6 +27,7 @@ The UI hides unavailable actions, but Convex remains the authority for every rea
 ## Safe authoring lifecycle
 
 1. Create an empty private definition or choose an existing draft.
+   Convex binds `ec-ibt-style-2026-v1` to `practice-estimate-v1` and the legacy ITP profile to `raw-objective`; mismatched client input is rejected.
 2. Save learner-facing metadata, sections, stimuli, and single-choice questions. Every change includes `expectedContentRevision`.
 3. Reorder or remove content through bounded Convex mutations. Section removal remains disabled while its item count is non-zero; Convex also rejects a section containing stimuli.
 4. Run automated validation for the exact revision.

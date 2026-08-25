@@ -4,7 +4,7 @@ import {
 } from "convex/server";
 import { v } from "convex/values";
 
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   internalMutation,
   internalQuery,
@@ -12,6 +12,8 @@ import {
   query,
 } from "./_generated/server";
 import {
+  findAdminByAuthAccount,
+  findAdminForIdentity,
   findAdminByTokenIdentifier,
   requireAdmin,
   writeAuditEvent,
@@ -104,10 +106,7 @@ export const me = query({
     if (identity === null) {
       return null;
     }
-    const admin = await findAdminByTokenIdentifier(
-      ctx,
-      identity.tokenIdentifier,
-    );
+    const admin = await findAdminForIdentity(ctx, identity);
     return admin === null || admin.status !== "active"
       ? null
       : toAdminView(admin);
@@ -119,6 +118,33 @@ export const getActiveByTokenIdentifier = internalQuery({
   returns: v.union(v.null(), adminViewValidator),
   handler: async (ctx, args) => {
     const admin = await findAdminByTokenIdentifier(ctx, args.tokenIdentifier);
+    return admin === null || admin.status !== "active"
+      ? null
+      : toAdminView(admin);
+  },
+});
+
+export const getActiveForIdentity = internalQuery({
+  args: {
+    tokenIdentifier: v.string(),
+    subject: v.string(),
+    issuer: v.string(),
+  },
+  returns: v.union(v.null(), adminViewValidator),
+  handler: async (ctx, args) => {
+    const legacyAdmin = await findAdminByTokenIdentifier(
+      ctx,
+      args.tokenIdentifier,
+    );
+    if (legacyAdmin !== null) {
+      return legacyAdmin.status === "active" ? toAdminView(legacyAdmin) : null;
+    }
+
+    const rawAuthUserId = args.subject.split("|")[0];
+    const authUserId = ctx.db.normalizeId("users", rawAuthUserId);
+    if (authUserId === null) return null;
+
+    const admin = await findAdminByAuthAccount(ctx, args.issuer, authUserId);
     return admin === null || admin.status !== "active"
       ? null
       : toAdminView(admin);
@@ -155,6 +181,136 @@ export const bootstrapOwner = internalMutation({
       createdAt: now,
       updatedAt: now,
     });
+  },
+});
+
+export const bindProvisionedPasswordAccount = internalMutation({
+  args: {
+    authUserId: v.id("users"),
+    authIssuer: v.string(),
+    displayName: v.string(),
+    email: v.string(),
+    role: adminRoleValidator,
+    replaceSoleLegacyTokenIdentifier: v.optional(v.string()),
+  },
+  returns: v.id("adminUsers"),
+  handler: async (ctx, args) => {
+    const displayName = cleanLine(args.displayName);
+    const email = normalizeEmail(args.email);
+    let issuerUrl: URL;
+    try {
+      issuerUrl = new URL(args.authIssuer);
+    } catch {
+      throw new Error("Provisioned admin identity is invalid.");
+    }
+    if (
+      email === undefined ||
+      args.authIssuer.length > 512 ||
+      (issuerUrl.protocol !== "https:" && issuerUrl.hostname !== "localhost")
+    ) {
+      throw new Error("Provisioned admin identity is invalid.");
+    }
+
+    const account = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", email),
+      )
+      .unique();
+    const user = await ctx.db.get(args.authUserId);
+    if (
+      account === null ||
+      account.userId !== args.authUserId ||
+      user === null ||
+      user.email?.trim().toLowerCase() !== email
+    ) {
+      throw new Error("Provisioned Password account could not be verified.");
+    }
+
+    const stableTokenIdentifier = `${args.authIssuer}|${args.authUserId}`;
+    validateAdminProfile(stableTokenIdentifier, displayName, email);
+
+    const stableAdmin = await findAdminByAuthAccount(
+      ctx,
+      args.authIssuer,
+      args.authUserId,
+    );
+    const firstAdmins = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_created_at")
+      .take(2);
+
+    let adminId: Id<"adminUsers">;
+    let summary: string;
+    const now = Date.now();
+
+    if (stableAdmin !== null) {
+      adminId = stableAdmin._id;
+      summary = `${args.role} Password account reprovisioned internally`;
+      await ctx.db.patch(stableAdmin._id, {
+        tokenIdentifier: stableTokenIdentifier,
+        authIssuer: args.authIssuer,
+        authUserId: args.authUserId,
+        displayName,
+        email,
+        role: args.role,
+        status: "active",
+        updatedAt: now,
+      });
+    } else if (
+      args.replaceSoleLegacyTokenIdentifier !== undefined &&
+      firstAdmins.length === 1 &&
+      firstAdmins[0].tokenIdentifier ===
+        args.replaceSoleLegacyTokenIdentifier &&
+      firstAdmins[0].authUserId === undefined &&
+      firstAdmins[0].role === "owner" &&
+      firstAdmins[0].status === "active" &&
+      args.role === "owner"
+    ) {
+      adminId = firstAdmins[0]._id;
+      summary = "Placeholder owner rebound to an internal Password account";
+      await ctx.db.patch(firstAdmins[0]._id, {
+        tokenIdentifier: stableTokenIdentifier,
+        authIssuer: args.authIssuer,
+        authUserId: args.authUserId,
+        displayName,
+        email,
+        updatedAt: now,
+      });
+    } else {
+      if (firstAdmins.length === 0 && args.role !== "owner") {
+        throw new Error("The first provisioned administrator must be an owner.");
+      }
+      if (
+        args.replaceSoleLegacyTokenIdentifier !== undefined &&
+        firstAdmins.length > 0
+      ) {
+        throw new Error("The requested placeholder owner repair is not safe.");
+      }
+
+      adminId = await ctx.db.insert("adminUsers", {
+        tokenIdentifier: stableTokenIdentifier,
+        authIssuer: args.authIssuer,
+        authUserId: args.authUserId,
+        displayName,
+        email,
+        role: args.role,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      });
+      summary = `${args.role} Password account provisioned internally`;
+    }
+
+    await writeAuditEvent(ctx, {
+      area: "admins",
+      action: "grant",
+      resourceType: "admin-user",
+      resourceId: adminId,
+      summary,
+      actorId: adminId,
+    });
+    return adminId;
   },
 });
 

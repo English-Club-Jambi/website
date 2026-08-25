@@ -1,6 +1,8 @@
 import { ConvexError } from "convex/values";
 
-import type { Doc } from "../_generated/dataModel";
+import type { UserIdentity } from "convex/server";
+
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 export type AdminPermission =
@@ -101,6 +103,36 @@ export async function findAdminByTokenIdentifier(
     .unique();
 }
 
+export async function findAdminByAuthAccount(
+  ctx: QueryCtx | MutationCtx,
+  authIssuer: string,
+  authUserId: Id<"users">,
+) {
+  return await ctx.db
+    .query("adminUsers")
+    .withIndex("by_auth_issuer_and_auth_user_id", (q) =>
+      q.eq("authIssuer", authIssuer).eq("authUserId", authUserId),
+    )
+    .unique();
+}
+
+export async function findAdminForIdentity(
+  ctx: QueryCtx | MutationCtx,
+  identity: UserIdentity,
+) {
+  const legacyAdmin = await findAdminByTokenIdentifier(
+    ctx,
+    identity.tokenIdentifier,
+  );
+  if (legacyAdmin !== null) return legacyAdmin;
+
+  const rawAuthUserId = identity.subject.split("|")[0];
+  const authUserId = ctx.db.normalizeId("users", rawAuthUserId);
+  if (authUserId === null) return null;
+
+  return await findAdminByAuthAccount(ctx, identity.issuer, authUserId);
+}
+
 export function adminHasPermission(
   admin: Pick<Doc<"adminUsers">, "role" | "status">,
   permission: AdminPermission,
@@ -113,7 +145,7 @@ export async function requireAdmin(
   permission: AdminPermission,
 ) {
   const identity = await requireIdentity(ctx);
-  const admin = await findAdminByTokenIdentifier(ctx, identity.tokenIdentifier);
+  const admin = await findAdminForIdentity(ctx, identity);
 
   if (admin === null || admin.status !== "active") {
     throw new ConvexError({ code: "FORBIDDEN" as const });

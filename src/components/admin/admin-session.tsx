@@ -8,7 +8,6 @@ import {
   BookOpenIcon,
   ChartBarSquareIcon,
   ChevronRightIcon,
-  ClipboardDocumentIcon,
   DocumentTextIcon,
   HomeIcon,
   IdentificationIcon,
@@ -125,18 +124,7 @@ export function canPublish(admin: Pick<AdminUser, "role">) {
   return admin.role === "publisher" || admin.role === "owner";
 }
 
-type PasswordFlow = "signIn" | "signUp";
-
-function cleanAuthError(
-  error: unknown,
-  {
-    flow,
-    allowInitialAccountSetup,
-  }: {
-    flow: PasswordFlow;
-    allowInitialAccountSetup: boolean;
-  },
-) {
+function cleanAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
   if (/TooManyFailedAttempts|too many (?:failed )?(?:sign-in|login) attempts/i.test(message)) {
@@ -144,16 +132,11 @@ function cleanAuthError(
   }
 
   if (/InvalidAccountId|InvalidSecret|invalid credentials|invalid password/i.test(message)) {
-    if (flow === "signIn" && allowInitialAccountSetup) {
-      return "The email or password is incorrect. If this is the first account, choose “Set up the first administrator account” below.";
-    }
     return "The email or password is incorrect.";
   }
 
   if (/already exists|already.*account/i.test(message)) {
-    return allowInitialAccountSetup
-      ? "An account already exists for this email address. Return to sign in."
-      : "An account already exists for this email address.";
+    return "An account already exists for this email address.";
   }
 
   if (/enter a valid email address/i.test(message)) {
@@ -171,21 +154,12 @@ function cleanAuthError(
   return "The request could not be completed. Try again.";
 }
 
-export function AdminSignIn({
-  allowInitialAccountSetup = false,
-}: {
-  allowInitialAccountSetup?: boolean;
-}) {
+export function AdminSignIn() {
   const { signIn } = useAuthActions();
-  const [requestedFlow, setRequestedFlow] = useState<"signIn" | "signUp">(
-    "signIn",
-  );
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-  const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
-  const flow = allowInitialAccountSetup ? requestedFlow : ("signIn" as const);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -193,17 +167,12 @@ export function AdminSignIn({
     setMessage("");
 
     const form = new FormData(event.currentTarget);
-    form.set("flow", flow);
+    form.set("flow", "signIn");
 
     try {
       await signIn("password", form);
     } catch (error) {
-      setMessage(
-        cleanAuthError(error, {
-          flow,
-          allowInitialAccountSetup,
-        }),
-      );
+      setMessage(cleanAuthError(error));
     } finally {
       setPending(false);
     }
@@ -225,34 +194,12 @@ export function AdminSignIn({
 
         <div className={styles.authIntro}>
           <p className={styles.contextLabel}>Administration</p>
-          <h1 id="admin-auth-title">
-            {flow === "signUp"
-              ? "Create the initial account."
-              : "Return to the workspace."}
-          </h1>
-          <p>
-            {flow === "signUp"
-              ? "This creates a signed identity only. The deployment operator must still grant that identity owner access."
-              : "Sign in with the account issued for English Club administration."}
-          </p>
+          <h1 id="admin-auth-title">Return to the workspace.</h1>
+          <p>Sign in with an account provisioned by the deployment operator.</p>
         </div>
 
         <form className={styles.authForm} onSubmit={handleSubmit}>
-          <input type="hidden" name="flow" value={flow} />
-          {flow === "signUp" ? (
-            <label className={styles.field} htmlFor={nameId}>
-              <span>Display name</span>
-              <input
-                id={nameId}
-                name="name"
-                type="text"
-                autoComplete="name"
-                minLength={2}
-                maxLength={100}
-                required
-              />
-            </label>
-          ) : null}
+          <input type="hidden" name="flow" value="signIn" />
 
           <label className={styles.field} htmlFor={emailId}>
             <span>Email address</span>
@@ -272,16 +219,11 @@ export function AdminSignIn({
               id={passwordId}
               name="password"
               type="password"
-              autoComplete={flow === "signUp" ? "new-password" : "current-password"}
+              autoComplete="current-password"
               minLength={12}
               maxLength={128}
               required
             />
-            {flow === "signUp" ? (
-              <small className={styles.fieldHint}>
-                Use 12 or more characters with upper-case, lower-case, and numeric characters.
-              </small>
-            ) : null}
           </label>
 
           {message ? (
@@ -291,34 +233,10 @@ export function AdminSignIn({
           ) : null}
 
           <button className={styles.primaryButton} type="submit" disabled={pending}>
-            {pending
-              ? flow === "signUp"
-                ? "Creating identity…"
-                : "Checking account…"
-              : flow === "signUp"
-                ? "Create initial identity"
-                : "Sign in"}
+            {pending ? "Checking account…" : "Sign in"}
             <ChevronRightIcon aria-hidden width={18} height={18} />
           </button>
         </form>
-
-        {allowInitialAccountSetup ? (
-          <button
-            className={styles.textButton}
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              setMessage("");
-              setRequestedFlow((current) =>
-                current === "signIn" ? "signUp" : "signIn",
-              );
-            }}
-          >
-            {flow === "signUp"
-              ? "Return to sign in"
-              : "Set up the first administrator account"}
-          </button>
-        ) : null}
 
         <Link className={styles.backToSite} href="/">
           <ArrowLeftStartOnRectangleIcon aria-hidden width={18} height={18} />
@@ -351,14 +269,6 @@ function AdminLoading() {
 
 function AdminAccessPending() {
   const { signOut } = useAuthActions();
-  const identity = useQuery(api.adminUsers.whoAmI, {});
-  const [copied, setCopied] = useState(false);
-
-  async function copyIdentity() {
-    if (!identity?.tokenIdentifier) return;
-    await navigator.clipboard.writeText(identity.tokenIdentifier);
-    setCopied(true);
-  }
 
   return (
     <main className={styles.accessViewport}>
@@ -367,21 +277,9 @@ function AdminAccessPending() {
         <p className={styles.contextLabel}>Access required</p>
         <h1>This account is not on the admin list.</h1>
         <p>
-          Ask an English Club owner to grant access to this signed identity. Creating an
-          account alone never opens the CMS.
+          Ask the deployment operator to provision this account internally. Browser
+          account creation is disabled.
         </p>
-        {identity === undefined ? (
-          <div className={styles.loadingLine} aria-label="Loading account identity" />
-        ) : identity === null ? null : (
-          <div className={styles.identityBox}>
-            <span>Your token identifier</span>
-            <code>{identity.tokenIdentifier}</code>
-            <button type="button" className={styles.secondaryButton} onClick={copyIdentity}>
-              <ClipboardDocumentIcon aria-hidden width={18} height={18} />
-              {copied ? "Copied" : "Copy identity"}
-            </button>
-          </div>
-        )}
         <button className={styles.textButton} type="button" onClick={() => void signOut()}>
           Sign out
         </button>
@@ -616,20 +514,12 @@ function AuthenticatedAdmin({ children }: { children: ReactNode }) {
   );
 }
 
-export function AdminAccessGate({
-  allowInitialAccountSetup = false,
-  children,
-}: {
-  allowInitialAccountSetup?: boolean;
-  children: ReactNode;
-}) {
+export function AdminAccessGate({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
 
   if (isLoading) return <AdminLoading />;
   if (!isAuthenticated) {
-    return (
-      <AdminSignIn allowInitialAccountSetup={allowInitialAccountSetup} />
-    );
+    return <AdminSignIn />;
   }
   return <AuthenticatedAdmin>{children}</AuthenticatedAdmin>;
 }

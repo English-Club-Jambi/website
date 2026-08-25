@@ -8,7 +8,7 @@ Register: brand
 
 English Club needs a public home that makes an informal community legible without sanding away its personality, plus maintainable tools for the people who run it. The product combines a concise organisation profile, a landing path for prospective members and collaborators, a consent-gated Member directory, a journal, an original English Club Assessment Lab, and a protected administration workspace backed by Convex. Cloudflare R2 Standard stores reviewed media bytes.
 
-The public experience demonstrates its subject through interactive language. Real activity remains visible as selective documentary proof. Practice results report only reproducible raw counts from original reviewed questions. Credibility comes from clear behavior and sourced content, not invented scale, institutional claims, official-score language, awards, partner marks, or testimonials.
+The public experience demonstrates its subject through interactive language. Real activity remains visible as selective documentary proof. Practice results report reproducible outcomes from original reviewed questions; the four-skill fixed form may add explicitly limited English Club estimates. Credibility comes from clear behavior and sourced content, not institutional claims, official-score language, unqualified prediction claims, awards, partner marks, or testimonials.
 
 ## Problem
 
@@ -23,9 +23,9 @@ The public organisation profile is working, but the complete product must also r
 - Keep the default experience clean and bright while providing one persistent site-wide dark theme.
 - Keep posts and future events maintainable through a typed Convex backend.
 - Let authorized staff manage public copy, journal revisions, Member records, media, themes, and Assessments through one protected CMS.
-- Offer full-form and short Listening, Structure & Written Expression, and Reading practice under the English Club Assessment Lab name.
+- Offer one original fixed-form Reading, Listening, Writing, and Speaking practice plus short skill forms under the English Club Assessment Lab name.
 - Preserve participant ownership through Anonymous Convex Auth only after Start and keep answer keys private until submission.
-- Report correct, possible, and omitted counts with mode/time context; make the non-official claim explicit.
+- Report correct, possible, omitted, and English Club practice-point values with mode/time context; keep any external-scale estimate visibly fixed-form and non-official.
 - Explain all five user-supplied role codes and publish only verified member profiles with explicit consent.
 - Keep media bytes in R2 while Convex remains the database authority for product records.
 - Preserve privacy and uncertainty in both visible copy and machine-readable metadata.
@@ -40,8 +40,8 @@ The public organisation profile is working, but the complete product must also r
 - Comments, newsletter automation, event ticketing, payment, chat, or social feed embedding.
 - Publishing the donation photo or video that contains children.
 - A complete Indonesian translation. The architecture must leave room for one later.
-- Speech recognition, microphone or camera capture, official/predicted/calibrated scores, CEFR placement, certificates, admission advice, streaks, or personalised learning claims.
-- Productive Writing, Speaking, adaptive routing, remote proctoring, browser lockdown, webcam monitoring, device fingerprinting, or AI-published questions.
+- Uploaded speech recordings, automatic speech recognition, camera capture, official or calibrated scores, exact score prediction, CEFR placement, certificates, admission advice, streaks, or personalised learning claims. A Speaking rehearsal may remain local to the current browser tab and submit only a learner-entered transcript.
+- Adaptive routing, remote proctoring, browser lockdown, webcam monitoring, device fingerprinting, or AI-published questions.
 - Public Assessment questions before original-content, academic, rights, accessibility, and bias review gates pass.
 - WebGL, a canvas-only hero, scroll hijacking, a custom cursor, or decorative pointer physics.
 
@@ -101,7 +101,7 @@ Jobs:
 
 - Understand the format, timing, Listening support, privacy boundary, and result limitation before Start.
 - Complete one current section with reliable save, resume, timer, transcript, and navigation states.
-- See raw correct, possible, and omitted counts, then review answers after submission.
+- See exact correct, possible, omitted, and practice-point values, understand any bounded fixed-form estimate, then review answers after submission.
 - Delete the owned attempt when desired without assuming that the Anonymous Auth row is also deleted.
 
 ## Experience principles
@@ -126,8 +126,9 @@ Home /
 ├── Practice /practice
 │   ├── Full practice /practice/full
 │   ├── Quick Listening /practice/quick/listening
-│   ├── Quick Structure /practice/quick/structure
 │   ├── Quick Reading /practice/quick/reading
+│   ├── Quick Writing /practice/quick/writing
+│   ├── Quick Speaking /practice/quick/speaking
 │   ├── Owned attempt /practice/attempt/[attemptId]
 │   └── Owned result /practice/result/[attemptId]
 ├── Members /members
@@ -375,9 +376,9 @@ Acceptance:
 ### FR-13 Protected administration
 
 - Resolve the Convex deployment on the server from `CONVEX_URL`; a duplicate `NEXT_PUBLIC_CONVEX_URL` is not required.
-- Use Convex Auth Password for named administrators. Initial account creation is disabled in production unless the operator explicitly sets `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1` for the controlled bootstrap window.
-- Treat sign-up as identity creation only. It grants no CMS access. A one-time internal `adminUsers:bootstrapOwner` mutation binds the known Auth `tokenIdentifier` to the first owner, then rejects every later bootstrap attempt.
-- Derive the active administrator from `identity.tokenIdentifier` in every protected Convex function. Ignore role, email, or actor identifiers supplied by the client.
+- Use Convex Auth Password for named administrators. The browser exposes sign-in only; every Password account is created by the deployment operator through `internal.adminProvisioning.provisionPasswordAdmin`.
+- Create or verify the Auth account and bind its stable issuer/Auth-user identity to an `adminUsers` role in one internal workflow. Browser `flow=signUp` requests must fail and no default credential may exist in source.
+- Derive the active administrator from the signed identity in every protected Convex function, resolving the stable issuer/Auth-user binding with a legacy complete-token fallback. Ignore role, email, or actor identifiers supplied by the client.
 - Enforce `editor`, `publisher`, and `owner` permissions server-side. An editor manages content; a publisher can publish general content and review/publish Assessments but cannot author Assessment questions; an owner also manages administrators.
 - Protect Overview, Pages, Journal, Assessments, Members, Media, Appearance, and Activity routes. None is indexed or linked from the public shell.
 - Record bounded audit events for content, journal, Member, media, Assessment, theme, and administrator changes.
@@ -409,13 +410,14 @@ Acceptance:
 
 ### FR-15 Assessment Lab
 
-- Publish `/practice`, `/practice/full`, three quick-skill briefing routes, an owned player route, and an owned result route under the English Club Assessment Lab name.
-- Full practice follows the original ITP Level 1-aligned structure: Listening 50 items/35 minutes, Structure & Written Expression 40 items/25 minutes, and Reading 50 items/55 minutes. It does not claim ETS affiliation or equivalence.
+- Publish `/practice`, `/practice/full`, four quick-skill briefing routes, an owned player route, and an owned result route under the English Club Assessment Lab name.
+- Full practice is an original fixed four-skill form: Reading 50 items/30 minutes, Listening 47 items/29 minutes, Writing 12 tasks/23 minutes, and Speaking 11 tasks/8 minutes. Its task rhythm follows the documented public 2026 blueprint, but it is not adaptive and does not claim ETS affiliation or equivalence.
 - Keep the programme quiz on Home to four locally authored questions grounded in published Activities copy. It stores no identity, answer, or score.
 - Create Anonymous Convex Auth only after the visitor presses Start on persisted practice. Bind every attempt to `identity.tokenIdentifier`; normalize the string route ID before typed ID lookup and return one indistinguishable unavailable result for malformed, missing, or cross-owner IDs.
 - Support idempotent start and submit request IDs, per-section timers, explicit transcript enablement, response save, navigation, resume, final-section-only submission, owned attempt listing, result review, and bounded graph deletion.
-- Keep answer keys outside every pre-submit response. After submission, expose raw correct, possible, and omitted counts plus section/time/mode context and a 20-item paginated answer review.
-- Never convert raw counts to percentages-as-levels, predicted or official scores, CEFR bands, certificates, placement, admission guidance, or personalised learning claims.
+- Keep answer keys outside every pre-submit response. After submission, expose exact correct, possible, omitted, and practice-point values plus section/time/mode context and a 20-item paginated answer review.
+- `ec-itp-level-1-aligned-v1` remains a legacy `raw-objective` contract. New four-skill definitions bind `ec-ibt-style-2026-v1` to `practice-estimate-v1`; mismatched profile/policy input fails server-side.
+- Fixed-form section estimates are transparent derivatives of this bank's practice points. An overall estimate appears only when all four skills are present. Never label any value as an official score, predicted TOEFL score, calibrated equivalent, CEFR band, certificate, placement, admission guidance, or personalised learning claim.
 - Keep definitions, immutable versions, checks, approvals, sections, stimuli, items, answer keys, attempts, responses, and result revisions as separate Convex records.
 - Require original-content, academic, rights, accessibility, and bias gates before publication. If no reviewed version is public, show an honest unavailable state; never fall back to local questions.
 
@@ -435,14 +437,14 @@ Acceptance:
 - The archive shows an English Club gathering in a library-like room.
 - A photographed discussion is titled "Leeds the Way: Bridging England and Indonesia."
 - A poster visible in the room reads "EC Incoming Day: Journey of the Golden Island."
-- The public Practice interface is an English Club Assessment Lab and reports original-question raw results only.
+- The public Practice interface is an English Club Assessment Lab. It reports exact outcomes for original questions and clearly bounded fixed-form estimates only for the four-skill profile.
 
 ### Held content
 
 - Donation handover imagery and video until guardian and organiser consent exists.
 - Member names, person-to-role assignments, quotes, counts, founding date, campus, city, address, schedule, fee, and social links until supplied and approved. The five-role taxonomy itself is confirmed by the user brief.
 - University or sponsor relationship claims.
-- Any Assessment question, source, media, answer key, or scoring interpretation that has not passed the complete publication gate.
+- Any Assessment question, source, media, answer key, estimate wording, or scoring interpretation that has not passed the complete publication gate.
 
 ### Seed journal policy
 

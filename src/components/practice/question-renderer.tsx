@@ -3,10 +3,14 @@
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  MicrophoneIcon,
   PlusIcon,
+  StopIcon,
+  TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
 import type { PublicContentFor } from "@content/public-content";
@@ -32,6 +36,8 @@ export function emptyResponseForItem(
       return { kind: "cloze", gapAnswers: [] };
     case "sentence-build":
       return { kind: "token-order", tokenOrder: [] };
+    case "constructed-response":
+      return { kind: "text", text: "" };
   }
 }
 
@@ -45,7 +51,118 @@ export function responseIsAnswered(response: PublicAssessmentResponse) {
       return response.gapAnswers.length > 0;
     case "token-order":
       return response.tokenOrder.length > 0;
+    case "text":
+      return response.text.trim().length > 0;
   }
+}
+
+function responseWordCount(value: string) {
+  return value.trim().match(/[A-Za-z]+(?:['’][A-Za-z]+)?/g)?.length ?? 0;
+}
+
+function LocalSpeakingRehearsal({
+  disabled,
+  copy,
+}: {
+  disabled?: boolean;
+  copy: PublicContentFor<"practice">;
+}) {
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [message, setMessage] = useState(copy.recordingLocal);
+
+  function releaseStream() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  function replaceAudioUrl(next: string | null) {
+    if (audioUrlRef.current !== null) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = next;
+    setAudioUrl(next);
+  }
+
+  useEffect(() => () => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    releaseStream();
+    if (audioUrlRef.current !== null) URL.revokeObjectURL(audioUrlRef.current);
+  }, []);
+
+  async function start() {
+    if (
+      disabled ||
+      typeof MediaRecorder === "undefined" ||
+      navigator.mediaDevices?.getUserMedia === undefined
+    ) {
+      setMessage(copy.recordingUnavailable);
+      return;
+    }
+    try {
+      replaceAudioUrl(null);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const chunks: BlobPart[] = [];
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+      recorder.addEventListener("dataavailable", (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      });
+      recorder.addEventListener("stop", () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        replaceAudioUrl(URL.createObjectURL(blob));
+        releaseStream();
+        setRecording(false);
+        setMessage(copy.recordingReady);
+      }, { once: true });
+      recorder.start();
+      setRecording(true);
+      setMessage(copy.recordingLocal);
+    } catch {
+      releaseStream();
+      setRecording(false);
+      setMessage(copy.recordingUnavailable);
+    }
+  }
+
+  function stop() {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  }
+
+  return (
+    <div className={styles.localRehearsal}>
+      <div className={styles.rehearsalActions}>
+        {recording ? (
+          <button type="button" disabled={disabled} onClick={stop}>
+            <StopIcon width={19} height={19} aria-hidden />
+            {copy.stopRecording}
+          </button>
+        ) : (
+          <button type="button" disabled={disabled} onClick={() => void start()}>
+            <MicrophoneIcon width={19} height={19} aria-hidden />
+            {copy.startRecording}
+          </button>
+        )}
+        {audioUrl !== null ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              replaceAudioUrl(null);
+              setMessage(copy.recordingLocal);
+            }}
+          >
+            <TrashIcon width={19} height={19} aria-hidden />
+            {copy.removeRecording}
+          </button>
+        ) : null}
+      </div>
+      {audioUrl !== null ? <audio controls preload="metadata" src={audioUrl} /> : null}
+      <p aria-live="polite">{message}</p>
+    </div>
+  );
 }
 
 export function QuestionRenderer({
@@ -240,6 +357,38 @@ export function QuestionRenderer({
               ))}
             </div>
           ) : null}
+        </div>
+      );
+    }
+
+    case "constructed-response": {
+      const text = response.kind === "text" ? response.text : "";
+      const words = responseWordCount(text);
+      const hintId = `${item.id}-response-hint`;
+      return (
+        <div className={styles.constructedResponse}>
+          {item.responseMode.startsWith("speaking-") ? (
+            <LocalSpeakingRehearsal disabled={disabled} copy={copy} />
+          ) : null}
+          <label htmlFor={`${item.id}-response`}>{copy.responseLabel}</label>
+          <p id={hintId}>
+            {item.responseMode === "writing"
+              ? copy.writingResponseHint
+              : copy.speakingResponseHint}
+          </p>
+          <textarea
+            id={`${item.id}-response`}
+            value={text}
+            disabled={disabled}
+            maxLength={item.maximumCharacters}
+            rows={item.responseMode === "writing" ? 12 : 7}
+            aria-describedby={hintId}
+            onChange={(event) => onChange({ kind: "text", text: event.target.value })}
+          />
+          <div className={styles.responseCount} aria-live="polite">
+            <span>{words} {copy.wordCount}</span>
+            <span>{item.recommendedWords} {copy.wordCount} {copy.recommendedWords}</span>
+          </div>
         </div>
       );
     }

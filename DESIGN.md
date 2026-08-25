@@ -117,7 +117,7 @@ The primary visual material is language. Documentary photographs confirm that th
 - Short, user-controlled motion that explains a choice.
 - One generated atmospheric hero layer, followed by sparse documentary proof.
 - One global dark theme with the same hierarchy and content.
-- One calm Assessment Lab register that makes timing, saving, transcript use, section progress, and raw results easy to understand.
+- One calm Assessment Lab register that makes timing, saving, transcript use, section progress, exact practice points, and estimate limits easy to understand.
 - One separate rounded-neobrutalist admin register whose boundaries communicate work state rather than decoration.
 
 ## Colours
@@ -187,7 +187,7 @@ Preferred silhouettes:
 - **Documentary Handoff**: one quiet image crossing a text edge, never a full gallery.
 - **Journal Relay**: linked titles as the main field with one companion preview on wide screens.
 - **Member Relay**: five equal responsibility channels beside one changing role companion, followed by a consent-gated editorial roster.
-- **Answer Line**: a ruled assessment composition with a briefing, one current prompt, explicit response state, bounded section navigator, and raw-result review.
+- **Answer Line**: a ruled assessment composition with a briefing, one current prompt, explicit response state, bounded section navigator, and result review.
 - **Publication Rail**: a compact admin state strip connecting draft revision, checks, human approvals, published version, and rollback.
 - **Intent Close**: three ordinary query-string links arranged as a conversational choice.
 
@@ -235,11 +235,11 @@ The Home quiz is an untimed four-question orientation interaction assembled from
 
 ### Assessment Lab
 
-The Assessment Lab uses the **Answer Line** direction: large but bounded headings, thin ruled answer rows, compact evidence notes, and Signal Orange only for the next explicit action. Briefings disclose timing mode, Listening mode, privacy boundary, and raw-result limitation before Start.
+The Assessment Lab uses the **Answer Line** direction: large but bounded headings, thin ruled answer rows, compact evidence notes, and Signal Orange only for the next explicit action. Briefings disclose timing mode, Listening mode, privacy, fixed-form behavior, and result limits before Start.
 
 The runner presents one current question and at most one related stimulus. Answer selection keeps focus in place; explicit navigation moves focus to the next prompt heading. The current-section navigator is a contained dialog rather than a wall of every question in a full form. Audio never autoplays. Transcript support is available through an explicit action and permanently labels that attempt and result.
 
-Results show correct, possible, and omitted counts, time used, mode, section order, and paginated review. They do not show a score ring, percentage-as-level, official scale, CEFR band, certificate, prediction, or admission recommendation. Review keys and explanations have no pre-submit path.
+Results show exact bank outcomes, time used, mode, section order, and paginated review. Four-skill forms may add a clearly separated band and comparable-total estimate; quick forms may add only a section estimate. The interface does not use a score ring, percentage-as-level, official scale, CEFR band, certificate, exact prediction, equivalence, or admission recommendation. Review keys and explanations have no pre-submit path.
 
 ### Administration workspace
 
@@ -338,7 +338,7 @@ Do not use inflated claims, manufactured warmth, fake quotes, generic empowermen
 - [x] Member role selection, showcase/unavailable roster states, portrait consent, true grid layout, and server-HTML parity are verified.
 - [x] The expanded header is inspected at 880, 900, 1024, and 1440 px.
 - [x] Member desktop light, desktop dark, phone, 320 px, selected-role, and roster-detail screenshots are inspected.
-- [x] Practice overview, briefing, question controls, dialogs, raw result, and 320 px behavior have focused automated coverage.
+- [x] Practice overview, briefing, question controls, dialogs, result limits, and 320 px behavior have focused automated coverage.
 - [x] Admin and Assessment workspaces use the rounded operational neobrutalist system, reusable controls, Heroicons, and reduced-motion rules.
 - [x] Public theme publication accepts only structured numeric tokens and preserves the visitor's independent light/dark choice.
 - [ ] Confidential Assessment upload remains disabled until the separate private R2 bucket and credentials are configured and smoke-tested.

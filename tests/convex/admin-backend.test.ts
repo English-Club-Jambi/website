@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../convex/_generated/api";
 import { validateEditorDocument } from "../../convex/lib/editorDocument";
@@ -17,6 +17,11 @@ const ownerToken = "https://perfect-greyhound-270.convex.site|owner-user";
 const publisherToken =
   "https://perfect-greyhound-270.convex.site|publisher-user";
 const editorToken = "https://perfect-greyhound-270.convex.site|editor-user";
+const testIssuer = "https://perfect-greyhound-270.convex.site";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 async function bootstrap() {
   const t = convexTest(schema, modules);
@@ -74,6 +79,105 @@ describe("admin authentication and authorization", () => {
         paginationOpts: { cursor: null, numItems: 20 },
       }),
     ).rejects.toThrow();
+  });
+
+  it("rejects public Password sign-up and provisions an owner only through the internal action", async () => {
+    vi.stubEnv("CONVEX_SITE_URL", testIssuer);
+    const t = convexTest(schema, modules);
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          name: "Browser Owner",
+          email: "browser-owner@example.com",
+          password: "StrongBrowserPassword12",
+        },
+      }),
+    ).rejects.toThrow("provisioned internally");
+
+    const publicAccountCount = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "browser-owner@example.com"),
+        )
+        .take(1),
+    );
+    expect(publicAccountCount).toHaveLength(0);
+
+    const provisioned = await t.action(
+      internal.adminProvisioning.provisionPasswordAdmin,
+      {
+        displayName: "Internal Owner",
+        email: "internal-owner@example.com",
+        password: "StrongInternalPassword12",
+        role: "owner",
+      },
+    );
+    expect(provisioned.role).toBe("owner");
+
+    const issuer = testIssuer;
+    const firstSession = t.withIdentity({
+      issuer,
+      subject: `${provisioned.authUserId}|session-one`,
+      tokenIdentifier: `${issuer}|${provisioned.authUserId}|session-one`,
+    });
+    const secondSession = t.withIdentity({
+      issuer,
+      subject: `${provisioned.authUserId}|session-two`,
+      tokenIdentifier: `${issuer}|${provisioned.authUserId}|session-two`,
+    });
+
+    await expect(firstSession.query(api.adminUsers.me, {})).resolves.toMatchObject({
+      displayName: "Internal Owner",
+      email: "internal-owner@example.com",
+      role: "owner",
+      status: "active",
+    });
+    await expect(secondSession.query(api.adminUsers.me, {})).resolves.toMatchObject({
+      displayName: "Internal Owner",
+      role: "owner",
+    });
+  });
+
+  it("repairs only the sole exact placeholder owner during internal provisioning", async () => {
+    vi.stubEnv("CONVEX_SITE_URL", testIssuer);
+    const t = convexTest(schema, modules);
+    const placeholderId = await t.mutation(
+      internal.adminUsers.bootstrapOwner,
+      {
+        tokenIdentifier: "TOKEN_DARI_UI",
+        displayName: "Placeholder Owner",
+      },
+    );
+
+    const provisioned = await t.action(
+      internal.adminProvisioning.provisionPasswordAdmin,
+      {
+        displayName: "Recovered Owner",
+        email: "recovered-owner@example.com",
+        password: "StrongRecoveryPassword12",
+        role: "owner",
+        replaceSoleLegacyTokenIdentifier: "TOKEN_DARI_UI",
+      },
+    );
+    expect(provisioned.adminUserId).toBe(placeholderId);
+
+    const rows = await t.run(async (ctx) =>
+      ctx.db.query("adminUsers").withIndex("by_created_at").take(2),
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      _id: placeholderId,
+      authUserId: provisioned.authUserId,
+      displayName: "Recovered Owner",
+      email: "recovered-owner@example.com",
+      role: "owner",
+      status: "active",
+    });
   });
 
   it("keeps unauthenticated, unknown, disabled, and insufficient roles out", async () => {

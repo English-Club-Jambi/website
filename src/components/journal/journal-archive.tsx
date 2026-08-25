@@ -8,7 +8,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { PublicContentFor } from "@content/public-content";
 
-import { PageContainer } from "@/components/ui";
+import { classNames, PageContainer } from "@/components/ui";
 import { getMedia } from "@/content/media";
 import {
   formatPublishedDate,
@@ -49,13 +49,16 @@ function JournalArchiveItem({ post }: { post: PublicPostSummary }) {
         </div>
 
         {!hasCover ? (
-          <div className={styles.archiveImageFallback} aria-hidden>
+          <div
+            className={classNames(styles.archiveMedia, styles.archiveImageFallback)}
+            aria-hidden
+          >
             <BookOpenIcon width={28} height={28} strokeWidth={1.5} />
           </div>
         ) : (
           <Link
             href={href}
-            className={styles.archiveImage}
+            className={classNames(styles.archiveMedia, styles.archiveImage)}
             tabIndex={-1}
             aria-hidden
           >

@@ -61,6 +61,11 @@ function answerProjection(key: Doc<"assessmentAnswerKeys">) {
         kind: "token-order" as const,
         tokenOrder: key.acceptedTokenOrders[0],
       };
+    case "text-rubric":
+      return {
+        kind: "text" as const,
+        text: key.sampleResponse,
+      };
   }
 }
 

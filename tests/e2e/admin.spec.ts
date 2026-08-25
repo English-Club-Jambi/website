@@ -19,6 +19,14 @@ test("admin sign-in is isolated, operable, and responsive", async ({ page }, tes
   await expect(page.locator(".site-footer")).toHaveCount(0);
 
   await expect(page.getByRole("button", { name: "Create an account" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: "Set up the first administrator account",
+    }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("Display name")).toHaveCount(0);
+  await expect(page.locator('input[name="flow"]')).toHaveValue("signIn");
+  await expect(page.getByText("provisioned by the deployment operator")).toBeVisible();
 
   await page.getByLabel("Email address").fill("admin@example.org");
   await page.getByLabel("Password").fill("keyboard-touch-check");

@@ -1,5 +1,7 @@
 # TOEFL® Test Preparation Product Research
 
+> Historical research decision (25 August 2026): this ITP-oriented recommendation predates the separate four-skill implementation request. Current behavior is specified in [`PRACTICE-IBT-IMPLEMENTATION.md`](PRACTICE-IBT-IMPLEMENTATION.md); the evidence and warnings here still govern trademark use, content rights, and unsupported score claims.
+
 - Status: product direction for review
 - Research cut-off: 25 August 2026
 - Scope: new assessment area and a short English Club programme quiz on Home

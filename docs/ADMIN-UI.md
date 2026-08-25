@@ -24,7 +24,7 @@ The interface is a bright, rounded neobrutalist work surface. Two-pixel rules, c
 
 The installed Convex Auth Next.js wrapper does not mount the auth state provider required by its own hook. The admin shell uses the package's client-side `ConvexAuthProvider`, which mounts both the auth state and Convex query providers. This keeps password sign-in and reactive admin queries in one provider tree.
 
-There is no public sign-up control. The first owner is created through the internal bootstrap described in [ADMIN-BACKEND.md](./ADMIN-BACKEND.md). Later accounts still require an active `adminUsers` record. An authenticated identity without an allowlisted record sees its token identifier and a clear access-pending screen, not the CMS.
+There is no browser sign-up control. Every administrator account is created through the internal provisioning command described in [ADMIN-BACKEND.md](./ADMIN-BACKEND.md). An authenticated identity without an active `adminUsers` record sees a clear access-pending screen, not an identity-management or self-registration path.
 
 Convex checks authorization again for every query and mutation. UI controls mirror that result:
 
@@ -88,4 +88,4 @@ Screenshots:
 - [Pixel 7 sign-in](./evidence/admin/admin-sign-in-mobile-chromium.png)
 - [320 px sign-in](./evidence/admin/admin-sign-in-narrow-chromium.png)
 
-Authenticated screens require the internal owner bootstrap. No fake administrator or production record was created for screenshots.
+Authenticated screens require an internally provisioned administrator. No reusable default credential is stored in screenshots or source.

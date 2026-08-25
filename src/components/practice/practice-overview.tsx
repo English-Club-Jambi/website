@@ -3,6 +3,7 @@ import {
   BookOpenIcon,
   ClockIcon,
   DocumentCheckIcon,
+  MicrophoneIcon,
   SpeakerWaveIcon,
   PencilSquareIcon,
   ShieldCheckIcon,
@@ -26,8 +27,9 @@ import styles from "./practice.module.css";
 
 const iconBySkill = {
   listening: SpeakerWaveIcon,
-  structure: PencilSquareIcon,
   reading: BookOpenIcon,
+  writing: PencilSquareIcon,
+  speaking: MicrophoneIcon,
 } as const;
 
 function formatTime(
@@ -88,13 +90,17 @@ export function PracticeOverview({
       title: copy.quickListeningTitle,
       summary: copy.quickListeningSummary,
     },
-    structure: {
-      title: copy.quickStructureTitle,
-      summary: copy.quickStructureSummary,
-    },
     reading: {
       title: copy.quickReadingTitle,
       summary: copy.quickReadingSummary,
+    },
+    writing: {
+      title: copy.quickWritingTitle,
+      summary: copy.quickWritingSummary,
+    },
+    speaking: {
+      title: copy.quickSpeakingTitle,
+      summary: copy.quickSpeakingSummary,
     },
   } as const;
 

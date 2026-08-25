@@ -46,8 +46,8 @@ Boundary rules:
 - Published real-member data comes only from Convex. A successful empty result activates the 15-profile source-only showcase; a failed query remains unavailable and never activates it.
 - Convex providers are scoped: `/practice` gets the Auth/Convex provider needed for Anonymous-owned attempts, and `/admin` gets the Auth/Convex provider needed for reactive protected work. Static organisation routes keep server adapters and discrete client leaves.
 - Raw HTML is disabled in Markdown rendering.
-- Admin route visibility is a UX gate only. Every protected Convex query, mutation, and action derives `identity.tokenIdentifier`, looks up an active `adminUsers` row, and checks a server-owned permission.
-- Assessment results are raw objective counts. Official, predicted, calibrated, CEFR, certificate, and admission claims are outside the contract.
+- Admin route visibility is a UX gate only. Every protected Convex query, mutation, and action derives the signed identity, resolves an active `adminUsers` row through its stable Auth-account binding (with a legacy token fallback), and checks a server-owned permission.
+- Assessment results report exact outcomes for the published English Club bank. The four-skill profile may add a clearly labelled fixed-form estimate; legacy profiles remain raw-only. Official, predicted, calibrated, equivalent, CEFR, certificate, and admission claims are outside the contract.
 
 ## 2. Route contract
 
@@ -64,7 +64,7 @@ Boundary rules:
 | `/practice/full` | Dynamic server briefing plus client Start | First published full-practice definition | Timing/Listening choices, acknowledgement, Start/resume | Useful unavailable state when no reviewed form is published |
 | `/practice/quick/[skill]` | Dynamic server briefing plus client Start | Published Listening, Structure, or Reading skill quiz | Skill-specific briefing and Start | Unknown skill is not found; missing content stays unavailable |
 | `/practice/attempt/[attemptId]` | Scoped authenticated client resolver/runner | Owned attempt/player DTO | Current section, stimulus, answer state, timer, navigator | Malformed, missing, and cross-owner IDs share one unavailable state; `noindex` |
-| `/practice/result/[attemptId]` | Scoped authenticated client resolver/result | Owned raw result and post-submit review pages | Counts, mode, section results, paginated review | Same non-disclosing unavailable state; `noindex` |
+| `/practice/result/[attemptId]` | Scoped authenticated client resolver/result | Owned result and post-submit review pages | Exact bank outcome, optional bounded estimate, mode, section results, paginated review | Same non-disclosing unavailable state; `noindex` |
 | `/admin` and children | Protected noindex layout with scoped Auth/Convex provider | Server-authorized admin queries and mutations | Rounded operational workspace | Sign-in, access-pending, configuration, conflict, and permission states remain explicit |
 | `/sitemap.xml` | Server metadata route | Static routes plus published slugs | XML | Static routes still emit if journal is unavailable |
 | `/robots.txt` | Static metadata route | Configuration | Text | Always available |
@@ -119,17 +119,17 @@ The URL query may preselect `join`, `partner`, or `ask`; the form still exposes 
 
 ### Practice
 
-`/practice` explains English Club Assessment Lab and offers only reviewed published definitions. The full route follows an original ITP Level 1-aligned three-section form: 50 Listening items in 35 minutes, 40 Structure & Written Expression items in 25 minutes, and 50 Reading items in 55 minutes. Quick routes use separate Listening, Structure, or Reading definitions.
+`/practice` explains English Club Assessment Lab and offers only published definitions. The current development bank has one fixed four-skill form with 50 Reading, 47 Listening, 12 Writing, and 11 Speaking tasks, plus one quick form per skill. Legacy ITP-shaped definitions remain supported but cannot use the estimate policy.
 
 Browsing never creates an identity. After the visitor acknowledges the claim boundary and presses Start, the scoped provider creates an Anonymous Convex Auth identity when needed and starts one owned attempt with an idempotency key. The runner begins each section explicitly, saves bounded response shapes with optimistic revisions, keeps the current-section navigator bounded, and never receives an answer key before submission. Transcript support may be enabled at any time and persists as a result label.
 
-The result reports raw correct, possible, and omitted counts, mode, time, ordered section rows, and cursor-paginated review. It does not convert the result to an official scale, percentage-as-level, CEFR band, certificate, prediction, or admission recommendation.
+The result reports exact bank outcomes, mode, time, ordered section rows, and cursor-paginated review. Four-skill results may include a deterministic band and comparable-total estimate; quick forms may include only their section estimate. The interface identifies these as uncalibrated English Club fixed-form values, never an official score, exact prediction, equivalence, CEFR band, certificate, or admission recommendation.
 
 ### Administration
 
 `/admin` uses its own noindex layout, rounded operational visual system, and scoped Convex Auth provider. Pages edits manifest-bound public copy. Journal stores immutable reviewed Tiptap-compatible revisions with image media IDs and bounded map coordinates. Members maintains role, joined year, publication, profile consent, portrait consent, and reviewed portrait selection. Media verifies browser-to-R2 uploads. Appearance publishes structured theme versions. Assessments manages definitions, versions, ordered sections/stimuli/items, protected keys, validation, four human reviews, publication, retirement, and next-draft cloning. Activity exposes the bounded owner audit trail.
 
-Creating a Password identity does not create an administrator. Initial account creation is available in development and only in production when `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1`; the deployment operator must still run the one-time internal owner bootstrap with the complete signed `tokenIdentifier`. Every protected function repeats permission checks inside Convex.
+The browser never creates Password identities. The deployment operator runs one internal provisioning action that creates or verifies the Password account and binds its stable issuer/Auth-user identity to a reviewed admin role. Every protected function repeats permission checks inside Convex.
 
 ## 4. Component map
 
@@ -377,10 +377,10 @@ The action never logs message bodies or email addresses. Convex remains the auth
 ### Admin identity and publication
 
 1. The `/admin` server layout resolves `CONVEX_URL` and passes it to `ConvexAuthProvider`.
-2. Password sign-in establishes an identity. Initial sign-up is available in development and only in production when `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1`.
-3. Sign-up grants no CMS access. The account sees its complete `tokenIdentifier` while access is pending.
-4. A deployment operator announces the target and invokes `adminUsers:bootstrapOwner` once. Later access changes require an active owner.
-5. Every admin function derives the signed identity, resolves `adminUsers` by `tokenIdentifier`, rejects disabled/unknown identities, and checks the exact permission before reading or writing.
+2. `/admin` exposes Password sign-in only; direct browser `signUp` requests are rejected by the provider.
+3. A deployment operator announces the target and runs `adminProvisioning:provisionPasswordAdmin` through the terminal helper.
+4. The action creates or verifies the Password account, verifies its Auth user, and binds the requested role. Later access changes require an active owner or another internal provisioning run.
+5. Every admin function derives the signed identity, resolves the stable issuer/Auth-user binding with a legacy complete-token fallback, rejects disabled/unknown identities, and checks the exact permission before reading or writing.
 6. Draft writes use optimistic revisions. Publish inserts immutable content, journal, or theme versions and updates the public pointer only after server validation.
 
 ### Assessment attempt
@@ -398,7 +398,7 @@ sequenceDiagram
   B->>C: begin section, save response, move or enable transcript
   C->>D: Validate ownership, version, section, deadline, and revisions
   B->>C: finalize current section; submit only from final section
-  C->>D: Score from private keys and insert immutable raw result
+  C->>D: Score from private keys and insert immutable result
   B->>C: Read owned result and paginated post-submit review
 ```
 
@@ -629,7 +629,7 @@ Admin and Assessment integration sequence:
 1. Add Convex Auth, server permission checks, admin/CMS/media/theme tables, and a protected reusable admin shell.
 2. Add public manifest delivery, structured journal revisions, reviewed browser uploads, theme versioning, and the 200-entry page ceiling.
 3. Add the assessment schema, Anonymous ownership, participant lifecycle, authoring/review/publish flow, and strict media projections.
-4. Add `/practice`, full/quick briefings, runner, raw result/review, Home programme quiz, and the Assessment admin workspaces.
+4. Add `/practice`, full/quick briefings, runner, result/review, Home programme quiz, and the Assessment admin workspaces.
 5. Keep confidential upload disabled until a separate private R2 bucket and exact-origin CORS are available.
 6. Push the stable integrated schema/functions to the announced cloud development deployment, then run the complete static, backend, browser, Axe, reduced-motion, responsive, and visual gate.
 

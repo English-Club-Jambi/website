@@ -22,17 +22,10 @@ export const metadata: Metadata = {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const deploymentUrl = getConvexDeploymentUrl();
-  const allowInitialAccountSetup =
-    process.env.NODE_ENV !== "production" ||
-    process.env.ADMIN_BOOTSTRAP_ACCOUNT_CREATION === "1";
 
   return (
     <AdminProvider deploymentUrl={deploymentUrl}>
-      <AdminAccessGate
-        allowInitialAccountSetup={allowInitialAccountSetup}
-      >
-        {children}
-      </AdminAccessGate>
+      <AdminAccessGate>{children}</AdminAccessGate>
     </AdminProvider>
   );
 }

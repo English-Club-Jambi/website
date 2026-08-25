@@ -453,7 +453,7 @@ export const publicContentManifest = {
     limit: text(
       "limit",
       "Practice evidence limit",
-      "Results describe your work on English Club questions. They are not official scores or admission evidence.",
+      "Results come from original English Club questions and a published practice formula. They are not official ETS scores or admission evidence.",
       220,
     ),
     openFull: text("open-full", "Open full practice action", "Open full practice", 50),
@@ -468,7 +468,7 @@ export const publicContentManifest = {
     pathsSupport: text(
       "paths-support",
       "Practice paths support",
-      "Both paths return raw question counts and reviewed answer notes. Neither path converts your work to an external score.",
+      "Both paths return practice points and reviewed answers. Four-skill forms also show a clearly labelled band and 0–120 estimate.",
       240,
     ),
     unavailable: text(
@@ -481,7 +481,7 @@ export const publicContentManifest = {
     fullSummary: text(
       "full-summary",
       "Full practice summary",
-      "Work through Listening, Structure and Written Expression, and Reading in one sustained session.",
+      "Work through Reading, Listening, Writing, and Speaking in one sustained fixed-form session.",
       220,
     ),
     viewBriefing: text("view-briefing", "Full briefing action", "View the briefing", 40),
@@ -534,6 +534,30 @@ export const publicContentManifest = {
       "Read an original passage and check details, purpose, and relationships.",
       180,
     ),
+    quickWritingTitle: text(
+      "quick-writing-title",
+      "Quick writing title",
+      "Writing",
+      50,
+    ),
+    quickWritingSummary: text(
+      "quick-writing-summary",
+      "Quick writing summary",
+      "Build precise sentences, then answer an email and a short academic discussion.",
+      180,
+    ),
+    quickSpeakingTitle: text(
+      "quick-speaking-title",
+      "Quick speaking title",
+      "Speaking",
+      50,
+    ),
+    quickSpeakingSummary: text(
+      "quick-speaking-summary",
+      "Quick speaking summary",
+      "Rehearse a spoken response locally, then submit its transcript for a limited practice estimate.",
+      220,
+    ),
     openBriefing: text("open-briefing", "Quick briefing action", "Open briefing", 40),
     underReview: text("under-review", "Review state label", "Under review", 40),
     noQuick: text(
@@ -545,13 +569,13 @@ export const publicContentManifest = {
     scopeTitle: text(
       "scope-title",
       "Practice scope title",
-      "The result stays within this form.",
+      "A score with its limits attached.",
       100,
     ),
     scopeBody: text(
       "scope-body",
       "Practice scope body",
-      "English Club reports correct, possible, and omitted answers with time used. It does not issue certificates, levels, or admission recommendations.",
+      "English Club reports exact results for this original bank. External-scale bands are fixed-form estimates, not certificates or admission recommendations.",
       280,
     ),
     labBack: text("lab-back", "Assessment Lab back link", "Assessment Lab", 40),
@@ -578,11 +602,13 @@ export const publicContentManifest = {
       70,
     ),
     skillReading: text("skill-reading", "Reading skill label", "Reading", 40),
+    skillWriting: text("skill-writing", "Writing skill label", "Writing", 40),
+    skillSpeaking: text("skill-speaking", "Speaking skill label", "Speaking", 40),
     factResult: text("fact-result", "Briefing result label", "Result", 24),
     factResultBody: text(
       "fact-result-body",
       "Briefing result description",
-      "Correct, possible, and omitted answers with time used and reviewed answer notes.",
+      "Practice points, time used, reviewed answers, and a transparent estimate where the form supports one.",
       180,
     ),
     evidenceTitle: text(
@@ -594,7 +620,7 @@ export const publicContentManifest = {
     evidenceBody: text(
       "evidence-body",
       "Evidence limit body",
-      "English Club does not convert this form to an external test scale, CEFR level, certificate, or admission recommendation.",
+      "The band and 0–120 values are English Club estimates from a fixed original bank. They do not reproduce ETS adaptive calibration or official response rating.",
       260,
     ),
     sessionBody: text(
@@ -678,7 +704,7 @@ export const publicContentManifest = {
     acknowledgement: text(
       "acknowledgement",
       "Practice acknowledgement",
-      "I understand that this produces an English Club practice result, not an official or predicted score.",
+      "I understand that this produces an English Club fixed-form estimate, not an official ETS score or exact test prediction.",
       220,
     ),
     signingIn: text("signing-in", "Session creation status", "Creating a private session.", 80),
@@ -799,6 +825,24 @@ export const publicContentManifest = {
       "The audio file is not available. Use transcript support to continue.",
       160,
     ),
+    playPracticeAudio: text(
+      "play-practice-audio",
+      "Generated practice audio button",
+      "Play practice audio",
+      40,
+    ),
+    stopPracticeAudio: text(
+      "stop-practice-audio",
+      "Stop generated audio button",
+      "Stop audio",
+      30,
+    ),
+    generatedAudioNote: text(
+      "generated-audio-note",
+      "Generated audio note",
+      "Browser speech is used only when the reviewed audio file cannot load.",
+      140,
+    ),
     finishSectionTitle: text(
       "finish-section-title",
       "Finish section dialog title",
@@ -848,6 +892,12 @@ export const publicContentManifest = {
     correctAnswer: text("correct-answer", "Correct answer label", "Correct answer", 40),
     reviewCorrect: text("review-correct", "Correct review state", "Correct", 24),
     reviewIncorrect: text("review-incorrect", "Incorrect review state", "Check again", 30),
+    reviewScored: text(
+      "review-scored",
+      "Constructed response review state",
+      "Rubric scored",
+      30,
+    ),
     reviewOmitted: text("review-omitted", "Omitted review state", "Not answered", 30),
     explanation: text("explanation", "Answer explanation label", "Why", 24),
     loadMoreReview: text(
@@ -883,6 +933,115 @@ export const publicContentManifest = {
     moveEarlier: text("move-earlier", "Move phrase earlier label", "Move earlier", 40),
     moveLater: text("move-later", "Move phrase later label", "Move later", 40),
     removePhrase: text("remove-phrase", "Remove phrase label", "Remove", 30),
+    responseLabel: text(
+      "response-label",
+      "Constructed response field label",
+      "Your response",
+      40,
+    ),
+    writingResponseHint: text(
+      "writing-response-hint",
+      "Writing response hint",
+      "Write in complete sentences and address every part of the task.",
+      140,
+    ),
+    speakingResponseHint: text(
+      "speaking-response-hint",
+      "Speaking transcript hint",
+      "Speak first, then type the words you said. The estimate reads the transcript, not the recording.",
+      180,
+    ),
+    wordCount: text("word-count", "Word count label", "words", 24),
+    recommendedWords: text(
+      "recommended-words",
+      "Recommended word count label",
+      "recommended",
+      30,
+    ),
+    startRecording: text(
+      "start-recording",
+      "Start local recording button",
+      "Start local rehearsal",
+      50,
+    ),
+    stopRecording: text(
+      "stop-recording",
+      "Stop local recording button",
+      "Stop recording",
+      40,
+    ),
+    removeRecording: text(
+      "remove-recording",
+      "Remove local recording button",
+      "Discard recording",
+      40,
+    ),
+    recordingLocal: text(
+      "recording-local",
+      "Local recording privacy note",
+      "This rehearsal stays in this browser tab and is not uploaded.",
+      140,
+    ),
+    recordingReady: text(
+      "recording-ready",
+      "Recording ready status",
+      "Rehearsal ready to play back.",
+      80,
+    ),
+    recordingUnavailable: text(
+      "recording-unavailable",
+      "Recording unavailable status",
+      "Microphone rehearsal is unavailable here. You can still type your spoken response.",
+      180,
+    ),
+    estimatedBand: text(
+      "estimated-band",
+      "Estimated band label",
+      "Estimated band",
+      40,
+    ),
+    comparableScore: text(
+      "comparable-score",
+      "Comparable score label",
+      "Comparable estimate",
+      50,
+    ),
+    practicePoints: text(
+      "practice-points",
+      "Weighted practice points label",
+      "Practice points",
+      40,
+    ),
+    estimateConfidence: text(
+      "estimate-confidence",
+      "Estimate confidence label",
+      "Estimate confidence",
+      40,
+    ),
+    confidenceLow: text(
+      "confidence-low",
+      "Low confidence label",
+      "Low",
+      20,
+    ),
+    confidenceModerate: text(
+      "confidence-moderate",
+      "Moderate confidence label",
+      "Moderate",
+      24,
+    ),
+    exampleResponse: text(
+      "example-response",
+      "Constructed response review label",
+      "Example response",
+      40,
+    ),
+    ruleBasedNote: text(
+      "rule-based-note",
+      "Constructed response scoring note",
+      "Writing and speaking transcripts use a limited rule-based rubric; pronunciation and delivery are not measured.",
+      200,
+    ),
   }),
 
   about: page("about", "About", {

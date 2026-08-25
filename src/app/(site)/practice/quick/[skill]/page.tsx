@@ -18,13 +18,17 @@ function getSkillCopy(
       title: copy.quickListeningTitle,
       summary: copy.quickListeningSummary,
     },
-    structure: {
-      title: copy.quickStructureTitle,
-      summary: copy.quickStructureSummary,
-    },
     reading: {
       title: copy.quickReadingTitle,
       summary: copy.quickReadingSummary,
+    },
+    writing: {
+      title: copy.quickWritingTitle,
+      summary: copy.quickWritingSummary,
+    },
+    speaking: {
+      title: copy.quickSpeakingTitle,
+      summary: copy.quickSpeakingSummary,
     },
   }[skill];
 }

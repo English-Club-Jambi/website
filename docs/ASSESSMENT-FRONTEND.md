@@ -4,7 +4,7 @@
 
 The public Assessment Lab shell, runner, result report, and Home programme quiz are implemented. Public assessment routes only render definitions returned by the reviewed-and-published Convex query. When none are available, the site keeps the route useful without substituting local questions.
 
-The public name is **English Club Assessment Lab** and the navigation label is **Practice**. The UI does not publish an official score, prediction, CEFR level, certificate, or admission recommendation.
+The public name is **English Club Assessment Lab** and the navigation label is **Practice**. It may display a transparent English Club fixed-form estimate for the 2026 four-skill profile. It never presents that value as an official ETS score, an exact TOEFL score prediction, a CEFR level, a certificate, or an admission recommendation.
 
 ## Route contract
 
@@ -13,10 +13,11 @@ The public name is **English Club Assessment Lab** and the navigation label is *
 | `/practice` | Server-rendered overview of currently published practice paths |
 | `/practice/full` | Full-form briefing and Start settings |
 | `/practice/quick/listening` | Listening quiz briefing |
-| `/practice/quick/structure` | Structure and Written Expression quiz briefing |
 | `/practice/quick/reading` | Reading quiz briefing |
+| `/practice/quick/writing` | Writing quiz briefing |
+| `/practice/quick/speaking` | Speaking rehearsal and transcript quiz briefing |
 | `/practice/attempt/[attemptId]` | Owned, reactive section runner |
-| `/practice/result/[attemptId]` | Owned raw result and paginated answer review |
+| `/practice/result/[attemptId]` | Owned exact result, optional fixed-form estimate, and paginated answer review |
 
 Obviously malformed route parameters are rejected before a Convex query. Every remaining string first passes through `assessmentAttempts.resolveMine`, which normalizes the ID and verifies ownership without revealing whether a missing or cross-owner attempt exists. Only the typed ID returned by that query can reach the player, result, review, or mutation APIs.
 
@@ -40,6 +41,8 @@ Obviously malformed route parameters are rejected before a Convex query. Every r
 8. Opening a Listening transcript first calls `assessmentAttempts.enableTranscript`; only the subsequent reactive player payload reveals the transcript. The updated attempt revision is retained for an immediate Next action.
 9. Section completion and final submission use their respective server mutations. The submitted result is server-computed.
 10. `assessmentReviews.listMinePage` returns at most 20 owned post-submit review items per page.
+
+Legacy `raw-objective` results retain their raw-result disclaimer and return no estimate object. The 2026 profile uses separate fixed-form estimate wording. Quick forms can show only their section estimate; an overall band or comparable total requires Reading, Listening, Writing, and Speaking in one result.
 
 The browser never receives answer keys or explanations through the pre-submit player DTO.
 
@@ -81,6 +84,7 @@ Focused automated coverage:
 - Practice overview passes serious/critical Axe checks at tested viewports.
 - Practice overview has no horizontal overflow at 1440 px, Pixel 7, or 320 px; the Home quiz remains touch-usable at 320 px.
 - The display title stays inside the content edge at the 412 px mid-phone breakpoint.
+- Legacy raw results never inherit estimate wording, and estimate wording explicitly rejects official-score and exact-prediction use.
 
 Screenshots:
 
@@ -90,4 +94,4 @@ Screenshots:
 - `docs/evidence/practice-overview-412.png`
 - `docs/evidence/programme-quiz-320.png`
 
-The captured overview currently shows the honest unavailable/review state because no reviewed public assessment form was returned during screenshot QA. Runner and result visuals are covered by component tests until reviewed content is published; no synthetic form was exposed on a public route for a screenshot.
+The first captured overview showed the honest unavailable state before the development bank was seeded. The selected development deployment now exposes one full form and four quick forms from the typed original bank. This proves route integration, not production review or psychometric validity.

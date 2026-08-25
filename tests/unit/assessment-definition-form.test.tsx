@@ -40,7 +40,7 @@ describe("AssessmentDefinitionForm", () => {
       "reading-practice-set",
     );
     expect(screen.getByLabelText("Content profile")).toHaveValue(
-      "English proficiency practice, revision 1",
+      "Four-skill iBT-style practice, 2026 blueprint",
     );
     expect(
       screen.queryByRole("option", { name: "Home programme quiz" }),
@@ -65,7 +65,7 @@ describe("AssessmentDefinitionForm", () => {
       adminTitle: "Reading Practice Set",
       slug: "reading-practice-set",
       kind: "skill-quiz",
-      profile: "ec-itp-level-1-aligned-v1",
+      profile: "ec-ibt-style-2026-v1",
       title: "Reading practice for careful readers",
       summary: "A short reading practice built from original English Club material.",
       instructions: "Read each passage carefully, then choose the strongest answer.",
@@ -73,7 +73,7 @@ describe("AssessmentDefinitionForm", () => {
       timePolicy: "untimed",
       allowResume: true,
       reviewPolicy: "after-submit",
-      scorePolicy: "raw-objective",
+      scorePolicy: "practice-estimate-v1",
       defaultTimingMode: "standard",
       defaultListeningMode: "transcript-supported",
       maxAttemptsPerDay: 3,
