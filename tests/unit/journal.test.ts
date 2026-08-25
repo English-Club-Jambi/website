@@ -13,46 +13,42 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("journal fallback adapter", () => {
-  it("returns bounded seed records newest first without a Convex URL", async () => {
+describe("journal Convex adapter", () => {
+  it("does not substitute hardcoded posts without a Convex URL", async () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const posts = await getPublishedPosts(2);
 
-    expect(posts).toHaveLength(2);
-    expect(posts[0].publishedAt).toBeGreaterThan(posts[1].publishedAt);
-    expect(posts[0].slug).toBe(
-      "leeds-the-way-bridging-england-and-indonesia",
-    );
+    expect(posts).toEqual([]);
   });
 
-  it("returns one known record and null for an unknown slug", async () => {
+  it("returns null without a Convex deployment instead of a local story", async () => {
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const known = await getPublishedPost("A-ROOM-MADE-FOR-TRYING-AGAIN");
-    const unknown = await getPublishedPost("not-in-the-journal");
-
-    expect(known?.title).toBe("A room made for trying again");
-    expect(unknown).toBeNull();
+    await expect(
+      getPublishedPost("A-ROOM-MADE-FOR-TRYING-AGAIN"),
+    ).resolves.toBeNull();
   });
 
   it("formats editorial timestamps in UTC", () => {
     expect(formatPublishedDate(Date.UTC(2026, 7, 25))).toBe("25 August 2026");
   });
 
-  it("returns summary-only local archive fallback on the first page", async () => {
+  it("returns an honest unavailable archive without a Convex URL", async () => {
     vi.stubEnv("CONVEX_URL", "");
     vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const page = await getPublishedPostsPage();
 
-    expect(page.state).toBe("fallback");
-    expect(page.posts).toHaveLength(3);
-    expect(page.continueCursor).toBeNull();
-    expect(page.posts[0]).not.toHaveProperty("body");
+    expect(page).toEqual({
+      state: "unavailable",
+      posts: [],
+      isDone: true,
+      continueCursor: null,
+    });
   });
 
   it("does not replace a cursor-page failure with first-page seeds", async () => {

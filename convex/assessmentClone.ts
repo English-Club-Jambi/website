@@ -68,6 +68,39 @@ export const cloneSections = internalMutation({
         timeLimitSeconds: section.timeLimitSeconds,
         audioReplayPolicy: section.audioReplayPolicy,
         itemCount: 0,
+        deliveryMode: section.deliveryMode,
+        bankProfile: section.bankProfile,
+        bankSelectionContract: section.bankSelectionContract,
+        bankSeedBatch: section.bankSeedBatch,
+      });
+    }
+    const sourceRules = await ctx.db
+      .query("assessmentVersionQuestionRules")
+      .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+        q.eq("versionId", source._id),
+      )
+      .take(201);
+    if (sourceRules.length > 200) {
+      throw new ConvexError({ code: "CLONE_SOURCE_INVALID" as const });
+    }
+    for (const rule of sourceRules) {
+      const existingRule = await ctx.db
+        .query("assessmentVersionQuestionRules")
+        .withIndex("by_version_id_and_bank_question_id", (q) =>
+          q
+            .eq("versionId", draft._id)
+            .eq("bankQuestionId", rule.bankQuestionId),
+        )
+        .unique();
+      if (existingRule !== null) continue;
+      const now = Date.now();
+      await ctx.db.insert("assessmentVersionQuestionRules", {
+        versionId: draft._id,
+        bankQuestionId: rule.bankQuestionId,
+        allowed: rule.allowed,
+        updatedBy: args.actorId,
+        createdAt: now,
+        updatedAt: now,
       });
     }
     await ctx.scheduler.runAfter(

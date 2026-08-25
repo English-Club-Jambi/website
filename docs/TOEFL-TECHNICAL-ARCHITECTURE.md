@@ -101,8 +101,8 @@ Unknown, forbidden, expired, or other-user attempt IDs all render the same `Atte
 | Route | Permission | Purpose |
 | --- | --- | --- |
 | `/admin/assessments` | `assessment:read` | Cursor-paginated catalog with status filters |
-| `/admin/assessments/new` | `assessment:edit` | Create a definition and first draft |
-| `/admin/assessments/[assessmentId]` | `assessment:read` | Definition, current draft, published pointer, validation rail |
+| `/admin/assessments/new` | `assessment:read` | Compatibility redirect to the fixed-format catalogue; no creation workflow |
+| `/admin/assessments/[assessmentId]` | `assessment:read` | Fixed format, current working revision, Question Bank eligibility, aggregate flags, published pointer, validation rail |
 | `/admin/assessments/[assessmentId]/sections/[sectionId]` | `assessment:edit` | Section/stimulus/item authoring |
 | `/admin/assessments/[assessmentId]/versions/[versionId]` | `assessment:read` | Read-only immutable version or mutable draft when authorized |
 | `/admin/assessments/[assessmentId]/preview` | `assessment:read` | Authenticated `no-store`, `noindex` player preview |
@@ -1171,7 +1171,7 @@ src/app/(site)/practice/attempt/[attemptId]/page.tsx
 src/app/(site)/practice/result/[attemptId]/page.tsx
 src/app/(site)/practice/history/page.tsx
 src/app/(admin)/admin/assessments/page.tsx
-src/app/(admin)/admin/assessments/new/page.tsx
+src/app/(admin)/admin/assessments/new/page.tsx # compatibility redirect only
 src/app/(admin)/admin/assessments/[assessmentId]/page.tsx
 src/app/(admin)/admin/assessments/[assessmentId]/sections/[sectionId]/page.tsx
 src/app/(admin)/admin/assessments/[assessmentId]/versions/[versionId]/page.tsx

@@ -14,6 +14,7 @@ import {
   memberDivisionValidator,
   memberPhotoValidator,
   memberPositionValidator,
+  memberPreCoordinatorRoleValidator,
   memberProfileStatusValidator,
   memberRecordOriginValidator,
   memberRoleLevelValidator,
@@ -55,7 +56,10 @@ function isValidPhoto(
   );
 }
 
-function toPublicMember(row: Doc<"members">) {
+function toPublicMember(
+  row: Doc<"members">,
+  managedDivision: Doc<"memberDivisions"> | null,
+) {
   const displayName = cleanLine(row.displayName);
   const shortBio = row.shortBio?.trim();
   const assignment = {
@@ -63,6 +67,9 @@ function toPublicMember(row: Doc<"members">) {
     ...(row.division === undefined
       ? {}
       : { division: row.division as MemberDivision }),
+    ...(managedDivision === null
+      ? {}
+      : { divisionKey: managedDivision.slug }),
     ...(row.position === undefined
       ? {}
       : { position: row.position as MemberPosition }),
@@ -78,6 +85,8 @@ function toPublicMember(row: Doc<"members">) {
     displayName !== row.displayName ||
     displayName.length < 2 ||
     displayName.length > 100 ||
+    (row.divisionId !== undefined &&
+      (managedDivision === null || managedDivision.status !== "active")) ||
     (shortBio !== undefined &&
       (shortBio.length < 12 || shortBio.length > 280)) ||
     !isValidMemberAssignment(assignment)
@@ -105,6 +114,12 @@ function toPublicMember(row: Doc<"members">) {
     displayName,
     roleLevel: row.roleLevel,
     ...(row.division === undefined ? {} : { division: row.division }),
+    ...(managedDivision === null
+      ? {}
+      : {
+          divisionKey: managedDivision.slug,
+          divisionName: managedDivision.name,
+        }),
     ...(row.position === undefined ? {} : { position: row.position }),
     ...(joinedYear === undefined ? {} : { joinedYear }),
     ...(shortBio === undefined ? {} : { shortBio }),
@@ -148,8 +163,16 @@ export const listPublished = query({
             .order("asc")
             .take(limit);
 
-    return rows.flatMap((row) => {
-      const member = toPublicMember(row);
+    const managedDivisions = await Promise.all(
+      rows.map((row) =>
+        row.divisionId === undefined
+          ? Promise.resolve(null)
+          : ctx.db.get("memberDivisions", row.divisionId),
+      ),
+    );
+
+    return rows.flatMap((row, index) => {
+      const member = toPublicMember(row, managedDivisions[index] ?? null);
       return member === null ? [] : [member];
     });
   },
@@ -161,6 +184,8 @@ export const upsertReviewed = internalMutation({
     displayName: v.string(),
     roleLevel: memberRoleLevelValidator,
     division: v.optional(memberDivisionValidator),
+    divisionId: v.optional(v.union(v.id("memberDivisions"), v.null())),
+    roleBeforeCoordinator: v.optional(memberPreCoordinatorRoleValidator),
     position: v.optional(memberPositionValidator),
     joinedYear: v.optional(v.union(v.number(), v.null())),
     shortBio: v.optional(v.string()),
@@ -177,9 +202,26 @@ export const upsertReviewed = internalMutation({
     const slug = args.slug.trim().toLowerCase();
     const displayName = cleanLine(args.displayName);
     const shortBio = args.shortBio?.trim();
+    const existing = await ctx.db
+      .query("members")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    const nextDivisionId =
+      args.divisionId === undefined
+        ? existing?.divisionId
+        : args.divisionId === null
+          ? undefined
+          : args.divisionId;
+    const managedDivision =
+      nextDivisionId === undefined
+        ? null
+        : await ctx.db.get("memberDivisions", nextDivisionId);
     const assignment = {
       roleLevel: args.roleLevel,
       ...(args.division === undefined ? {} : { division: args.division }),
+      ...(managedDivision === null
+        ? {}
+        : { divisionKey: managedDivision.slug }),
       ...(args.position === undefined ? {} : { position: args.position }),
     };
 
@@ -197,7 +239,9 @@ export const upsertReviewed = internalMutation({
       (args.joinedYear !== undefined &&
         args.joinedYear !== null &&
         !isValidMemberJoinedYear(args.joinedYear)) ||
-      !isValidMemberAssignment(assignment)
+      !isValidMemberAssignment(assignment) ||
+      (nextDivisionId !== undefined &&
+        (managedDivision === null || managedDivision.status !== "active"))
     ) {
       throw new Error("Member profile input is invalid.");
     }
@@ -209,10 +253,6 @@ export const upsertReviewed = internalMutation({
       throw new Error("Member photo input is invalid.");
     }
 
-    const existing = await ctx.db
-      .query("members")
-      .withIndex("by_slug", (q) => q.eq("slug", slug))
-      .unique();
     const now = Date.now();
     const nextJoinedYear =
       args.joinedYear === undefined
@@ -231,6 +271,14 @@ export const upsertReviewed = internalMutation({
       displayName,
       roleLevel: args.roleLevel,
       ...(args.division === undefined ? {} : { division: args.division }),
+      ...(nextDivisionId === undefined ? {} : { divisionId: nextDivisionId }),
+      ...(args.roleLevel !== 2
+        ? {}
+        : args.roleBeforeCoordinator !== undefined
+          ? { roleBeforeCoordinator: args.roleBeforeCoordinator }
+          : existing?.roleBeforeCoordinator === undefined
+            ? {}
+            : { roleBeforeCoordinator: existing.roleBeforeCoordinator }),
       ...(args.position === undefined ? {} : { position: args.position }),
       ...(nextJoinedYear === undefined ? {} : { joinedYear: nextJoinedYear }),
       ...(shortBio === undefined ? {} : { shortBio }),

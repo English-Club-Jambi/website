@@ -62,6 +62,7 @@ export const publicContentManifest = {
       "Activities",
       28,
     ),
+    navPrograms: text("nav-programs", "Programs navigation label", "Programs", 28),
     navMembers: text("nav-members", "Members navigation label", "Members", 28),
     navPractice: text("nav-practice", "Practice navigation label", "Practice", 28),
     navJournal: text("nav-journal", "Journal navigation label", "Journal", 28),
@@ -481,7 +482,7 @@ export const publicContentManifest = {
     fullSummary: text(
       "full-summary",
       "Full practice summary",
-      "Work through Reading, Listening, Writing, and Speaking in one sustained fixed-form session.",
+      "Work through Reading, Listening, Writing, and Speaking in one session. A reviewed set is drawn from the English Club question bank when you start.",
       220,
     ),
     viewBriefing: text("view-briefing", "Full briefing action", "View the briefing", 40),
@@ -575,7 +576,7 @@ export const publicContentManifest = {
     scopeBody: text(
       "scope-body",
       "Practice scope body",
-      "English Club reports exact results for this original bank. External-scale bands are fixed-form estimates, not certificates or admission recommendations.",
+      "Your raw points are exact for the questions delivered in that attempt. The band and 0–120 values are English Club practice estimates, not certificates or admission recommendations.",
       280,
     ),
     labBack: text("lab-back", "Assessment Lab back link", "Assessment Lab", 40),
@@ -620,7 +621,7 @@ export const publicContentManifest = {
     evidenceBody: text(
       "evidence-body",
       "Evidence limit body",
-      "The band and 0–120 values are English Club estimates from a fixed original bank. They do not reproduce ETS adaptive calibration or official response rating.",
+      "The question set is fixed after an attempt begins. Its band and 0–120 values follow a published English Club recipe; they do not reproduce ETS adaptive calibration or official response rating.",
       260,
     ),
     sessionBody: text(
@@ -704,7 +705,7 @@ export const publicContentManifest = {
     acknowledgement: text(
       "acknowledgement",
       "Practice acknowledgement",
-      "I understand that this produces an English Club fixed-form estimate, not an official ETS score or exact test prediction.",
+      "I understand that my raw result applies to this attempt, while its band and 0–120 values are English Club estimates, not an official ETS score or exact test prediction.",
       220,
     ),
     signingIn: text("signing-in", "Session creation status", "Creating a private session.", 80),
@@ -921,6 +922,7 @@ export const publicContentManifest = {
     chooseRangeSuffix: text("choose-range-suffix", "Multiple choice instruction suffix", "answers", 30),
     completeBlanks: text("complete-blanks", "Cloze group label", "Complete each blank", 50),
     blank: text("blank", "Cloze field label", "Blank", 24),
+    chooseWord: text("choose-word", "Cloze word placeholder", "Choose", 24),
     choosePhrase: text("choose-phrase", "Cloze blank label", "Choose a phrase", 50),
     currentOrder: text("current-order", "Sentence order label", "Current sentence order", 60),
     sentenceStart: text(
@@ -1256,6 +1258,88 @@ export const publicContentManifest = {
       180,
     ),
     cautionLink: text("caution-link", "Programme note link", "Ask about a session", 50),
+  }),
+
+  programs: page("programs", "Programs", {
+    metadataTitle: text("metadata-title", "Browser title", "Programs", 70),
+    metadataDescription: text(
+      "metadata-description",
+      "Search and share description",
+      "Explore English Club Universitas Jambi programmes, documented exchanges, learning support, competition preparation, and community-facing work.",
+      200,
+    ),
+    heroEyebrow: text("hero-eyebrow", "Hero eyebrow", "Programs / public record", 60),
+    heroTitleLineOne: text("hero-title-line-one", "Hero title line one", "English leaves", 48),
+    heroTitleLineTwo: text("hero-title-line-two", "Hero title line two", "the club room.", 48),
+    heroSupport: text(
+      "hero-support",
+      "Hero supporting text",
+      "Programs turn conversation practice into workshops, exchanges, competition support, and carefully prepared work with the wider community.",
+      220,
+    ),
+    bridgeLabel: text("bridge-label", "Activities bridge label", "Activities explain the method", 60),
+    bridgeBody: text(
+      "bridge-body",
+      "Activities bridge body",
+      "Activities shows how a session can feel. Programs records what the club has delivered, keeps running, or is preparing with a partner.",
+      220,
+    ),
+    bridgeLink: text("bridge-link", "Activities bridge link", "Explore the activity relay", 60),
+    documentedEyebrow: text("documented-eyebrow", "Documented record eyebrow", "Documented record", 50),
+    documentedTitle: text(
+      "documented-title",
+      "Documented record title",
+      "A public record should be specific enough to check.",
+      100,
+    ),
+    documentedSupport: text(
+      "documented-support",
+      "Documented record supporting text",
+      "Completed entries name the date, place, audience, and primary source available to the club. The record grows as more evidence is reviewed.",
+      240,
+    ),
+    linesEyebrow: text("lines-eyebrow", "Programme lines eyebrow", "Programme lines", 50),
+    linesTitle: text(
+      "lines-title",
+      "Programme lines title",
+      "Useful work can continue without pretending to be a fixed timetable.",
+      110,
+    ),
+    linesSupport: text(
+      "lines-support",
+      "Programme lines supporting text",
+      "These programme areas come from the club's published mission. Individual sessions enter the documented record when their scope and evidence are ready.",
+      250,
+    ),
+    plannedEyebrow: text("planned-eyebrow", "Open direction eyebrow", "Open direction", 50),
+    plannedTitle: text(
+      "planned-title",
+      "Open direction title",
+      "Community work starts by listening to the community.",
+      100,
+    ),
+    plannedBody: text(
+      "planned-body",
+      "Open direction body",
+      "English Club is preparing a community-service programme around the needs of schools, youth groups, and learning partners. A project becomes public as completed only after its partner, scope, safeguarding, date, and evidence are reviewed.",
+      360,
+    ),
+    plannedLink: text(
+      "planned-link",
+      "Community collaboration link",
+      "Propose a community collaboration",
+      70,
+    ),
+    sourcePrefix: text("source-prefix", "Source link prefix", "Open source", 40),
+    audiencePrefix: text("audience-prefix", "Audience label", "For", 24),
+    placePrefix: text("place-prefix", "Place label", "At", 24),
+    benefitPrefix: text("benefit-prefix", "Community value label", "Why it matters", 40),
+    recordNote: text(
+      "record-note",
+      "Public record note",
+      "Names, dates, partners, and results are published only when the club can verify them.",
+      180,
+    ),
   }),
 
   members: page("members", "Members", {

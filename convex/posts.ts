@@ -70,7 +70,7 @@ function toPublicPost(post: {
     ...(post.coverKey === undefined ? {} : { coverKey: post.coverKey }),
     ...(post.coverMedia === undefined ? {} : { coverMedia: post.coverMedia }),
     publishedAt: post.publishedAt,
-    updatedAt: post.updatedAt,
+    updatedAt: post.publishedAt,
     featured: post.featured,
   };
 }
@@ -253,6 +253,8 @@ export const listSitemapEntries = query({
       .order("desc")
       .take(100);
 
-    return rows.map(({ slug, updatedAt }) => ({ slug, updatedAt }));
+    return rows.flatMap(({ slug, publishedAt }) =>
+      publishedAt === undefined ? [] : [{ slug, updatedAt: publishedAt }],
+    );
   },
 });

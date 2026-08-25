@@ -1,7 +1,6 @@
 import { fetchQuery } from "convex/nextjs";
 
 import { api } from "../../convex/_generated/api";
-import { seedPosts } from "@content/seed-posts";
 import { getConvexDeploymentUrl } from "@/lib/convex";
 
 export type PublicJournalMedia = {
@@ -35,7 +34,7 @@ export type PublicPostSummary = Omit<
 
 export type JournalArchivePage =
   | {
-      state: "ready" | "fallback";
+      state: "ready";
       posts: PublicPostSummary[];
       isDone: boolean;
       continueCursor: string | null;
@@ -68,59 +67,10 @@ export function parseJournalCursor(value: string | string[] | undefined) {
   return { state: "cursor", cursor: value } as const;
 }
 
-function toPostSummary(post: PublicPost): PublicPostSummary {
-  return {
-    slug: post.slug,
-    title: post.title,
-    excerpt: post.excerpt,
-    category: post.category,
-    authorName: post.authorName,
-    ...(post.coverKey === undefined ? {} : { coverKey: post.coverKey }),
-    ...(post.coverMedia === undefined ? {} : { coverMedia: post.coverMedia }),
-    publishedAt: post.publishedAt,
-    updatedAt: post.updatedAt,
-    featured: post.featured,
-  };
-}
-
-export function getLocalPublishedPosts(limit = 12): PublicPost[] {
-  const boundedLimit = Math.min(12, Math.max(1, Math.floor(limit)));
-
-  return seedPosts
-    .filter(
-      (post): post is typeof post & { publishedAt: number } =>
-        post.status === "published" && post.publishedAt !== undefined,
-    )
-    .map((post) => ({
-      slug: post.slug,
-      title: post.title,
-      excerpt: post.excerpt,
-      body: post.body,
-      category: post.category,
-      authorName: post.authorName,
-      ...(post.coverKey === undefined ? {} : { coverKey: post.coverKey }),
-      publishedAt: post.publishedAt,
-      updatedAt: post.updatedAt,
-      featured: post.featured,
-    }))
-    .sort((a, b) => b.publishedAt - a.publishedAt)
-    .slice(0, boundedLimit);
-}
-
-export function getLocalPublishedPostSummaries(
-  limit = journalPageSize,
-): PublicPostSummary[] {
-  const boundedLimit = Math.min(
-    journalPageSize,
-    Math.max(1, Math.floor(limit)),
-  );
-  return getLocalPublishedPosts(boundedLimit).map(toPostSummary);
-}
-
-function reportFallback(operation: string, error?: unknown) {
+function reportUnavailable(operation: string, error?: unknown) {
   if (process.env.NODE_ENV !== "production") {
     console.warn(
-      `[journal] ${operation} is using the local seed fallback.`,
+      `[journal] ${operation} is unavailable; no local content was substituted.`,
       error instanceof Error ? error.message : error ?? "Convex URL is not set.",
     );
   }
@@ -130,8 +80,8 @@ export async function getPublishedPosts(limit = 6): Promise<PublicPost[]> {
   const boundedLimit = Math.min(12, Math.max(1, Math.floor(limit)));
   const convexUrl = getConvexDeploymentUrl();
   if (convexUrl === undefined) {
-    reportFallback("listPublished");
-    return getLocalPublishedPosts(boundedLimit);
+    reportUnavailable("listPublished");
+    return [];
   }
 
   try {
@@ -141,8 +91,8 @@ export async function getPublishedPosts(limit = 6): Promise<PublicPost[]> {
       { url: convexUrl },
     );
   } catch (error) {
-    reportFallback("listPublished", error);
-    return getLocalPublishedPosts(boundedLimit);
+    reportUnavailable("listPublished", error);
+    return [];
   }
 }
 
@@ -151,20 +101,13 @@ export async function getPublishedPostsPage(
 ): Promise<JournalArchivePage> {
   const convexUrl = getConvexDeploymentUrl();
   if (convexUrl === undefined) {
-    reportFallback("listPublishedPage");
-    return cursor === undefined
-      ? {
-          state: "fallback",
-          posts: getLocalPublishedPostSummaries(),
-          isDone: true,
-          continueCursor: null,
-        }
-      : {
-          state: "unavailable",
-          posts: [],
-          isDone: true,
-          continueCursor: null,
-        };
+    reportUnavailable("listPublishedPage");
+    return {
+      state: "unavailable",
+      posts: [],
+      isDone: true,
+      continueCursor: null,
+    };
   }
 
   try {
@@ -187,20 +130,13 @@ export async function getPublishedPostsPage(
       continueCursor: result.isDone ? null : result.continueCursor,
     };
   } catch (error) {
-    reportFallback("listPublishedPage", error);
-    return cursor === undefined
-      ? {
-          state: "fallback",
-          posts: getLocalPublishedPostSummaries(),
-          isDone: true,
-          continueCursor: null,
-        }
-      : {
-          state: "unavailable",
-          posts: [],
-          isDone: true,
-          continueCursor: null,
-        };
+    reportUnavailable("listPublishedPage", error);
+    return {
+      state: "unavailable",
+      posts: [],
+      isDone: true,
+      continueCursor: null,
+    };
   }
 }
 
@@ -208,10 +144,8 @@ export async function getPublishedPost(slug: string): Promise<PublicPost | null>
   const normalizedSlug = slug.trim().toLowerCase();
   const convexUrl = getConvexDeploymentUrl();
   if (convexUrl === undefined) {
-    reportFallback("getPublishedBySlug");
-    return (
-      getLocalPublishedPosts().find((post) => post.slug === normalizedSlug) ?? null
-    );
+    reportUnavailable("getPublishedBySlug");
+    return null;
   }
 
   try {
@@ -221,21 +155,16 @@ export async function getPublishedPost(slug: string): Promise<PublicPost | null>
       { url: convexUrl },
     );
   } catch (error) {
-    reportFallback("getPublishedBySlug", error);
-    return (
-      getLocalPublishedPosts().find((post) => post.slug === normalizedSlug) ?? null
-    );
+    reportUnavailable("getPublishedBySlug", error);
+    return null;
   }
 }
 
 export async function getSitemapPosts() {
   const convexUrl = getConvexDeploymentUrl();
   if (convexUrl === undefined) {
-    reportFallback("listSitemapEntries");
-    return getLocalPublishedPosts().map(({ slug, updatedAt }) => ({
-      slug,
-      updatedAt,
-    }));
+    reportUnavailable("listSitemapEntries");
+    return [];
   }
 
   try {
@@ -245,16 +174,9 @@ export async function getSitemapPosts() {
       { url: convexUrl },
     );
   } catch (error) {
-    reportFallback("listSitemapEntries", error);
-    return getLocalPublishedPosts().map(({ slug, updatedAt }) => ({
-      slug,
-      updatedAt,
-    }));
+    reportUnavailable("listSitemapEntries", error);
+    return [];
   }
-}
-
-export function getLocalPostSlugs() {
-  return getLocalPublishedPosts().map(({ slug }) => ({ slug }));
 }
 
 export function formatPublishedDate(timestamp: number) {

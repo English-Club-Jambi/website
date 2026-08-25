@@ -23,7 +23,10 @@ export type AdminPermission =
   | "assessment:read"
   | "assessment:edit"
   | "assessment:review"
-  | "assessment:publish";
+  | "assessment:publish"
+  | "programs:read"
+  | "programs:edit"
+  | "programs:publish";
 
 const rolePermissions: Record<
   Doc<"adminUsers">["role"],
@@ -42,6 +45,8 @@ const rolePermissions: Record<
     "theme:edit",
     "assessment:read",
     "assessment:edit",
+    "programs:read",
+    "programs:edit",
   ]),
   publisher: new Set([
     "content:read",
@@ -60,6 +65,9 @@ const rolePermissions: Record<
     "assessment:read",
     "assessment:review",
     "assessment:publish",
+    "programs:read",
+    "programs:edit",
+    "programs:publish",
   ]),
   owner: new Set([
     "admin:manage",
@@ -80,6 +88,9 @@ const rolePermissions: Record<
     "assessment:edit",
     "assessment:review",
     "assessment:publish",
+    "programs:read",
+    "programs:edit",
+    "programs:publish",
   ]),
 };
 

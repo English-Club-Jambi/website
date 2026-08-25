@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
 import { useMutation, useQuery } from "convex/react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { SelectField } from "@/components/forms/select-field";
 import {
@@ -238,6 +238,7 @@ export function ContentManager() {
   const admin = useAdminSession();
   const [pageKey, setPageKey] = useState<PublicContentPageKey>("home");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const contentCanvasRef = useRef<HTMLDivElement>(null);
   const entries = useQuery(api.adminContent.getPageWorkspace, {
     pageKey,
     locale: publicContentLocale,
@@ -250,6 +251,10 @@ export function ContentManager() {
     editorItems.find((item) => item.contentKey === selectedKey) ??
     editorItems[0] ??
     null;
+
+  useEffect(() => {
+    contentCanvasRef.current?.scrollTo({ top: 0 });
+  }, [selectedItem?.contentKey]);
 
   return (
     <>
@@ -302,14 +307,20 @@ export function ContentManager() {
         ) : selectedItem === null ? (
           <AdminEmpty title="No approved content fields" description="The shared public copy manifest has no fields for this page." />
         ) : (
-          <div className={styles.splitWorkspace}>
-            <div className={`${styles.workspaceRail} ${styles.contentRail}`}>
+          <div className={`${styles.splitWorkspace} ${styles.contentSplitWorkspace}`}>
+            <div
+              className={`${styles.workspaceRail} ${styles.contentRail}`}
+              role="region"
+              aria-label={`${pageOptions.find((page) => page.value === pageKey)?.label ?? pageKey} content fields`}
+              tabIndex={0}
+            >
               {editorItems.map((item) => (
                 <button
                   key={`${item.pageKey}-${item.contentKey}`}
                   className={styles.railButton}
                   type="button"
                   data-active={selectedItem.contentKey === item.contentKey}
+                  aria-current={selectedItem.contentKey === item.contentKey ? "true" : undefined}
                   onClick={() => setSelectedKey(item.contentKey)}
                 >
                   <strong>{item.label}</strong>
@@ -317,7 +328,13 @@ export function ContentManager() {
                 </button>
               ))}
             </div>
-            <div className={styles.workspaceCanvas}>
+            <div
+              ref={contentCanvasRef}
+              className={`${styles.workspaceCanvas} ${styles.contentCanvasScroll}`}
+              role="region"
+              aria-label={`Editing ${selectedItem.label}`}
+              tabIndex={0}
+            >
               <ContentEntryEditor
                 key={`${selectedItem.pageKey}-${selectedItem.contentKey}`}
                 item={selectedItem}

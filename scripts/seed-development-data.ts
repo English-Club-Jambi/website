@@ -13,11 +13,13 @@ import {
 import {
   developmentSeedMembers,
 } from "../content/member-development-seed.ts";
+import { getPublicContentManifestPages } from "../content/public-content.ts";
 
 const confirmation = "seed-english-club-development-v1";
 const expectedDeployment = "dev:perfect-greyhound-270";
 const publicDomain = "https://r2.mukhtada.my.id";
 const portraitSource = "public/images/member-directory-portraits-v1.webp";
+const membersOnly = process.argv.includes("--members-only");
 
 type PortraitRecord = {
   slug: string;
@@ -206,12 +208,33 @@ async function main() {
   const members = convexRun<{
     inserted: number;
     existing: number;
+    updated: number;
+    divisionsInserted: number;
+    divisionsExisting: number;
     mediaInserted: number;
     mediaExisting: number;
   }>("developmentSeed:seedMembers", { confirm: confirmation, portraits });
   console.log(
-    `Members: ${members.inserted} inserted, ${members.existing} existing; media ${members.mediaInserted} inserted, ${members.mediaExisting} existing.`,
+    `Members: ${members.inserted} inserted, ${members.updated} linked to managed divisions, ${members.existing} existing; divisions ${members.divisionsInserted} inserted, ${members.divisionsExisting} existing; media ${members.mediaInserted} inserted, ${members.mediaExisting} existing.`,
   );
+  if (membersOnly) {
+    const verification = convexRun<{
+      members: number;
+      memberMedia: number;
+      memberDivisions: number;
+    }>("developmentSeed:verify", { confirm: confirmation });
+    if (
+      verification.members !== developmentSeedMembers.length ||
+      verification.memberMedia !== developmentSeedMembers.length ||
+      verification.memberDivisions !== 5
+    ) {
+      throw new Error("Development member data verification failed.");
+    }
+    console.log(
+      `Verified ${verification.members} development members and ${verification.memberDivisions} managed divisions from Convex.`,
+    );
+    return;
+  }
   const themes = convexRun<{
     inserted: number;
     updated: number;
@@ -221,17 +244,67 @@ async function main() {
   console.log(
     `Themes: ${themes.inserted} inserted, ${themes.updated} updated, ${themes.existing} unchanged; initial publish ${themes.publishedInitial ? "created" : "already present"}.`,
   );
+  const journal = convexRun<{
+    inserted: number;
+    migrated: number;
+    existing: number;
+  }>("developmentSeed:seedJournal", { confirm: confirmation });
+  console.log(
+    `Journal: ${journal.inserted} inserted, ${journal.migrated} upgraded to the editor lifecycle, ${journal.existing} unchanged.`,
+  );
+  const programs = convexRun<{ inserted: number; existing: number }>(
+    "developmentSeed:seedPrograms",
+    { confirm: confirmation },
+  );
+  console.log(
+    `Programs: ${programs.inserted} inserted and published, ${programs.existing} unchanged.`,
+  );
+  let contentFields = 0;
+  let contentInserted = 0;
+  let contentPublishedExisting = 0;
+  for (const page of getPublicContentManifestPages()) {
+    const seeded = convexRun<{
+      pageKey: string;
+      inserted: number;
+      publishedExisting: number;
+      existing: number;
+      total: number;
+    }>("developmentSeed:seedPublicContentPage", {
+      confirm: confirmation,
+      pageKey: page.pageKey,
+    });
+    contentFields += seeded.total;
+    contentInserted += seeded.inserted;
+    contentPublishedExisting += seeded.publishedExisting;
+  }
+  console.log(
+    `Public copy: ${contentFields} fields checked across ${getPublicContentManifestPages().length} pages; ${contentInserted} inserted and ${contentPublishedExisting} existing drafts published.`,
+  );
   const verification = convexRun<{
     members: number;
     memberMedia: number;
+    memberDivisions: number;
     themePresets: number;
     publicThemeReady: boolean;
+    journalPublished: number;
+    journalManaged: number;
+    contentExpected: number;
+    contentPublished: number;
+    programsPublished: number;
+    programsManaged: number;
   }>("developmentSeed:verify", { confirm: confirmation });
   if (
     verification.members !== 15 ||
     verification.memberMedia !== 15 ||
+    verification.memberDivisions !== 5 ||
     verification.themePresets !== 4 ||
-    !verification.publicThemeReady
+    !verification.publicThemeReady ||
+    verification.journalPublished !== 3 ||
+    verification.journalManaged !== 3 ||
+    verification.contentExpected !== contentFields ||
+    verification.contentPublished !== contentFields ||
+    verification.programsPublished !== 6 ||
+    verification.programsManaged !== 6
   ) {
     throw new Error("Development data verification failed.");
   }
@@ -242,7 +315,9 @@ async function main() {
   if (publicMembers.length !== 15) {
     throw new Error(`Public directory returned ${publicMembers.length} members, expected 15.`);
   }
-  console.log("Verified 15 public members and four Appearance presets from Convex.");
+  console.log(
+    `Verified 15 public members, three managed Journal stories, six managed Programs, four Appearance presets, and ${contentFields} published copy fields from Convex.`,
+  );
 }
 
 await main();

@@ -21,6 +21,8 @@ export type PublicMember = {
   displayName: string;
   roleLevel: MemberRoleLevel;
   division?: MemberDivision;
+  divisionKey?: string;
+  divisionName?: string;
   position?: MemberPosition;
   joinedYear?: number;
   shortBio?: string;

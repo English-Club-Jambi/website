@@ -755,17 +755,16 @@
 }
 
 .clozeAnswer {
-  display: grid;
-  gap: 1.5rem;
+  max-width: 68ch;
+  font-size: clamp(1.05rem, 1.5vw, 1.22rem);
+  line-height: 2.9;
 }
 
-.clozePart {
-  border-bottom: 1px solid var(--practice-rule);
-  padding-bottom: 1.5rem;
-}
-
-.clozePart > p {
-  margin-bottom: 0.75rem;
+.clozeWord {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .sentenceBuilder {
@@ -1087,6 +1086,23 @@
   padding-block: clamp(2rem, 4vw, 4rem);
 }
 
+.questionIllustration {
+  width: min(100%, 48rem);
+  margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
+  overflow: hidden;
+  border: 1px solid var(--practice-rule);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.questionIllustration img {
+  width: 100%;
+  height: auto;
+  max-height: min(52vh, 34rem);
+  display: block;
+  object-fit: contain;
+}
+
 .questionPrompt h1 {
   max-width: 27ch;
   margin-bottom: 2.5rem;
@@ -1117,15 +1133,11 @@
 }
 
 .questionActions {
-  position: sticky;
-  z-index: 4;
-  bottom: 0;
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
   border-top: 1px solid var(--practice-rule);
   padding-block: 0.8rem max(0.8rem, env(safe-area-inset-bottom));
-  background: var(--page);
 }
 
 .navigatorDialog,

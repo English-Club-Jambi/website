@@ -46,6 +46,7 @@ erDiagram
   ADMIN_USERS ||--o{ POSTS : maintains
   POSTS ||--o{ POST_REVISIONS : snapshots
   MEDIA_ASSETS ||--o{ POST_REVISIONS : appears_in
+  MEMBER_DIVISIONS ||--o{ MEMBERS : coordinates
   ASSESSMENT_DEFINITIONS ||--o{ ASSESSMENT_VERSIONS : versions
   ASSESSMENT_VERSIONS ||--o{ ASSESSMENT_SECTIONS : contains
   ASSESSMENT_SECTIONS ||--o{ ASSESSMENT_STIMULI : contains
@@ -76,12 +77,15 @@ erDiagram
 | `postRevisions` | Immutable Tiptap JSON, plain text, title metadata, cover media, author, and revision number | post + revision |
 | `events` | Schema-ready verified event record; no first-release public route | slug; status + start |
 | `contactSubmissions` | Private join, partner, and question enquiries | normalized email + creation; status + creation |
-| `members` | Public-role record with consent gates, optional portrait, optional joined year, and stable order | slug; public consent/order; public role/order; status/update; update |
+| `memberDivisions` | Managed working-division catalogue with stable slug, public name, summary, lifecycle status, and order | slug; status + order; order |
+| `members` | Public-role record with consent gates, optional portrait, optional joined year, managed division link, and stable order | slug; public consent/order; public role/order; division + role; status/update; update |
 
 Important Member fields and rules:
 
 - `roleLevel` is exactly `0 | 1 | 2 | 3 | 4`; it classifies responsibility and is not a score.
-- Role `2` requires one Coordinator division and no position.
+- Role `2` requires one active managed division (or a compatible legacy division during migration) and no position.
+- A managed division has at most one Coordinator; changing coordinators restores the former coordinator's saved Member/Pioneer role.
+- A division with member references cannot be deleted, and an archived division cannot be newly assigned.
 - Role `3` requires Secretary, Treasury, Vice President, or President and no division.
 - Role `4` requires Mentor or Head of UPA and no division.
 - Roles `0` and `1` have neither division nor position.
@@ -90,7 +94,7 @@ Important Member fields and rules:
 - Portrait projection additionally requires cleared photo consent and a complete reviewed media object.
 - Personal email, telephone, student number, private social data, internal notes, and consent timestamps are not public Member fields.
 
-The 15 fictional showcase profiles live only in source. They are not seeded, counted, or described as real members and disappear when Convex returns any public Member record.
+The development seed contains 15 fictional public-facing profiles and the five initial managed divisions so the complete role and grid contracts can be exercised before reviewed identities replace them. The seed command is development-gated, idempotent, labelled by batch, and must never target production.
 
 ### 4.2 Administration and CMS
 
@@ -110,7 +114,7 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 
 | Table | Purpose | Public rule |
 | --- | --- | --- |
-| `assessmentDefinitions` | Stable slug, kind/profile, administrative title, draft/published pointers, visibility, and next version | A definition is discoverable only through its published pointer and visibility |
+| `assessmentDefinitions` | Stable slug, kind/profile, administrative title, draft/published pointers, visibility, next version, and an optional internal-only marker | A public definition is discoverable only through its published pointer and visibility; the Question Bank authoring ledger never appears in the catalogue |
 | `assessmentVersions` | Immutable-version candidate with timing, resume, review, score policy, mode, attempt-limit, revision, checksum, and publication data | Published projection uses one reviewed revision; profile and score policy must be a supported pair |
 | `assessmentVersionChecks` | Validation run tied to a content revision, with blocking/warning counts and report JSON | A stale check cannot approve a newer revision |
 | `assessmentVersionApprovals` | Academic, rights, accessibility, and bias review decision by reviewer and revision | All four current-revision approvals must pass; original-content/provenance is enforced by validation and the content ledger |
@@ -118,6 +122,9 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 | `assessmentStimuli` | Passage, audio, image, transcript, alt text, provenance, and optional media link | Protected/private media never resolves publicly |
 | `assessmentItems` | Ordered prompt and choices linked to version/section/stimulus | Bounded to 200 per version |
 | `assessmentAnswerKeys` | Correct answer and scoring data | Never included in a pre-submit public DTO |
+| `assessmentQuestionBank` | Reusable inventory with skill, task family, difficulty, global state, source lineage, origin, optional illustration media ID, and content fingerprint | A new admin-authored row starts paused and outside full practice; a ready row is still ineligible unless the active published format version allows it |
+| `assessmentVersionQuestionRules` | Optional allow/disable override for one bank question in one format version | A rule change increments the working content revision and makes earlier checks/approvals stale; published rules never change in place |
+| `assessmentQuestionFlagSignals` | Aggregate current/total learner flag counts and editorial review state per format/question | Admin projections omit participant, attempt, response, and answer-key data; a later flag reopens review |
 
 Full-form validation follows the definition profile. Legacy `ec-itp-level-1-aligned-v1` uses 50 Listening, 40 Structure & Written Expression, and 50 Reading items with `raw-objective`. The current `ec-ibt-style-2026-v1` uses 50 Reading, 47 Listening, 12 Writing, and 11 Speaking tasks with `practice-estimate-v1`. Cross-paired profile and score-policy values fail server validation.
 
@@ -126,9 +133,9 @@ The four-skill bank is fixed rather than adaptive. Its weighted practice points 
 The authoring lifecycle is:
 
 ```text
-definition -> draft version -> content revision -> validation/provenance check
+fixed definition -> working version -> content revision -> pool/validation check
            -> four current-revision approvals -> publish immutable version
-           -> optional clone to a new draft -> retire when replaced
+           -> optional clone to a new working revision -> retire when replaced
 ```
 
 A publisher can review and publish Assessments but cannot edit Assessment content. An editor can author but cannot approve or publish. An owner can do both. This separation is intentional.
@@ -139,6 +146,7 @@ A publisher can review and publish Assessments but cannot edit Assessment conten
 | --- | --- | --- |
 | `assessmentAttempts` | Version snapshot, owner token, idempotency keys, mode, timer, lifecycle, current cursor, result pointer, and activity timestamps | `ownerTokenIdentifier` must equal the current Auth identity |
 | `assessmentAttemptSections` | Per-section start, deadline, completion, elapsed, answered, and flagged state | Parent attempt ownership is checked first |
+| `assessmentAttemptItems` | Structured random draw pinned at Start: bank question, delivered item, optional illustration media ID, target section, and stable order | The attempt never redraws during resume/navigation; later bank metadata edits cannot replace its selected question or illustration reference |
 | `assessmentResponses` | One selected answer/flag state per owned item | Indexed by attempt and item |
 | `assessmentResults` | Immutable result revision with objective totals, optional weighted points and fixed-form estimates, status, completion, supersession, and claim contract | Available only after submit to the owner; legacy raw results project `estimate: null` |
 | `assessmentSectionResults` | Skill totals, answered/item counts, elapsed seconds, optional weighted points, and bounded estimate fields | Child of one owned result revision |
@@ -157,6 +165,10 @@ Attempt safeguards:
 - Post-submit answer review is cursor-paginated at 20 items.
 - `deleteMine` bounds responses to 200, sections to nine, and result children before deleting the owned graph. It does not promise deletion of the underlying Anonymous Auth row.
 - `listMine` is cursor-paginated at no more than ten rows.
+- Each fixed Practice Format selects only ready, source-valid questions that match its profile and skill. A quick format inherits its own source pool; full practice inherits globally reviewed full-practice rows; explicit version rules may narrow or extend that default.
+- Format validation fails when any allowed skill pool is smaller than its fixed quota. A rule cannot revive a paused/archived row, missing answer key, invalid source, or unreviewed delivery media.
+- Question Bank authoring creates a real `assessmentItems` row, a separate private `assessmentAnswerKeys` row, and a paused `assessmentQuestionBank` row in one mutation. Request IDs and content fingerprints prevent retry duplicates.
+- An attached illustration must resolve to a ready public `assessment-image` R2 record with an image MIME type and positive dimensions. Questions without an illustration store no media reference and render no empty frame.
 
 Results expose `correct`, `possible`, and `omitted`, with mode, time, per-section totals, and review. They never store or return percentage-as-level, predicted/official scores, CEFR bands, certificates, placement, or admission advice.
 
@@ -227,7 +239,7 @@ Every protected function calls `requireAdmin(permission)`, which resolves the cu
 
 ### Protected administration
 
-Protected pages use cursor pagination: administrators 20, Members 20, media no more than 24, Assessment definitions 20, Assessment items no more than 25, and approval history 20. Mutation families are split by domain (`adminContent`, `adminPosts`, `adminMembers`, `adminMedia`, `adminThemes`, `adminAssessments`, `adminAssessmentItems`, and Assessment review/media modules) so each call has one explicit permission.
+Protected pages use cursor pagination: administrators 20, Members 20, media no more than 24, Assessment definitions 20, Assessment items no more than 25, and approval history 20. Mutation families are split by domain (`adminContent`, `adminPosts`, `adminMembers`, `adminMemberDivisions`, `adminMedia`, `adminThemes`, `adminAssessments`, `adminAssessmentItems`, and Assessment review/media modules) so each call has one explicit permission.
 
 ## 7. Media record and R2 boundaries
 
@@ -240,7 +252,7 @@ Public/general media and confidential Assessment source media use separate R2 bu
 | Public media bucket | Public reviewed derivatives via `https://r2.mukhtada.my.id` | `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Public immutable URL after review |
 | Private Assessment bucket | Confidential source upload and server verification only | `R2_ASSESSMENT_BUCKET_NAME`, `R2_ASSESSMENT_ACCESS_KEY_ID`, `R2_ASSESSMENT_SECRET_ACCESS_KEY` | No public URL or public-bucket fallback |
 
-Both use `R2_ACCOUNT_ID` and the validated `R2_API` endpoint. A reservation checks configuration before insertion, then a short-lived presigned PUT moves bytes directly to R2. `HeadObject` must match object key, MIME, byte size, and required metadata before status becomes verified. Assessment source records may carry `durationMs` and SHA-256 metadata; a public derivative links back through `sourceMediaId` and the same `assessmentVersionId`.
+Both use `R2_ACCOUNT_ID` and the validated `R2_API` endpoint. A reservation checks configuration before insertion, then a short-lived presigned PUT contract moves bytes to R2. General CMS browsers use the validated same-origin streaming relay while the public bucket lacks exact CORS; the private Assessment design uses a direct signed PUT after its separate bucket and CORS exist. `HeadObject` must match object key, MIME, byte size, and required metadata before status becomes verified. Assessment source records may carry `durationMs` and SHA-256 metadata; a public derivative links back through `sourceMediaId` and the same `assessmentVersionId`.
 
 The public bucket/custom domain is working. The separate private Assessment bucket is **not configured**. No confidential Assessment upload is release-ready until the exact bucket environment, CORS policy, and real checksum round trip pass.
 

@@ -11,7 +11,7 @@ The administration workspace lives under `/admin` and uses its own layout. It do
 | `/admin/journal` | Paginated story archive |
 | `/admin/journal/new` | New structured journal revision |
 | `/admin/journal/[postId]` | Story editing, inline media, publishing, and revision history |
-| `/admin/members` | Member records, responsibilities, consent, and portraits |
+| `/admin/members` | Filtered Member records, responsibilities, consent, portraits, and managed divisions/coordinators |
 | `/admin/media` | R2 uploads, verification status, and archival |
 | `/admin/appearance` | Structured light and dark theme recipes |
 | `/admin/activity` | Owner-only audit trail |
@@ -38,19 +38,40 @@ The Pages workspace reads `content/public-content.ts`. Page labels, keys, format
 
 An empty Convex deployment still displays every approved field. Each field opens with the checked-in public text and revision `0`; saving creates its first Convex draft. Stored keys that are absent from the manifest remain visible for diagnosis but are labelled as unused by the public site and cannot be published from the UI.
 
+On desktop, the field rail and selected editor are separate labelled scroll regions;
+scrolling a long Home catalogue does not move the copy canvas or document. Selecting
+another field resets only the editor pane. Touch layouts replace the rail with the
+shared custom Content field picker and retain a single document scroll.
+
 ## Journal editor
 
 The journal editor stores the allowlisted Tiptap JSON contract, not HTML. It supports paragraphs, H2 and H3 headings, bold, italic, HTTPS or email links, lists, quotes, reviewed inline images, and bounded coordinate map notes.
 
 An image upload sends its alternative text to the R2 upload contract. The stored node contains `mediaId`, alternative text, and optional caption. Resolved `inlineMedia` URLs hydrate those media IDs when a saved revision is reopened. Captions remain editor-node metadata.
 
-The archive requests 12 rows at a time. Revision history requests at most 20 metadata rows. Large bodies and inline-media projections are fetched only for the open story.
+Featured media is an explicit revision field beside the story settings. The editor
+shows the current public or legacy cover, lets an administrator upload a reviewed
+replacement or deliberately remove it, and never guesses that the first inline image
+is the cover. Saving records the choice privately; only publishing that exact revision
+changes archive cards, article metadata, and the public header. Private draft work
+does not advance the public modification timestamp or sitemap date.
+
+The archive requests 12 rows at a time and provides explicit Edit plus reversible
+Archive/Restore controls. Revision history requests at most 20 metadata rows. Large
+bodies and inline-media projections are fetched only for the open story.
 
 ## R2 media flow
 
-The browser requests a short-lived upload URL from Convex, uploads the exact MIME type and immutable cache header directly to Cloudflare R2, then asks Convex to verify object metadata. A verified asset uses the public domain `https://r2.mukhtada.my.id`.
+The browser requests a short-lived upload contract from Convex, then sends the exact body and signed metadata to the same-origin `/api/admin/media-upload` route. That route validates the configured bucket and signature contract before streaming to Cloudflare R2; Convex then verifies object metadata. A verified asset uses the public domain `https://r2.mukhtada.my.id`.
 
 General CMS images accept AVIF, JPEG, PNG, and WebP up to 10 MB. Member portraits accept AVIF or WebP. A member portrait keeps profile consent and portrait consent as separate fields.
+
+The Member workspace has two reusable views. Profiles can be filtered by review
+status, role, division/position, and joined year without changing the cursor-page
+truth shown to the editor. Divisions form a managed catalogue: an administrator can
+create or edit a division, select one accountable Coordinator, archive it, and remove
+it only after every Member reference is cleared. Coordinator replacement restores
+the previous Coordinator's saved Member/Pioneer role instead of silently erasing it.
 
 ## Appearance contract
 

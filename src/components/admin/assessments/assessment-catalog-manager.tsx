@@ -4,7 +4,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CircleStackIcon,
-  DocumentPlusIcon,
   InformationCircleIcon,
   PhotoIcon,
 } from "@heroicons/react/24/outline";
@@ -17,7 +16,6 @@ import { useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { SelectField } from "@/components/forms/select-field";
 
-import { useAdminSession } from "../admin-session";
 import adminStyles from "../admin-shell.module.css";
 import {
   AdminLoadingRows,
@@ -25,7 +23,6 @@ import {
   AdminSection,
 } from "../admin-ui";
 import { AssessmentCatalogView } from "./assessment-admin-ui";
-import { getAssessmentAdminCapabilities } from "./assessment-admin-permissions";
 import styles from "./assessment-admin.module.css";
 
 type Visibility = "draft" | "published" | "retired";
@@ -54,8 +51,6 @@ function mapCatalogRow(row: CatalogRow) {
 }
 
 export function AssessmentCatalogManager() {
-  const admin = useAdminSession();
-  const capabilities = getAssessmentAdminCapabilities(admin.role);
   const [visibility, setVisibility] = useState<Visibility>("published");
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const cursor = cursors.at(-1) ?? null;
@@ -76,8 +71,8 @@ export function AssessmentCatalogManager() {
   return (
     <>
       <AdminPageHeading
-        title="Assessment Lab"
-        description="Build original English practice, keep answer keys private, and publish only the exact revision approved by every reviewer."
+        title="Practice Builder"
+        description="Question Bank stores reusable questions. A practice format defines the structured draw, section order, timing, delivery rules, and scoring used when a learner starts."
         actions={
           <>
             <Link className={adminStyles.secondaryButton} href="/admin/assessments/questions">
@@ -88,12 +83,6 @@ export function AssessmentCatalogManager() {
               <PhotoIcon aria-hidden width={18} height={18} />
               Assessment media
             </Link>
-            {capabilities.canEdit ? (
-              <Link className={adminStyles.primaryButton} href="/admin/assessments/new">
-                <DocumentPlusIcon aria-hidden width={18} height={18} />
-                New assessment
-              </Link>
-            ) : null}
           </>
         }
       />
@@ -101,14 +90,32 @@ export function AssessmentCatalogManager() {
       <div className={styles.sourceNotice}>
         <InformationCircleIcon aria-hidden width={20} height={20} />
         <span>
-          The Home programme quiz is generated from reviewed Activities wording in
-          <Link href="/admin/pages"> Pages</Link>. It is not stored as an Assessment definition.
+          The small Home programme quiz comes from reviewed Programs wording in
+          <Link href="/admin/pages"> Pages</Link>. The formats below power the separate Practice area.
+        </span>
+      </div>
+
+      <div className={styles.catalogGuide} aria-label="How a live practice session is assembled">
+        <span>
+          <b>1</b>
+          <strong>Question Bank</strong>
+          <small>Reusable, reviewed questions grouped by skill and task</small>
+        </span>
+        <span>
+          <b>2</b>
+          <strong>Practice format</strong>
+          <small>Counts, mix, sections, timing, media, and review gates</small>
+        </span>
+        <span>
+          <b>3</b>
+          <strong>Pinned attempt</strong>
+          <small>The selected questions and order are fixed when Start is pressed</small>
         </span>
       </div>
 
       <AdminSection
-        title="Assessment definitions"
-        description="Twenty records are read per page. Status filters and cursors keep the workspace bounded as the catalogue grows."
+        title="Practice formats"
+        description="Each row is a delivery blueprint, not a second question store. “No unpublished changes” means the live format has no newer private working version."
       >
         <div className={adminStyles.toolbar}>
           <SelectField
@@ -124,13 +131,13 @@ export function AssessmentCatalogManager() {
         </div>
 
         {result === undefined ? (
-          <AdminLoadingRows label="Loading assessment definitions" />
+          <AdminLoadingRows label="Loading practice formats" />
         ) : (
           <AssessmentCatalogView entries={result.page.map(mapCatalogRow)} />
         )}
 
         {result && (cursors.length > 1 || !result.isDone) ? (
-          <nav className={adminStyles.listFooter} aria-label="Assessment pages">
+          <nav className={adminStyles.listFooter} aria-label="Practice format pages">
             <div className={adminStyles.buttonRow}>
               <button
                 className={adminStyles.secondaryButton}

@@ -30,6 +30,7 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly PRACTICE_FORMAT_CREATION_MODE: string | undefined;
   readonly R2_ACCESS_KEY_ID: string | undefined;
   readonly R2_ACCOUNT_ID: string | undefined;
   readonly R2_API: string | undefined;

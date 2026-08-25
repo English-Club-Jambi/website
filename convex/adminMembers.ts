@@ -24,6 +24,7 @@ const memberAdminViewValidator = v.object({
   displayName: v.string(),
   roleLevel: memberRoleLevelValidator,
   division: v.optional(memberDivisionValidator),
+  divisionId: v.optional(v.id("memberDivisions")),
   position: v.optional(memberPositionValidator),
   joinedYear: v.optional(v.number()),
   shortBio: v.optional(v.string()),
@@ -45,6 +46,7 @@ function toAdminView(member: Doc<"members">) {
     displayName: member.displayName,
     roleLevel: member.roleLevel,
     ...(member.division === undefined ? {} : { division: member.division }),
+    ...(member.divisionId === undefined ? {} : { divisionId: member.divisionId }),
     ...(member.position === undefined ? {} : { position: member.position }),
     ...(member.joinedYear === undefined
       ? {}
@@ -107,6 +109,7 @@ export const saveReviewed = mutation({
     displayName: v.string(),
     roleLevel: memberRoleLevelValidator,
     division: v.optional(memberDivisionValidator),
+    divisionId: v.optional(v.union(v.id("memberDivisions"), v.null())),
     position: v.optional(memberPositionValidator),
     joinedYear: v.optional(v.union(v.number(), v.null())),
     shortBio: v.optional(v.string()),
@@ -119,6 +122,29 @@ export const saveReviewed = mutation({
   returns: v.id("members"),
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx, "members:edit");
+    const slug = args.slug.trim().toLowerCase();
+    const existing = await ctx.db
+      .query("members")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    if (args.divisionId !== undefined && args.divisionId !== null) {
+      const division = await ctx.db.get("memberDivisions", args.divisionId);
+      if (division === null || division.status !== "active") {
+        throw new Error("Choose an active managed division.");
+      }
+      if (args.roleLevel !== 2) {
+        throw new Error("Only a Coordinator can be assigned to a division.");
+      }
+      const conflictingCoordinator = await ctx.db
+        .query("members")
+        .withIndex("by_division_id_and_role_level", (q) =>
+          q.eq("divisionId", division._id).eq("roleLevel", 2),
+        )
+        .take(2);
+      if (conflictingCoordinator.some((member) => member._id !== existing?._id)) {
+        throw new Error("This division already has a coordinator.");
+      }
+    }
     if (args.photo !== undefined) {
       const media = await ctx.db
         .query("mediaAssets")
@@ -138,7 +164,17 @@ export const saveReviewed = mutation({
     }
     const memberId: Doc<"members">["_id"] = await ctx.runMutation(
       internal.members.upsertReviewed,
-      args,
+      {
+        ...args,
+        ...(args.roleLevel !== 2
+          ? {}
+          : {
+              roleBeforeCoordinator:
+                existing?.roleLevel === 0 || existing?.roleLevel === 1
+                  ? existing.roleLevel
+                  : existing?.roleBeforeCoordinator ?? 1,
+            }),
+      },
     );
     await writeAuditEvent(ctx, {
       area: "members",
@@ -163,6 +199,14 @@ export const archive = mutation({
     }
     await ctx.db.patch("members", member._id, {
       profileStatus: "archived",
+      ...(member.roleLevel === 2
+        ? {
+            roleLevel: member.roleBeforeCoordinator ?? 1,
+            division: undefined,
+            divisionId: undefined,
+            roleBeforeCoordinator: undefined,
+          }
+        : {}),
       updatedAt: Date.now(),
     });
     await writeAuditEvent(ctx, {

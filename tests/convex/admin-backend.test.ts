@@ -251,6 +251,7 @@ describe("admin authentication and authorization", () => {
       return { account, sessions };
     });
     expect(recoveredState.account?.secret).not.toBe(orphaned.secret);
+    expect(recoveredState.account).not.toHaveProperty("expirationTime");
     expect(recoveredState.sessions).toHaveLength(0);
   });
 
@@ -505,6 +506,111 @@ describe("admin journal revisions", () => {
       title: "Legacy listening story",
     });
     expect(revisedWorkspace?.published).toBeNull();
+
+    const publicWhileDrafting = await t.query(api.posts.getPublishedBySlug, {
+      slug: "legacy-listening-story",
+    });
+    expect(publicWhileDrafting?.updatedAt).toBe(now);
+    expect(publicWhileDrafting?.body).toBe(legacyBody);
+
+    const sitemapWhileDrafting = await t.query(api.posts.listSitemapEntries, {});
+    expect(sitemapWhileDrafting).toContainEqual({
+      slug: "legacy-listening-story",
+      updatedAt: now,
+    });
+  });
+
+  it("shows, preserves, replaces, and explicitly removes a revisioned journal cover", async () => {
+    const { t, editor, publisher } = await bootstrap();
+    const now = Date.UTC(2026, 7, 25);
+    const postId = await t.run(async (ctx) =>
+      ctx.db.insert("posts", {
+        slug: "legacy-story-with-a-cover",
+        title: "Legacy story with a cover",
+        excerpt:
+          "An existing public story keeps its known cover until an editor deliberately changes it.",
+        body: "The legacy journal body remains public while its first structured revision is prepared.",
+        category: "Exchange",
+        authorName: "English Club",
+        coverKey: "leeds-panel",
+        status: "published",
+        featured: true,
+        publishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+
+    const legacyWorkspace = await editor.query(api.adminPosts.getWorkspace, {
+      postId,
+    });
+    expect(legacyWorkspace?.post.coverKey).toBe("leeds-panel");
+    expect(legacyWorkspace?.draft).toBeNull();
+
+    const preserved = await editor.mutation(api.adminPosts.saveDraft, {
+      postId,
+      expectedRevision: 0,
+      slug: "legacy-story-with-a-cover",
+      title: "Legacy story with a cover",
+      excerpt:
+        "An existing public story keeps its known cover until an editor deliberately changes it.",
+      category: "Exchange",
+      authorName: "English Club",
+      featured: true,
+      editorJson,
+    });
+    expect(preserved.ok).toBe(true);
+    if (!preserved.ok) throw new Error("Expected the legacy cover draft to save.");
+
+    const preservedWorkspace = await editor.query(
+      api.adminPosts.getWorkspace,
+      { postId },
+    );
+    expect(preservedWorkspace?.draft).toMatchObject({
+      coverKey: "leeds-panel",
+      coverRemoved: false,
+    });
+    await publisher.mutation(api.adminPosts.publish, {
+      postId,
+      expectedRevision: preserved.revision,
+    });
+    expect(
+      await t.query(api.posts.getPublishedBySlug, {
+        slug: "legacy-story-with-a-cover",
+      }),
+    ).toMatchObject({ coverKey: "leeds-panel" });
+
+    const removed = await editor.mutation(api.adminPosts.saveDraft, {
+      postId,
+      expectedRevision: preserved.revision,
+      slug: "legacy-story-with-a-cover",
+      title: "Legacy story with a cover",
+      excerpt:
+        "An existing public story keeps its known cover until an editor deliberately changes it.",
+      category: "Exchange",
+      authorName: "English Club",
+      featured: true,
+      coverMediaId: null,
+      editorJson,
+    });
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) throw new Error("Expected the cover removal draft to save.");
+
+    const removalWorkspace = await editor.query(api.adminPosts.getWorkspace, {
+      postId,
+    });
+    expect(removalWorkspace?.draft).toMatchObject({ coverRemoved: true });
+    expect(removalWorkspace?.draft).not.toHaveProperty("coverKey");
+
+    await publisher.mutation(api.adminPosts.publish, {
+      postId,
+      expectedRevision: removed.revision,
+    });
+    const publicWithoutCover = await t.query(api.posts.getPublishedBySlug, {
+      slug: "legacy-story-with-a-cover",
+    });
+    expect(publicWithoutCover).not.toHaveProperty("coverKey");
+    expect(publicWithoutCover).not.toHaveProperty("coverMedia");
   });
 
   it("rejects raw HTML, script-shaped links, and malformed map nodes", async () => {

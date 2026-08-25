@@ -12,6 +12,7 @@ describe("sitemap", () => {
     const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
 
     expect(paths).toContain("/practice");
+    expect(paths).toContain("/programs");
     expect(paths.some((path) => path.startsWith("/practice/attempt/"))).toBe(false);
     expect(paths.some((path) => path.startsWith("/practice/result/"))).toBe(false);
   });

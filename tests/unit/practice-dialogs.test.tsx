@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { getPublicContentDefaults } from "@content/public-content";
 import {
   FinishDialog,
+  QuestionIllustration,
   QuestionNavigator,
 } from "@/components/practice/attempt-runner";
 import { PracticeProvider } from "@/components/practice/practice-provider";
@@ -47,6 +48,7 @@ const player = {
       { key: "b", label: "They met yesterday." },
     ],
   },
+  illustration: null,
   stimulus: null,
   response: null,
   flagged: false,
@@ -124,6 +126,28 @@ function FinishHarness() {
 }
 
 describe("practice runner dialogs at phone width", () => {
+  it("renders a verified optional question illustration without adding empty media", () => {
+    const { rerender } = render(
+      <QuestionIllustration
+        illustration={{
+          mediaId: "mediaasset000000000000000001" as Id<"mediaAssets">,
+          publicUrl:
+            "https://r2.mukhtada.my.id/uploads/assessment-image/wetland-field-guide.webp",
+          alt: "A field guide open beside wetland observation notes",
+          width: 1_200,
+          height: 800,
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("img", {
+        name: "A field guide open beside wetland observation notes",
+      }),
+    ).toBeVisible();
+    rerender(<QuestionIllustration illustration={null} />);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("uses a modal navigator, locks background scroll, and restores launcher focus", async () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
     const user = userEvent.setup();

@@ -91,17 +91,17 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Add a private operator flow for short-lived presigned PUT uploads and `HeadObject` verification.
 - [x] Upload and verify six cleared generated derivatives without exposing credentials or signed URLs.
 - [x] Reject existing object keys so public assets remain immutable.
-- [x] Seed and query the cloud journal; keep the public Member result empty until real consented records exist while the route renders its separate source-only showcase.
+- [x] Seed and query the development cloud Journal, 15 fictional Member profiles, and five managed divisions through their real Convex contracts; keep the seed batch excluded from production.
 
 ### Member organisation showcase
 
-- [x] Record the final source-only showcase and unchanged real-profile consent boundary in `docs/MEMBER-SHOWCASE-DECISION.md`.
-- [x] Add 15 fictional identities across all five role codes without inserting them into Convex.
+- [x] Record the development-only fictional roster and unchanged real-profile consent boundary in `docs/MEMBER-SHOWCASE-DECISION.md`.
+- [x] Add 15 fictional identities across all five role codes to the guarded, idempotent Convex development seed.
 - [x] Cover all five Coordinator divisions, all four Core positions, and both Board positions.
 - [x] Generate a 16-cell portrait sheet, use 15 unique cells, and upload AVIF/WebP derivatives to R2.
 - [x] Replace the long roster rows with a true 5/4/3/2-column CSS contact sheet.
 - [x] Remove public QA, fixture, database, and placeholder language from the organisation profile.
-- [x] Hide the entire fixture when one or more real public profiles exist; retain the unavailable backend state.
+- [x] Label the development records by seed batch, retain an honest unavailable backend state, and require production to contain only consent-cleared records.
 - [x] Add unit and browser assertions for identity uniqueness, role filtering, assignment validity, grid columns, and public copy.
 - [x] Run the complete static, browser, Axe, reduced-motion, and visual release gate after the grid change.
 
@@ -113,7 +113,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Build the protected `/admin` shell, Pages, Journal, Members, Media, Appearance, Assessments, and Activity workspaces.
 - [x] Replace code-only journal maintenance with immutable structured revisions, reviewed covers/inline media, safe coordinate map nodes, publish, archive, and cursor pagination.
 - [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 200 entries per page and locale.
-- [x] Add browser-to-R2 reviewed media upload, metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.
+- [x] Add reviewed media upload through a validated same-origin streaming relay, Convex metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.
 - [x] Add structured public theme drafts, server-side OKLCH derivation and contrast validation, immutable versions, atomic publish/rollback pointers, and a checked-in fallback.
 - [x] Keep admin symbols on Heroicons, controls at least 44px, dialogs focus-contained, and motion reduced under `prefers-reduced-motion`.
 - [x] Complete a real internal owner provisioning, sign-in, sign-out, and second-session round trip on the announced non-production cloud deployment.
@@ -122,13 +122,17 @@ Convex remains the application database and authorization boundary. Cloudflare R
 
 - [x] Publish the canonical `/practice` route family under the English Club Assessment Lab name.
 - [x] Implement reviewed catalog reads, four-skill full-form and quick-quiz briefings, an owned attempt runner, exact-result report with bounded optional estimates, and paginated post-submit review.
-- [x] Keep the Home programme quiz local and derive its questions from reviewed Activities wording; it creates no visitor identity or Convex attempt.
+- [x] Keep the Home programme quiz local and derive its questions from reviewed Programs wording; it creates no visitor identity or Convex attempt.
 - [x] Add Anonymous Convex Auth only after the visitor presses Start on a persisted assessment.
 - [x] Derive participant ownership from server auth, normalize route IDs before typed access, and return the same unavailable state for malformed, missing, and cross-owner IDs.
 - [x] Keep answer keys, explanations, provenance, draft media, admin IDs, and scoring authority out of pre-submit public payloads.
 - [x] Implement per-section deadlines, revision conflicts, idempotent Start/Submit, transcript-supported mode, owned deletion, and bounded result snapshots.
 - [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep four-skill estimates explicitly fixed-form, non-official, and unusable as certificates or admission evidence.
 - [x] Add assessment authoring, current-revision validation, academic/rights/accessibility/bias approvals, immutable publication, safe reorder/delete, and bounded next-draft cloning.
+- [x] Lock the five Practice Formats as an internally installed catalogue: remove the browser creation flow and reject server-side creation unless an operator deliberately enables internal maintenance mode.
+- [x] Add versioned per-format Question Bank allow/disable rules, fixed skill quotas, structured random draws pinned at Start, shortage validation, and privacy-safe aggregate flag review.
+- [x] Add real Question Bank authoring with idempotent Convex writes, private answer keys, duplicate fingerprints, skill-grouped task families, and a paused-by-default review state.
+- [x] Add optional Question illustration selection/direct R2 upload, validate the media contract server-side, pin its ID in each random attempt manifest, and render it accessibly in Live Session.
 - [x] Add a separate private-source/public-derivative media contract and a UI configuration gate.
 - [ ] Create and configure the separate private Assessment R2 bucket, apply exact-origin CORS, and prove checksum-aware PUT, preview, verification, and public derivative delivery against Cloudflare.
 - [ ] Publish a real assessment only after original content, rights, academic, accessibility, and bias approvals are complete.
@@ -145,7 +149,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 ## Working rules
 
 1. Evidence precedes implementation. Every supplied reference remains traceable.
-2. Unknown claims stay absent. Fictional showcase identities are allowed only inside the documented source fixture; metrics, dates, partners, testimonials, schedules, outcomes, and real-member claims are not invented.
+2. Unknown claims stay absent. Fictional identities are allowed only in the guarded development seed and never in production; metrics, dates, partners, testimonials, schedules, outcomes, and real-member claims are not invented.
 3. Language leads the identity. A route must remain visually finished without optional media.
 4. Motion must communicate hierarchy, handoff, feedback, or state change.
 5. Client code stays inside discrete interactive leaves. Server HTML carries core content and links.

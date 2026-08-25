@@ -22,6 +22,7 @@ Verified public path:
 - Existing-key overwrite is rejected.
 - Presigned URLs were not written to source or logs.
 - `https://r2.mukhtada.my.id` is active. DNS, TLS, cache, and representative public object reads passed the recorded development checks.
+- A real authenticated Journal upload passed the same-origin relay with HTTP 204, Convex `HeadObject` verification, editor insertion, revision save, edit-route reload, custom-domain rendering, and QA cleanup. The browser made no request to the S3 host.
 
 Not verified:
 
@@ -35,7 +36,8 @@ Do not infer the private path is healthy because the public bucket works.
 
 ```mermaid
 flowchart LR
-  A["Authenticated admin browser"] -->|"reviewed public image PUT"| P["Public R2 bucket"]
+  A["Authenticated admin browser"] -->|"reviewed public image body"| N["Validated same-origin Next.js relay"]
+  N -->|"presigned public image PUT"| P["Public R2 bucket"]
   A -->|"confidential source PUT + SHA-256"| Q["Private Assessment bucket"]
   C["Convex metadata + authorization"] -->|"short-lived signed operation"| P
   C -->|"short-lived signed operation"| Q
@@ -45,7 +47,7 @@ flowchart LR
   Q -. "no public URL" .-> X["Blocked browser read"]
 ```
 
-Bytes move directly between the browser/R2 or server/R2. They do not pass through a Convex database document. Convex records the immutable key, MIME, byte size, review state, rights/access class, dimensions or duration, checksum where applicable, Assessment version, source derivative relation, actor, and timestamps.
+General CMS bytes currently pass through the same-origin Next.js streaming route and then to R2; confidential Assessment bytes are designed for a direct exact-CORS browser PUT once the private bucket exists. Neither path stores file bytes in a Convex database document. Convex records the immutable key, MIME, byte size, review state, rights/access class, dimensions or duration, checksum where applicable, Assessment version, source derivative relation, actor, and timestamps.
 
 ## 3. Usage and cost boundary
 
@@ -130,8 +132,8 @@ Flow:
 
 1. An active administrator with `media:upload` requests an upload for purpose, MIME, exact bytes, original name, and factual alt text.
 2. Convex creates a random immutable key under `uploads/<purpose>/...` or `members/profiles/...` and a pending `mediaAssets` row.
-3. The browser receives a 300-second presigned PUT URL plus exact `Content-Type` and `Cache-Control` values.
-4. The browser PUTs directly to the R2 S3 endpoint.
+3. The browser receives a 300-second presigned PUT URL plus exact size, `Content-Type`, and `Cache-Control` values.
+4. The browser sends the body to `/api/admin/media-upload`. The same-origin route validates the configured R2 host and bucket, signed operation, immutable key, size, MIME, cache control, expiry, and signature shape before streaming the request to R2 without following redirects.
 5. The action verifies MIME, byte length, and `public, max-age=31536000, immutable` with `HeadObject`.
 6. Only the ready record becomes selectable by Journal, Member, or other CMS editors.
 
@@ -142,6 +144,7 @@ General image rules:
 - size: 1 byte through 10 MiB;
 - alt text: reviewed plain text;
 - replacement: a new immutable key, never overwrite;
+- direct browser PUT: optional only after the bucket has an exact-origin CORS policy; never use wildcard upload CORS.
 - public URL: custom domain plus the verified object key.
 
 The reviewed operator helper remains available for code-owned derivatives under `brand/`, `images/`, or `members/`:
@@ -295,8 +298,9 @@ Private media has no equivalent public curl URL. Verify it only through authenti
 - [x] Existing-key overwrite is rejected.
 - [x] Signed URL is absent from recorded logs.
 - [x] `r2.mukhtada.my.id` is active and representative object reads return 200.
+- [x] Authenticated CMS upload passes the validated same-origin relay, HEAD verification, save/reload persistence, and custom-domain read.
 - [ ] Production deployment receives its own target check.
-- [ ] Public browser CMS upload passes exact-origin CORS in the release environment.
+- [ ] If direct browser PUT is enabled later, the public bucket receives an exact-origin CORS policy and the relay remains the fallback until that path passes.
 - [ ] Every real-person derivative has the required rights and consent.
 
 ### Private Assessment path

@@ -256,6 +256,8 @@ dd {
 }
 
 .wordmark {
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;

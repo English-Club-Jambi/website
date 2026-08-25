@@ -26,6 +26,7 @@ import {
   listDeliveredSectionItems,
   prepareRandomSelectionPlans,
 } from "./lib/assessmentQuestionBank";
+import { updateQuestionFlagSignal } from "./lib/assessmentQuestionSignals";
 import {
   normalizeRequestId,
   normalizeResponseForItem,
@@ -34,7 +35,10 @@ import {
   responseIsAnswered,
   sameResponsePayload,
 } from "./lib/assessmentModel";
-import { publicAssessmentR2UrlForMedia } from "./lib/media";
+import {
+  projectReadyQuestionIllustration,
+  publicAssessmentR2UrlForMedia,
+} from "./lib/media";
 
 const startResultValidator = v.object({
   attemptId: v.id("assessmentAttempts"),
@@ -351,6 +355,7 @@ export const start = mutation({
           sectionId: section._id,
           bankQuestionId: bankQuestion._id,
           itemId: bankQuestion.sourceItemId,
+          illustrationMediaId: bankQuestion.illustrationMediaId,
           order,
           selectedAt: now,
           selectionContract: 1,
@@ -591,6 +596,10 @@ export const getPlayer = query({
     );
     if (delivered === null) return null;
     const { item } = delivered;
+    const illustration = await projectReadyQuestionIllustration(
+      ctx,
+      delivered.illustrationMediaId,
+    );
     const response = await ctx.db
       .query("assessmentResponses")
       .withIndex("by_attempt_id_and_item_id", (q) =>
@@ -666,6 +675,7 @@ export const getPlayer = query({
         instructions: section.instructions,
       },
       item: publicItemFromDoc(item),
+      illustration,
       stimulus,
       response: response === null ? null : publicResponseFromDoc(response),
       flagged: response?.flagged ?? false,
@@ -781,6 +791,15 @@ export const saveResponse = mutation({
       await ctx.db.insert("assessmentResponses", document);
     } else {
       await ctx.db.replace("assessmentResponses", existing._id, document);
+    }
+    if ((existing?.flagged ?? false) !== args.flagged) {
+      await updateQuestionFlagSignal(
+        ctx,
+        attempt,
+        item._id,
+        args.flagged,
+        now,
+      );
     }
     const wasAnswered = existing === null ? false : responseIsAnswered(publicResponseFromDoc(existing));
     const isAnswered = responseIsAnswered(normalized);
@@ -1064,7 +1083,7 @@ export const getResult = query({
             : ("Practice result" as const);
     const disclaimer =
       result.scoringModel === "ec-ibt-style-v1"
-        ? "This is an English Club estimate from an original fixed-form practice bank. It is not an official ETS score, an exact test prediction, a certificate, or evidence for admission."
+        ? "The raw result is exact for the original questions delivered in this attempt. The band and 0–120 values are English Club estimates, not an official ETS score, an exact test prediction, a certificate, or evidence for admission."
         : "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.";
 
     return {
@@ -1148,6 +1167,14 @@ export const deleteMine = mutation({
       }
     }
     for (const response of responses) {
+      if (response.flagged) {
+        await updateQuestionFlagSignal(
+          ctx,
+          attempt,
+          response.itemId,
+          false,
+        );
+      }
       await ctx.db.delete("assessmentResponses", response._id);
     }
     for (const progress of progressRows) {

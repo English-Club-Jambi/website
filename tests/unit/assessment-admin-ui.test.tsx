@@ -65,9 +65,31 @@ describe("assessment admin views", () => {
     render(<AssessmentCatalogView entries={[]} />);
 
     expect(
-      screen.getByText("No assessment definitions in this view"),
+      screen.getByText("No practice formats in this view"),
     ).toBeVisible();
     expect(screen.queryByText(/sample|placeholder|voice 01/i)).not.toBeInTheDocument();
+  });
+
+  it("explains a published form without an active working copy in plain language", () => {
+    render(
+      <AssessmentCatalogView
+        entries={[
+          {
+            id: "definition-live",
+            title: "Quick Listening: Campus Voices",
+            slug: "quick-listening-campus-voices",
+            kind: "skill-quiz",
+            profile: "ec-ibt-style-2026-v1",
+            visibility: "published",
+            updatedAt: Date.UTC(2026, 7, 26),
+            href: "/admin/assessments/definition-live" as never,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("No unpublished changes")).toBeVisible();
+    expect(screen.queryByText("No active draft")).not.toBeInTheDocument();
   });
 
   it("enables publication only for the validated revision and four current approvals", async () => {
@@ -146,7 +168,7 @@ describe("assessment admin views", () => {
     expect(screen.getByText(/1:32/)).toBeVisible();
   });
 
-  it("creates the next private draft without offering published-version editing", async () => {
+  it("starts the next private revision without offering published-version editing", async () => {
     const user = userEvent.setup();
     const onCreateNextDraft = vi.fn();
     render(
@@ -162,7 +184,7 @@ describe("assessment admin views", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Edit metadata" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Create next draft" }));
+    await user.click(screen.getByRole("button", { name: "Start next revision" }));
     expect(onCreateNextDraft).toHaveBeenCalledOnce();
   });
 
@@ -199,7 +221,7 @@ describe("assessment admin views", () => {
     expect(onResumeClone).toHaveBeenCalledOnce();
   });
 
-  it("disables section movement at bounds and protects non-empty deletion", () => {
+  it("presents the canonical skill structure without structural editing controls", () => {
     render(
       <AssessmentWorkspaceView
         model={{
@@ -223,7 +245,6 @@ describe("assessment admin views", () => {
               skill: "reading",
               order: 0,
               itemCount: 3,
-              href: "/admin/assessments/definition-a/sections/section-one",
             },
             {
               id: "section-two",
@@ -231,8 +252,7 @@ describe("assessment admin views", () => {
               title: "Reading detail",
               skill: "reading",
               order: 1,
-              itemCount: 0,
-              href: "/admin/assessments/definition-a/sections/section-two",
+              itemCount: 2,
             },
           ],
         }}
@@ -241,14 +261,14 @@ describe("assessment admin views", () => {
         canPublish={false}
         validating={false}
         publishing={false}
-        onMoveSection={vi.fn()}
-        onDeleteSection={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Move Reading foundations up" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Move Reading detail down" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Remove Reading foundations" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Remove Reading detail" })).toBeEnabled();
+    expect(screen.getByText("Fixed skill structure")).toBeVisible();
+    expect(screen.getByText("Quota 3")).toBeVisible();
+    expect(screen.getByText("Quota 2")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /add section/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /move .* (up|down)/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove reading/i })).not.toBeInTheDocument();
   });
 });

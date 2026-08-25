@@ -1,5 +1,5 @@
-import { ActivityManager } from "@/components/admin/activity-manager";
+import { redirect } from "next/navigation";
 
 export default function AdminActivityPage() {
-  return <ActivityManager />;
+  redirect("/admin/audit");
 }

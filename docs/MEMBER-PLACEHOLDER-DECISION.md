@@ -4,7 +4,7 @@ Date: 25 August 2026
 Status: superseded on 25 August 2026
 Superseded by: `MEMBER-SHOWCASE-DECISION.md`
 
-> Historical record only. The public route no longer renders `Voice NN`, placeholder labels, sample labels, or role-icon-only rows. The current implementation uses the documented 15-profile source-only showcase and generated portrait sheet.
+> Historical record only. The public route no longer renders `Voice NN`, placeholder labels, sample labels, or role-icon-only rows. The current development deployment uses the documented 15-profile Convex seed and generated portrait sheet; production must contain only consent-cleared records.
 
 ## Request change
 

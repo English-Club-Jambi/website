@@ -223,7 +223,7 @@ On wide screens, a bounded `IntersectionObserver` and a passive scroll/resize sc
 
 One native radio group controls the responsibility companion and the published roster filter. `All roles` is the initial view, followed by role codes `0` through `4`. Every channel contains a Heroicon, public label, and short scope sentence. All role definitions and supplied subtypes remain in server HTML; JavaScript changes emphasis only. A concise status message announces roster updates without moving focus.
 
-The numeric values are classification codes, not scores or ranks. Published real people come only from Convex records with cleared profile consent. A real portrait also requires separately cleared photo consent. While the successful Convex result is empty, a documented source-only showcase supplies 15 fictional profiles and generated portraits. The complete showcase disappears when reviewed records publish and never appears when the query is unavailable.
+The numeric values are classification codes, not scores or ranks. Published real people come only from Convex records with cleared profile consent. A real portrait also requires separately cleared photo consent. The development deployment uses 15 explicitly fictional, seed-batch-labelled Convex profiles and generated portraits to exercise the production-shaped directory. They are never production roster evidence, and an unavailable query remains an honest unavailable state.
 
 ### Theme control
 
@@ -315,7 +315,7 @@ Do not use inflated claims, manufactured warmth, fake quotes, generic empowermen
 - Do not build equal icon cards, a bento dashboard, or a feature checklist.
 - Do not add fake scores, levels, streaks, metrics, schedules, testimonials, or partner marks.
 - Do not publish official, predicted, calibrated, CEFR, certificate, or admission language for an English Club raw practice result.
-- Do not present the fictional showcase as sourced roster evidence or write it to Convex. Do not invent member totals, terms, achievements, testimonials, or contact details.
+- Do not present development-seeded fictional profiles as sourced roster evidence or copy them into production. Do not invent member totals, terms, achievements, testimonials, or contact details.
 - Do not turn the five role codes into a pyramid, prestige ladder, floating-card wall, or filter-heavy directory product. The contact sheet remains one ruled composition.
 - Do not use gradient text, decorative gradients, glow, glass, 3D letters, particles, or cursor-following images. The single hero media fade is the exception.
 - Do not decorate sections with tiny labels, coordinates, numbers, or filler metadata.

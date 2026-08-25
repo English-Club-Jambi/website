@@ -10,13 +10,15 @@ import {
 type FilterableMember = {
   roleLevel: MemberRoleLevel;
   division?: MemberDivision;
+  divisionKey?: string;
+  divisionName?: string;
   position?: MemberPosition;
   joinedYear?: number;
 };
 
 export type MemberAssignmentSelection =
   | "all"
-  | `division:${MemberDivision}`
+  | `division:${string}`
   | `position:${MemberPosition}`;
 
 export type MemberJoinedYearSelection = "all" | "unknown" | number;
@@ -42,8 +44,8 @@ export const defaultMemberFilters: MemberFilterState = {
 export function getMemberAssignmentKey(
   member: FilterableMember,
 ): Exclude<MemberAssignmentSelection, "all"> | undefined {
-  if (member.division !== undefined) {
-    return `division:${member.division}`;
+  if (member.divisionKey !== undefined || member.division !== undefined) {
+    return `division:${member.divisionKey ?? member.division}`;
   }
 
   if (member.position !== undefined) {

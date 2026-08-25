@@ -81,6 +81,8 @@ function getR2Config() {
       region: "auto",
       endpoint: endpointUrl.origin,
       credentials: { accessKeyId, secretAccessKey },
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     }),
   };
 }
@@ -213,9 +215,17 @@ export const createReviewedImageUploadUrl = internalAction({
         Bucket: bucket,
         Key: args.objectKey,
         ContentType: args.contentType,
+        ContentLength: args.byteSize,
         CacheControl: "public, max-age=31536000, immutable",
       }),
-      { expiresIn },
+      {
+        expiresIn,
+        signableHeaders: new Set([
+          "cache-control",
+          "content-length",
+          "content-type",
+        ]),
+      },
     );
 
     return {
@@ -312,9 +322,17 @@ export const createAdminUploadUrl = action({
         Bucket: bucket,
         Key: objectKey,
         ContentType: contentType,
+        ContentLength: args.byteSize,
         CacheControl: cacheControl,
       }),
-      { expiresIn },
+      {
+        expiresIn,
+        signableHeaders: new Set([
+          "cache-control",
+          "content-length",
+          "content-type",
+        ]),
+      },
     );
     const mediaId: Id<"mediaAssets"> = await ctx.runMutation(
       internal.adminMedia.createPending,

@@ -11,6 +11,8 @@ out/
 .env.local
 .env.*.local
 .auth-keys.json
+.convex-auth-jwt-keys.json
+.qa-admin-credentials.json
 
 # Local tool state and generated security/test artifacts.
 .claude-flow/

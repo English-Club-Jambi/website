@@ -100,7 +100,7 @@ The 23 skips are deliberate project gates. Authenticated Admin touch runs separa
 | Theme | Pass | Light remains bright without becoming blank; dark preserves emphasis and text contrast |
 | Motion | Pass | Selection motion is deterministic and limited to transform/opacity; reduced motion removes spatial movement |
 | Iconography | Pass | Heroicons supply controls and role symbols; punctuation remains text only |
-| Privacy | Pass with documented showcase boundary | The 15 names, biographies, and portrait cells are fictional source-only presentation data, never enter Convex, and disappear when a real reviewed profile publishes; real profile and portrait consent gates remain unchanged |
+| Privacy | Pass with development boundary | The 15 names, biographies, and portrait cells are fictional and seed-batch-labelled in the named development Convex deployment. They are barred from production; real profile and portrait consent gates remain unchanged. |
 | Accessibility | Pass with boundary | Automated Axe and keyboard paths pass; no manual VoiceOver, NVDA, Safari, or 200 percent zoom session was available |
 | Performance | Pass with boundary | Routes are server-first and derivatives are compact; no field Core Web Vitals or production Lighthouse result exists yet |
 

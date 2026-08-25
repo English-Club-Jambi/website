@@ -164,7 +164,7 @@ async function main() {
 
   console.log("Admin provisioned.");
   if (generatedPassword) {
-    console.log(`Temporary password: ${password}`);
+    console.log(`Generated password: ${password}`);
   }
 }
 

@@ -9,13 +9,16 @@
  */
 
 import type * as adminAssessmentItems from "../adminAssessmentItems.js";
+import type * as adminAssessmentPools from "../adminAssessmentPools.js";
 import type * as adminAssessmentQuestionBank from "../adminAssessmentQuestionBank.js";
 import type * as adminAssessments from "../adminAssessments.js";
 import type * as adminAudit from "../adminAudit.js";
 import type * as adminContent from "../adminContent.js";
 import type * as adminMedia from "../adminMedia.js";
+import type * as adminMemberDivisions from "../adminMemberDivisions.js";
 import type * as adminMembers from "../adminMembers.js";
 import type * as adminPosts from "../adminPosts.js";
+import type * as adminPrograms from "../adminPrograms.js";
 import type * as adminProvisioning from "../adminProvisioning.js";
 import type * as adminThemes from "../adminThemes.js";
 import type * as adminUsers from "../adminUsers.js";
@@ -40,12 +43,14 @@ import type * as lib_assessmentEstimate from "../lib/assessmentEstimate.js";
 import type * as lib_assessmentMedia from "../lib/assessmentMedia.js";
 import type * as lib_assessmentModel from "../lib/assessmentModel.js";
 import type * as lib_assessmentQuestionBank from "../lib/assessmentQuestionBank.js";
+import type * as lib_assessmentQuestionSignals from "../lib/assessmentQuestionSignals.js";
 import type * as lib_assessmentScoring from "../lib/assessmentScoring.js";
 import type * as lib_editorDocument from "../lib/editorDocument.js";
 import type * as lib_media from "../lib/media.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as members from "../members.js";
 import type * as posts from "../posts.js";
+import type * as programs from "../programs.js";
 import type * as publicThemes from "../publicThemes.js";
 import type * as r2 from "../r2.js";
 import type * as seed from "../seed.js";
@@ -61,13 +66,16 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   adminAssessmentItems: typeof adminAssessmentItems;
+  adminAssessmentPools: typeof adminAssessmentPools;
   adminAssessmentQuestionBank: typeof adminAssessmentQuestionBank;
   adminAssessments: typeof adminAssessments;
   adminAudit: typeof adminAudit;
   adminContent: typeof adminContent;
   adminMedia: typeof adminMedia;
+  adminMemberDivisions: typeof adminMemberDivisions;
   adminMembers: typeof adminMembers;
   adminPosts: typeof adminPosts;
+  adminPrograms: typeof adminPrograms;
   adminProvisioning: typeof adminProvisioning;
   adminThemes: typeof adminThemes;
   adminUsers: typeof adminUsers;
@@ -92,12 +100,14 @@ declare const fullApi: ApiFromModules<{
   "lib/assessmentMedia": typeof lib_assessmentMedia;
   "lib/assessmentModel": typeof lib_assessmentModel;
   "lib/assessmentQuestionBank": typeof lib_assessmentQuestionBank;
+  "lib/assessmentQuestionSignals": typeof lib_assessmentQuestionSignals;
   "lib/assessmentScoring": typeof lib_assessmentScoring;
   "lib/editorDocument": typeof lib_editorDocument;
   "lib/media": typeof lib_media;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   members: typeof members;
   posts: typeof posts;
+  programs: typeof programs;
   publicThemes: typeof publicThemes;
   r2: typeof r2;
   seed: typeof seed;

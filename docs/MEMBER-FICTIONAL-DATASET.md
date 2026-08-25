@@ -1,16 +1,16 @@
 # Fictional member dataset
 
-Status: superseded recommendation; final dataset is `src/content/member-showcase.ts`
+Status: superseded recommendation; final development dataset is `content/member-development-seed.ts`
 Date: 25 August 2026
 Record count: 14 fictional identities
 
-> This file records the first 14-profile writing pass. The implemented roster contains 15 profiles so Pioneer has two entries and the desktop grid resolves to 5 by 3. See `MEMBER-SHOWCASE-DECISION.md` for the final contract.
+> This file records the first 14-profile writing pass. The implemented guarded development seed contains 15 profiles so Pioneer has two entries and the desktop grid resolves to 5 by 3. See `MEMBER-SHOWCASE-DECISION.md` for the current contract.
 
 ## Purpose and boundary
 
 This dataset gives the Member page enough believable content for layout, interaction, accessibility, and screenshot review before the club supplies a verified roster. Every identity, assignment, and biography below is fictional. The names are synthetic combinations and are not based on people in `assets/`, the GenBI reference, contact submissions, or any known English Club member.
 
-The data belongs in a source-only demo module. Do not seed it into Convex, publish it as the official roster, pair it with supplied participant photos, or migrate it into production records. A name may coincide with a real person by chance. That coincidence grants no permission and establishes no connection to English Club.
+The historical draft was intended as a source-only demo. The final test contract instead uses a target-locked development Convex seed. Do not publish it as the official roster, pair it with supplied participant photos, or migrate it into production records. A name may coincide with a real person by chance. That coincidence grants no permission and establishes no connection to English Club.
 
 ## Coverage
 

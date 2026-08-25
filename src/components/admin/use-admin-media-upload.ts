@@ -4,13 +4,15 @@ import { useAction } from "convex/react";
 
 import type { Id } from "../../../convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
+import { relayAdminMediaUpload } from "./admin-media-upload-relay";
 
 export type AdminMediaPurpose =
   | "journal-cover"
   | "journal-inline"
   | "member-photo"
   | "page-image"
-  | "brand";
+  | "brand"
+  | "assessment-image";
 
 export type UploadedAdminMedia = {
   mediaId: Id<"mediaAssets">;
@@ -88,17 +90,11 @@ export function useAdminMediaUpload() {
       alt: cleanAlt,
     });
 
-    const response = await fetch(upload.uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": upload.requiredHeaders.contentType,
-        "Cache-Control": upload.requiredHeaders.cacheControl,
-      },
-      body: file,
+    await relayAdminMediaUpload({
+      uploadUrl: upload.uploadUrl,
+      file,
+      requiredHeaders: upload.requiredHeaders,
     });
-    if (!response.ok) {
-      throw new Error(`R2 rejected the upload with status ${response.status}.`);
-    }
 
     const verified = await verifyUpload({
       mediaId: upload.mediaId,

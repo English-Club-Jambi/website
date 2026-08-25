@@ -4,11 +4,11 @@ export default function AdminAssessmentsLoading() {
   return (
     <>
       <AdminPageHeading
-        title="Assessment Lab"
-        description="Loading the private authoring workspace."
+        title="Practice Builder"
+        description="Loading formats and question-selection rules."
       />
-      <AdminSection title="Assessment definitions">
-        <AdminLoadingRows label="Loading assessment workspace" />
+      <AdminSection title="Practice formats">
+        <AdminLoadingRows label="Loading practice formats" />
       </AdminSection>
     </>
   );

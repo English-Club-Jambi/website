@@ -1,18 +1,10 @@
 "use client";
 
 import {
-  ArrowDownIcon,
   ArrowPathIcon,
-  ArrowUpIcon,
   DocumentDuplicateIcon,
-  EyeIcon,
-  ListBulletIcon,
   PencilSquareIcon,
-  RectangleStackIcon,
-  TrashIcon,
 } from "@heroicons/react/24/outline";
-import type { Route } from "next";
-import Link from "next/link";
 
 import {
   AdminEmpty,
@@ -21,10 +13,8 @@ import {
 
 import adminStyles from "../admin-shell.module.css";
 import styles from "./assessment-admin.module.css";
-import { assessmentOrderControls } from "./assessment-order";
 import {
   AssessmentReviewRail,
-  AssessmentWorkflowNav,
   type AssessmentKind,
   type AssessmentPublishGate,
   type AssessmentReviewState,
@@ -41,7 +31,6 @@ export type AssessmentWorkspaceSection = {
   order: number;
   itemCount: number;
   timeLimitSeconds?: number;
-  href: Route<`/admin/assessments/${string}/sections/${string}`>;
 };
 
 export type AssessmentWorkspaceModel = {
@@ -90,13 +79,10 @@ export function AssessmentWorkspaceView({
   publishing,
   onValidate,
   onEditMetadata,
-  onAddSection,
   onOpenReview,
   onPublish,
   onCreateNextDraft,
   onResumeClone,
-  onMoveSection,
-  onDeleteSection,
 }: {
   model: AssessmentWorkspaceModel;
   canEdit: boolean;
@@ -106,35 +92,14 @@ export function AssessmentWorkspaceView({
   publishing: boolean;
   onValidate?: () => void;
   onEditMetadata?: () => void;
-  onAddSection?: () => void;
   onOpenReview?: (reviewType: AssessmentReviewType) => void;
   onPublish?: () => void;
   onCreateNextDraft?: () => void;
   onResumeClone?: () => void;
-  onMoveSection?: (sectionId: string, targetOrder: number) => void;
-  onDeleteSection?: (sectionId: string, title: string) => void;
 }) {
   const draft = model.draft;
   const clonePending = draft?.status === "cloning";
   const cloneFailed = draft?.status === "clone-failed";
-  const baseHref = `/admin/assessments/${model.definition.id}` as Route;
-  const workflow = [
-    {
-      label: "Draft overview",
-      href: baseHref,
-      active: true,
-      icon: RectangleStackIcon,
-    },
-    ...(draft && model.sections[0]
-      ? [
-          {
-            label: "Section authoring",
-            href: model.sections[0].href,
-            icon: ListBulletIcon,
-          },
-        ]
-      : []),
-  ];
 
   return (
     <section className={adminStyles.adminSection}>
@@ -161,13 +126,11 @@ export function AssessmentWorkspaceView({
         </div>
       </header>
 
-      <AssessmentWorkflowNav links={workflow} />
-
       {draft === null ? (
         <div className={styles.draftLifecyclePanel}>
           <AdminEmpty
             title="No editable draft"
-            description="The published version stays immutable. Create a private next-version draft before changing sections, questions, or media."
+            description="The published version stays immutable. Start a private next revision before changing its wording or Question Bank eligibility rules."
           />
           {canEdit && model.published && onCreateNextDraft ? (
             <button
@@ -177,7 +140,7 @@ export function AssessmentWorkspaceView({
               onClick={onCreateNextDraft}
             >
               <DocumentDuplicateIcon aria-hidden width={18} height={18} />
-              {publishing ? "Starting clone…" : "Create next draft"}
+              {publishing ? "Starting revision…" : "Start next revision"}
             </button>
           ) : null}
         </div>
@@ -215,10 +178,10 @@ export function AssessmentWorkspaceView({
             <div className={styles.editorBlock}>
               <div className={styles.editorHeading}>
                 <div>
-                  <h3>Learner-facing draft</h3>
+                  <h3>Format contract</h3>
                   <p>
-                    Public title, summary, instructions, timing, and review policy belong
-                    to revision {draft.contentRevision}.
+                    The catalogue entry is fixed. Public wording, timing, and review policy
+                    belong to working revision {draft.contentRevision}.
                   </p>
                 </div>
                 {canEdit && onEditMetadata ? (
@@ -259,77 +222,38 @@ export function AssessmentWorkspaceView({
             <div className={styles.editorBlock}>
               <div className={styles.editorHeading}>
                 <div>
-                  <h3>Versioned sections</h3>
+                  <h3>Fixed skill structure</h3>
                   <p>
-                    Section order, timing, stimuli, items, and private keys remain pinned
-                    to this draft version.
+                    Skills and quotas define the format. Admins choose the eligible
+                    Question Bank pool below; they do not add, remove, or reorder sections.
                   </p>
                 </div>
-                {canEdit && onAddSection ? (
-                  <button
-                    className={adminStyles.primaryButton}
-                    type="button"
-                    onClick={onAddSection}
-                  >
-                    <RectangleStackIcon aria-hidden width={18} height={18} />
-                    Add section
-                  </button>
-                ) : null}
+                <AdminStatus tone="neutral">Fixed format</AdminStatus>
               </div>
               {model.sections.length === 0 ? (
                 <AdminEmpty
-                  title="No sections in this draft"
-                  description="Add the first section before creating stimuli or questions."
+                  title="Fixed structure is missing"
+                  description="Restore the canonical format data before validating or publishing this revision."
                 />
               ) : (
                 <div className={styles.authoringList}>
-                  {model.sections.map((section) => {
-                    const orderControls = assessmentOrderControls(section.order, model.sections.length);
-                    return <div key={section.id} className={styles.authoringRow}>
+                  {model.sections.map((section) => (
+                    <div key={section.id} className={styles.authoringRow}>
                       <span className={styles.authoringIndex}>{section.order + 1}</span>
                       <span className={styles.rowCopy}>
-                        <Link className={styles.authoringLink} href={section.href}>
-                          <strong>{section.title}</strong>
-                        </Link>
+                        <strong>{section.title}</strong>
                         <span>
-                          {section.skill}, {section.itemCount} questions, {formatMinutes(section.timeLimitSeconds)}
+                          {section.skill}, draws {section.itemCount} questions, {formatMinutes(section.timeLimitSeconds)}
                         </span>
                       </span>
                       <span className={styles.rowActions}>
                         <AdminStatus>{section.sectionKey}</AdminStatus>
-                        {canEdit && onMoveSection ? (
-                          <>
-                            <button className={adminStyles.iconButton} type="button" disabled={validating || !orderControls.canMoveUp} aria-label={`Move ${section.title} up`} onClick={() => onMoveSection(section.id, section.order - 1)}>
-                              <ArrowUpIcon aria-hidden width={18} height={18} />
-                            </button>
-                            <button className={adminStyles.iconButton} type="button" disabled={validating || !orderControls.canMoveDown} aria-label={`Move ${section.title} down`} onClick={() => onMoveSection(section.id, section.order + 1)}>
-                              <ArrowDownIcon aria-hidden width={18} height={18} />
-                            </button>
-                          </>
-                        ) : null}
-                        <Link
-                          className={adminStyles.secondaryButton}
-                          href={section.href}
-                          aria-label={`Open ${section.title}`}
-                        >
-                          Open
-                          <EyeIcon aria-hidden width={17} height={17} />
-                        </Link>
-                        {canEdit && onDeleteSection ? (
-                          <button
-                            className={adminStyles.iconButton}
-                            type="button"
-                            disabled={validating || section.itemCount > 0}
-                            aria-label={`Remove ${section.title}`}
-                            title={section.itemCount > 0 ? "Remove every question before deleting this section" : "Remove empty section"}
-                            onClick={() => onDeleteSection(section.id, section.title)}
-                          >
-                            <TrashIcon aria-hidden width={18} height={18} />
-                          </button>
-                        ) : null}
+                        <AdminStatus tone="success">
+                          Quota {section.itemCount}
+                        </AdminStatus>
                       </span>
                     </div>
-                  })}
+                  ))}
                 </div>
               )}
             </div>

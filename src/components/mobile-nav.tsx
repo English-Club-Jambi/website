@@ -25,6 +25,7 @@ export function PrimaryNavigation({
   const links: Array<{ href: Route; label: string }> = [
     { href: "/about", label: copy.navAbout },
     { href: "/activities", label: copy.navActivities },
+    { href: "/programs", label: copy.navPrograms },
     { href: "/members", label: copy.navMembers },
     { href: "/practice", label: copy.navPractice },
     { href: "/journal", label: copy.navJournal },

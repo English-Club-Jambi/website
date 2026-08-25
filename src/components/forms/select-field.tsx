@@ -37,6 +37,7 @@ type SelectFieldProps = {
   id?: string;
   className?: string;
   describedBy?: string;
+  variant?: "field" | "inline";
 };
 
 function SelectOption({ option }: { option: SelectFieldOption }) {
@@ -75,6 +76,7 @@ export function SelectField({
   id,
   className,
   describedBy,
+  variant = "field",
 }: SelectFieldProps) {
   const generatedId = useId();
   const triggerId = id ?? `select-${generatedId.replaceAll(":", "")}`;
@@ -84,6 +86,7 @@ export function SelectField({
     <div
       className={classNames(styles.field, className)}
       data-disabled={disabled || undefined}
+      data-variant={variant}
     >
       <label className={styles.label} htmlFor={triggerId}>
         {label}
@@ -102,6 +105,7 @@ export function SelectField({
           className={styles.trigger}
           aria-describedby={describedBy}
           data-select-trigger
+          data-variant={variant}
         >
           <SelectPrimitive.Value placeholder={placeholder} />
           <SelectPrimitive.Icon className={styles.triggerIcon}>
@@ -118,6 +122,7 @@ export function SelectField({
             align="start"
             collisionPadding={12}
             avoidCollisions
+            data-variant={variant}
           >
             <SelectPrimitive.ScrollUpButton
               className={styles.scrollButton}

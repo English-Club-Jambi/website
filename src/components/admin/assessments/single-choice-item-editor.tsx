@@ -329,7 +329,7 @@ export function SingleChoiceItemEditor({
         <div className={styles.privatePanelBody}>
           <SelectField
             label="Correct option"
-            value={correctChoiceKey || undefined}
+            value={correctChoiceKey}
             placeholder="Choose the correct option"
             options={correctOptions}
             required

@@ -4,10 +4,13 @@ import {
   AdjustmentsHorizontalIcon,
   ArchiveBoxIcon,
   ArrowLeftIcon,
+  ArrowUpTrayIcon,
   CheckCircleIcon,
   ChevronDownIcon,
   ClockIcon,
   PaperAirplaneIcon,
+  PhotoIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import type { JSONContent } from "@tiptap/core";
 import type { FunctionReturnType } from "convex/server";
@@ -21,6 +24,9 @@ import {
   RichJournalEditor,
   type JournalEditorChange,
 } from "@/components/admin/editor/rich-journal-editor";
+import { JournalCover } from "@/components/journal/journal-cover";
+import { getMedia } from "@/content/media";
+import type { PublicJournalMedia } from "@/lib/journal";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 
@@ -62,6 +68,13 @@ type JournalFormState = {
   authorName: string;
   featured: boolean;
 };
+
+type JournalCoverPreview = {
+  coverKey?: string;
+  coverMedia?: PublicJournalMedia;
+};
+
+type JournalCoverIntent = "unchanged" | "replace" | "remove";
 
 const newStoryState: JournalFormState = {
   slug: "",
@@ -114,6 +127,31 @@ type JournalRevisionRecords = FunctionReturnType<
   typeof api.adminPosts.listRevisions
 >;
 
+function resolveInitialCover(
+  source:
+    | NonNullable<JournalWorkspaceRecord["draft"]>
+    | NonNullable<JournalWorkspaceRecord["published"]>
+    | undefined,
+  post: JournalWorkspaceRecord["post"] | undefined,
+): JournalCoverPreview | null {
+  if (source?.coverRemoved === true) return null;
+  if (source?.coverMedia !== undefined || source?.coverKey !== undefined) {
+    return {
+      ...(source.coverMedia === undefined
+        ? {}
+        : { coverMedia: source.coverMedia }),
+      ...(source.coverKey === undefined ? {} : { coverKey: source.coverKey }),
+    };
+  }
+  if (post?.coverMedia !== undefined || post?.coverKey !== undefined) {
+    return {
+      ...(post.coverMedia === undefined ? {} : { coverMedia: post.coverMedia }),
+      ...(post.coverKey === undefined ? {} : { coverKey: post.coverKey }),
+    };
+  }
+  return null;
+}
+
 function JournalWorkspaceEditor({
   typedPostId,
   workspace,
@@ -137,6 +175,11 @@ function JournalWorkspaceEditor({
     [workspace?.legacyBody],
   );
   const metadataSource = source ?? workspace?.post;
+  const initialCover = resolveInitialCover(source, workspace?.post);
+  const initialCoverAlt =
+    initialCover?.coverMedia?.alt ??
+    getMedia(initialCover?.coverKey)?.alt ??
+    "";
   const [form, setForm] = useState<JournalFormState>(() =>
     metadataSource
       ? {
@@ -150,6 +193,14 @@ function JournalWorkspaceEditor({
       : { ...newStoryState },
   );
   const [revision, setRevision] = useState(workspace?.draft?.revision ?? 0);
+  const [coverPreview, setCoverPreview] = useState<JournalCoverPreview | null>(
+    initialCover,
+  );
+  const [coverIntent, setCoverIntent] =
+    useState<JournalCoverIntent>("unchanged");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverAlt, setCoverAlt] = useState(initialCoverAlt);
+  const [coverInputKey, setCoverInputKey] = useState(0);
   const [editorChange, setEditorChange] = useState<JournalEditorChange>(() => ({
     document:
       source === undefined
@@ -160,9 +211,15 @@ function JournalWorkspaceEditor({
       ? source.plainText.trim().split(/\s+/u).length
       : legacyDocument.wordCount,
   }));
-  const [pending, setPending] = useState<"save" | "publish" | "archive" | null>(null);
+  const [pending, setPending] = useState<
+    "save" | "publish" | "archive" | "cover" | null
+  >(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const coverIsResolvable =
+    coverPreview !== null &&
+    (coverPreview.coverMedia !== undefined ||
+      getMedia(coverPreview.coverKey) !== undefined);
   const editorInitialContent = useMemo(
     () =>
       source === undefined
@@ -191,6 +248,14 @@ function JournalWorkspaceEditor({
         ...(typedPostId === undefined ? {} : { postId: typedPostId }),
         expectedRevision: revision,
         ...form,
+        ...(coverIntent === "replace" && coverPreview?.coverMedia !== undefined
+          ? {
+              coverMediaId: coverPreview.coverMedia
+                .mediaId as Id<"mediaAssets">,
+            }
+          : coverIntent === "remove"
+            ? { coverMediaId: null }
+            : {}),
         editorJson: JSON.stringify(editorChange.document),
       });
       if (!result.ok) {
@@ -199,6 +264,7 @@ function JournalWorkspaceEditor({
         return;
       }
       setRevision(result.revision);
+      setCoverIntent("unchanged");
       setMessage(`Draft revision ${result.revision} saved.`);
       if (typedPostId === undefined) {
         router.replace(`/admin/journal/${result.postId}` as Route);
@@ -208,6 +274,58 @@ function JournalWorkspaceEditor({
     } finally {
       setPending(null);
     }
+  }
+
+  async function handleCoverUpload() {
+    if (coverFile === null) {
+      setError("Choose a cover image before uploading.");
+      return;
+    }
+    setPending("cover");
+    setMessage("");
+    setError("");
+    try {
+      const uploaded = await uploadMedia({
+        file: coverFile,
+        alt: coverAlt,
+        purpose: "journal-cover",
+      });
+      setCoverPreview({
+        coverKey: uploaded.objectKey,
+        coverMedia: {
+          mediaId: uploaded.mediaId,
+          publicUrl: uploaded.publicUrl,
+          alt: coverAlt.trim().replace(/\s+/gu, " "),
+          width: uploaded.width,
+          height: uploaded.height,
+        },
+      });
+      setCoverIntent("replace");
+      setCoverFile(null);
+      setCoverInputKey((current) => current + 1);
+      setMessage("Cover verified in R2. Save the revision to keep this choice.");
+    } catch (caught) {
+      setError(humanizeError(caught));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  function removeCover() {
+    setCoverPreview(null);
+    setCoverIntent("remove");
+    setCoverFile(null);
+    setCoverInputKey((current) => current + 1);
+    setMessage("The cover will be removed when this revision is saved.");
+  }
+
+  function restoreCoverChoice() {
+    setCoverPreview(initialCover);
+    setCoverIntent("unchanged");
+    setCoverAlt(initialCoverAlt);
+    setCoverFile(null);
+    setCoverInputKey((current) => current + 1);
+    setMessage("The saved cover choice has been restored.");
   }
 
   async function handlePublish() {
@@ -369,6 +487,113 @@ function JournalWorkspaceEditor({
               </label>
             </div>
           </details>
+
+          <section
+            className={styles.storyCoverField}
+            aria-labelledby="story-cover-heading"
+          >
+            <div className={styles.storyCoverIntro}>
+              <div>
+                <PhotoIcon aria-hidden width={21} height={21} />
+                <div className={styles.storyCoverIntroText}>
+                  <h2 id="story-cover-heading">Featured image</h2>
+                  <small>
+                    Used in the journal archive, story preview, and article header.
+                  </small>
+                </div>
+              </div>
+              <AdminStatus tone={coverIsResolvable ? "success" : "neutral"}>
+                {coverPreview === null
+                  ? "No cover"
+                  : coverIsResolvable
+                    ? "Cover ready"
+                    : "Cover unavailable"}
+              </AdminStatus>
+            </div>
+            <div className={styles.storyCoverWorkspace}>
+              <div className={styles.storyCoverPreview}>
+                {coverIsResolvable ? (
+                  <JournalCover
+                    coverKey={coverPreview.coverKey}
+                    coverMedia={coverPreview.coverMedia}
+                    ratio="16 / 9"
+                    sizes="(max-width: 720px) 100vw, 240px"
+                  />
+                ) : coverPreview !== null ? (
+                  <div className={styles.storyCoverUnavailable}>
+                    <PhotoIcon aria-hidden width={30} height={30} />
+                    <span>The stored cover is unavailable. Upload a replacement.</span>
+                  </div>
+                ) : (
+                  <div className={styles.storyCoverUnavailable}>
+                    <PhotoIcon aria-hidden width={30} height={30} />
+                    <span>This story has no featured image.</span>
+                  </div>
+                )}
+              </div>
+              <div className={styles.storyCoverControls}>
+                <label className={styles.field}>
+                  <span>Image file</span>
+                  <input
+                    key={coverInputKey}
+                    type="file"
+                    accept="image/avif,image/jpeg,image/png,image/webp"
+                    disabled={pending !== null}
+                    onChange={(event) =>
+                      setCoverFile(event.target.files?.[0] ?? null)
+                    }
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span>Alternative text</span>
+                  <input
+                    value={coverAlt}
+                    minLength={3}
+                    maxLength={240}
+                    placeholder="Describe what the image shows"
+                    disabled={pending !== null}
+                    onChange={(event) => setCoverAlt(event.target.value)}
+                  />
+                </label>
+                <div className={styles.buttonRow}>
+                  <button
+                    className={styles.secondaryButton}
+                    type="button"
+                    disabled={pending !== null || coverFile === null}
+                    onClick={() => void handleCoverUpload()}
+                  >
+                    <ArrowUpTrayIcon aria-hidden width={18} height={18} />
+                    {pending === "cover" ? "Uploading…" : "Upload cover"}
+                  </button>
+                  {coverPreview !== null ? (
+                    <button
+                      className={styles.textButton}
+                      type="button"
+                      disabled={pending !== null}
+                      onClick={removeCover}
+                    >
+                      <TrashIcon aria-hidden width={17} height={17} />
+                      Remove cover
+                    </button>
+                  ) : null}
+                  {coverIntent !== "unchanged" ? (
+                    <button
+                      className={styles.textButton}
+                      type="button"
+                      disabled={pending !== null}
+                      onClick={restoreCoverChoice}
+                    >
+                      Restore saved cover
+                    </button>
+                  ) : null}
+                </div>
+                <p>
+                  Uploading verifies the file in R2. Saving records it in a draft;
+                  publishing makes that exact revision public.
+                </p>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section className={styles.storyBodySection} aria-labelledby="story-body-heading">

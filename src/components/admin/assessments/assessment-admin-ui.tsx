@@ -157,8 +157,8 @@ export function AssessmentCatalogView({
   if (entries.length === 0) {
     return (
       <AdminEmpty
-        title="No assessment definitions in this view"
-        description="Create a definition or change the status filter. Nothing publishes until its current revision passes every review gate."
+        title="No practice formats in this view"
+        description="Change the publication filter to find another format. The fixed catalogue is installed internally; admins can revise delivery rules without creating new formats."
       />
     );
   }
@@ -177,7 +177,7 @@ export function AssessmentCatalogView({
               <small>{entry.profile}</small>
             </span>
             <span>
-              <b>{entry.draftStatus ?? "No active draft"}</b>
+              <b>{entry.draftStatus ?? "No unpublished changes"}</b>
               <small>Updated {formatAdminDate(entry.updatedAt)}</small>
             </span>
           </span>

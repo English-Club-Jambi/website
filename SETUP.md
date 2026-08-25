@@ -150,7 +150,7 @@ npm run admin:provision -- \
   --generate-password
 ```
 
-`--generate-password` prints the temporary password once after a successful run. Store it in a password manager. Do not put a password in shell arguments, source, Markdown, or Git.
+`--generate-password` prints the generated password once after a successful run. Store it in a password manager. The password does not expire automatically; do not put it in shell arguments, source, Markdown, or Git.
 
 If an earlier operator action created the Password account but failed before it could bind the sole legacy placeholder owner, recover that exact account instead of attempting a second sign-up:
 
@@ -165,6 +165,13 @@ npm run admin:provision -- \
 ```
 
 This recovery is intentionally narrow: the email must already identify a Password account, the legacy deployment must contain exactly one active unbound owner with the exact supplied token, and the requested role must remain `owner`. The account is bound first, then its password is rotated and prior sessions are invalidated. Do not use `--recover-existing` for normal account creation.
+
+The Password provider stores a one-way password hash on the Auth account. The
+password itself has no application-level expiry and is never rotated during sign-in,
+session refresh, deployment, or normal CMS work. Only the explicit
+`--recover-existing` operator command replaces it. Session tokens do expire and may
+be invalidated without changing the password. Use a separate development-only admin
+for automated browser checks so QA never changes a human administrator's credential.
 
 3. Open `/admin` and sign in with that issued account.
 4. Confirm the owner workspace appears, sign out, sign in again, and verify the stable Auth-account binding survives the new session.
@@ -194,7 +201,7 @@ npm run r2:check
 
 A healthy connection returns `{ "ok": true }`. The existing public bucket and `https://r2.mukhtada.my.id` custom domain have already passed public-object checks; re-run the target-specific check for production.
 
-Public browser CMS uploads require an exact-origin CORS policy because the browser PUTs directly to the S3 endpoint. The general media upload signs `Content-Type` and `Cache-Control`; see `R2-SETUP.md` for the complete policy and verification flow.
+The current public CMS upload does not depend on bucket CORS. The browser sends the body to the same-origin `/api/admin/media-upload` route, which validates the Convex-issued presigned contract and streams to the R2 S3 endpoint; Convex then verifies metadata with `HeadObject`. Exact-origin bucket CORS is still required before switching to a direct browser PUT. See `R2-SETUP.md` for both paths.
 
 ## 8. Configure the private Assessment bucket
 
@@ -267,13 +274,19 @@ npx convex run seed:run '{}'
 npx convex run posts:listPublished '{"limit":3}'
 ```
 
-The Member public query may be empty until consent-cleared records publish:
+The development deployment uses an idempotent, development-gated Member seed so
+the grid, filters, managed divisions, and coordinator workflow can be exercised:
 
 ```bash
+npm run members:seed:dev
 npx convex run members:listPublished '{}'
 ```
 
-When it returns `[]`, the route uses the 15-profile fictional source showcase. Those records are not members, are never written to Convex, and disappear when the first reviewed profile publishes.
+The seed writes 15 explicitly fictional showcase profiles, reviewed portrait
+derivatives, and the five initial managed divisions only to the configured Convex
+development deployment. It is not a production roster and must be replaced with
+consent-cleared organisational records before launch. The command checks the target,
+is idempotent, and refuses production.
 
 Assessment does not use a local question fallback. The development deployment may be populated with the checked-in original bank for end-to-end flow testing. Announce and verify the exact non-production target first, install `espeak-ng`, `ffmpeg`, and `ffprobe`, then run:
 
@@ -295,7 +308,7 @@ The admin media workspace performs:
 
 1. reserve a reviewed immutable object key;
 2. request a short-lived presigned PUT;
-3. upload directly from the browser to the R2 S3 endpoint with exact signed headers;
+3. send the body with exact signed headers to the same-origin upload relay, which validates and streams it to the R2 S3 endpoint;
 4. verify object MIME and byte size with `HeadObject`;
 5. mark reviewed status before the asset becomes selectable;
 6. publish only through the public custom-domain key.

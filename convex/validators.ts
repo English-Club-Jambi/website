@@ -13,6 +13,46 @@ export const eventStatusValidator = v.union(
   v.literal("archived"),
 );
 
+export const programStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("published"),
+  v.literal("archived"),
+);
+
+export const programCategoryValidator = v.union(
+  v.literal("learning"),
+  v.literal("competition"),
+  v.literal("exchange"),
+  v.literal("community"),
+  v.literal("milestone"),
+);
+
+export const programDeliveryStateValidator = v.union(
+  v.literal("completed"),
+  v.literal("ongoing"),
+  v.literal("planned"),
+);
+
+export const publicProgramValidator = v.object({
+  slug: v.string(),
+  title: v.string(),
+  summary: v.string(),
+  body: v.string(),
+  category: programCategoryValidator,
+  deliveryState: programDeliveryStateValidator,
+  audience: v.string(),
+  dateLabel: v.optional(v.string()),
+  startsAt: v.optional(v.number()),
+  locationLabel: v.optional(v.string()),
+  communityBenefit: v.string(),
+  sourceLabel: v.optional(v.string()),
+  sourceUrl: v.optional(v.string()),
+  featured: v.boolean(),
+  sortOrder: v.number(),
+  publishedAt: v.number(),
+  updatedAt: v.number(),
+});
+
 export const contactIntentValidator = v.union(
   v.literal("join"),
   v.literal("partner"),
@@ -87,6 +127,16 @@ export const memberDivisionValidator = v.union(
   v.literal("human-resource-development"),
 );
 
+export const memberDivisionStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("archived"),
+);
+
+export const memberPreCoordinatorRoleValidator = v.union(
+  v.literal(0),
+  v.literal(1),
+);
+
 export const memberPositionValidator = v.union(
   v.literal("secretary"),
   v.literal("treasury"),
@@ -126,6 +176,8 @@ export const publicMemberValidator = v.object({
   displayName: v.string(),
   roleLevel: memberRoleLevelValidator,
   division: v.optional(memberDivisionValidator),
+  divisionKey: v.optional(v.string()),
+  divisionName: v.optional(v.string()),
   position: v.optional(memberPositionValidator),
   joinedYear: v.optional(v.number()),
   shortBio: v.optional(v.string()),
@@ -164,6 +216,9 @@ export const adminPermissionValidator = v.union(
   v.literal("assessment:edit"),
   v.literal("assessment:review"),
   v.literal("assessment:publish"),
+  v.literal("programs:read"),
+  v.literal("programs:edit"),
+  v.literal("programs:publish"),
 );
 
 export const cmsAreaValidator = v.union(
@@ -174,6 +229,7 @@ export const cmsAreaValidator = v.union(
   v.literal("media"),
   v.literal("theme"),
   v.literal("assessment"),
+  v.literal("programs"),
 );
 
 export const cmsActionValidator = v.union(
@@ -181,6 +237,7 @@ export const cmsActionValidator = v.union(
   v.literal("update"),
   v.literal("publish"),
   v.literal("archive"),
+  v.literal("delete"),
   v.literal("restore"),
   v.literal("grant"),
   v.literal("disable"),

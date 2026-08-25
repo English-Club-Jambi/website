@@ -130,23 +130,31 @@ export function isValidMemberJoinedYear(
 export function isValidMemberAssignment({
   roleLevel,
   division,
+  divisionKey,
   position,
 }: {
   roleLevel: MemberRoleLevel;
   division?: MemberDivision;
+  divisionKey?: string;
   position?: MemberPosition;
 }) {
   if (roleLevel === 0 || roleLevel === 1) {
-    return division === undefined && position === undefined;
+    return division === undefined && divisionKey === undefined && position === undefined;
   }
 
   if (roleLevel === 2) {
-    return division !== undefined && position === undefined;
+    return (
+      (division !== undefined ||
+        (divisionKey !== undefined &&
+          /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(divisionKey))) &&
+      position === undefined
+    );
   }
 
   if (roleLevel === 3) {
     return (
       division === undefined &&
+      divisionKey === undefined &&
       position !== undefined &&
       corePositionKeys.has(position)
     );
@@ -154,6 +162,7 @@ export function isValidMemberAssignment({
 
   return (
     division === undefined &&
+    divisionKey === undefined &&
     position !== undefined &&
     boardPositionKeys.has(position)
   );
@@ -165,11 +174,17 @@ export function getMemberRoleDefinition(level: MemberRoleLevel) {
 
 export function getMemberSubtypeLabel({
   division,
+  divisionName,
   position,
 }: {
   division?: MemberDivision;
+  divisionName?: string;
   position?: MemberPosition;
 }) {
+  if (divisionName !== undefined) {
+    return divisionName;
+  }
+
   if (division !== undefined) {
     return coordinatorDivisions.find((item) => item.key === division)?.label;
   }

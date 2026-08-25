@@ -4,6 +4,24 @@
   gap: 0.55rem;
 }
 
+.field[data-variant="inline"] {
+  width: max-content;
+  max-width: 100%;
+  display: inline-grid;
+  gap: 0;
+  vertical-align: middle;
+}
+
+.field[data-variant="inline"] .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .label {
   color: var(--muted);
   font-size: 0.72rem;
@@ -66,6 +84,20 @@
   opacity: 0.55;
 }
 
+.trigger[data-variant="inline"] {
+  width: auto;
+  min-width: 6.5rem;
+  max-width: min(14rem, calc(100vw - 2rem));
+  min-height: 44px;
+  gap: 0.4rem;
+  border-color: var(--primary);
+  border-radius: 0.5rem;
+  padding: 0.42rem 0.5rem 0.42rem 0.65rem;
+  background: color-mix(in oklch, var(--primary-wash) 42%, var(--surface));
+  font-size: 0.95em;
+  line-height: 1.15;
+}
+
 .triggerIcon {
   display: grid;
   place-items: center;
@@ -90,6 +122,15 @@
   box-shadow: 0 4px 0 color-mix(in oklch, var(--ink) 20%, transparent);
   transform-origin: var(--radix-select-content-transform-origin);
   animation: select-content-enter var(--duration-fast) var(--ease-out) both;
+}
+
+.content[data-variant="inline"] {
+  width: max-content;
+  min-width: var(--radix-select-trigger-width);
+}
+
+.content[data-variant="inline"] .item {
+  white-space: nowrap;
 }
 
 .viewport {

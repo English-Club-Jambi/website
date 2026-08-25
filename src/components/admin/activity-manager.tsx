@@ -33,6 +33,8 @@ const areaOptions = [
   { value: "members", label: "Members" },
   { value: "media", label: "Media" },
   { value: "theme", label: "Appearance" },
+  { value: "assessment", label: "Assessments" },
+  { value: "programs", label: "Programs" },
 ] as const;
 
 function actionTone(action: AuditRecord["action"]) {
@@ -102,14 +104,14 @@ function OwnerActivity() {
   );
 }
 
-export function ActivityManager() {
+export function AuditLogManager() {
   const admin = useAdminSession();
 
   return (
     <>
       <AdminPageHeading
-        title="Activity"
-        description="Review the signed record of changes made across the English Club workspace."
+        title="Audit log"
+        description="Review the signed, owner-only record of administrative and publishing changes."
       />
       {admin.role === "owner" ? (
         <OwnerActivity />
@@ -119,7 +121,7 @@ export function ActivityManager() {
             <ShieldCheckIcon aria-hidden width={34} height={34} />
             <div>
               <strong>This account cannot read the audit trail.</strong>
-              <p>An owner can review activity or change this account&apos;s role from the secured admin access workflow.</p>
+              <p>An owner can review the change history or adjust this account&apos;s role through the secured admin access workflow.</p>
             </div>
           </div>
         </AdminSection>

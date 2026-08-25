@@ -6,6 +6,7 @@ import {
   DocumentTextIcon,
   PaintBrushIcon,
   PhotoIcon,
+  RectangleStackIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
 import type { Route } from "next";
@@ -29,6 +30,13 @@ const workAreas = [
     description: "Write structured stories, place reviewed images, and prepare a revision.",
     action: "Open journal",
     icon: BookOpenIcon,
+  },
+  {
+    href: "/admin/programs",
+    label: "Programs",
+    description: "Keep delivered work, programme lines, sources, and open community directions distinct.",
+    action: "Open programs",
+    icon: RectangleStackIcon,
   },
   {
     href: "/admin/members",

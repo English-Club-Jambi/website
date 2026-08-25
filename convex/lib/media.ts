@@ -1,5 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
-import type { QueryCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+
+type MediaReadCtx = Pick<QueryCtx | MutationCtx, "db">;
 
 export function publicR2UrlForKey(objectKey: string) {
   return `https://r2.mukhtada.my.id/${objectKey
@@ -109,4 +111,22 @@ export async function projectReadyJournalMedia(
     }),
   );
   return media.flatMap((asset) => (asset === null ? [] : [asset]));
+}
+
+export async function projectReadyQuestionIllustration(
+  ctx: MediaReadCtx,
+  mediaId: Id<"mediaAssets"> | undefined,
+) {
+  if (mediaId === undefined) return null;
+  const asset = await ctx.db.get("mediaAssets", mediaId);
+  if (
+    asset === null ||
+    asset.status !== "ready" ||
+    (asset.access ?? "public") !== "public" ||
+    asset.purpose !== "assessment-image" ||
+    !asset.contentType.startsWith("image/")
+  ) {
+    return null;
+  }
+  return toReadyMediaProjection(asset);
 }

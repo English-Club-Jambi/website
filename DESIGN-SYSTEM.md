@@ -291,15 +291,15 @@ Desktop:
 - Each role channel shows its real numeric code, one Heroicon, label, and scope sentence.
 - One companion field occupies the remaining columns and shows the selected role's supplied divisions or positions.
 - A separate roster region uses a shared-rule contact sheet for records returned by Convex.
-- A successful empty query uses the same grid for 15 source-only fictional profiles. Each card combines one generated portrait cell, a Heroicon role symbol, name, assignment, and short biography.
+- The named development deployment uses the same grid for 15 seed-batch-labelled fictional Convex profiles. Each card combines one generated portrait cell, a Heroicon role symbol, name, assignment, and short biography. Production renders only consent-cleared records returned by its own deployment.
 
 Phone:
 
 - All role controls form one vertical group. No label depends on horizontal drag.
 - The active companion follows the controls in source order.
-- The roster remains a two-column grid down to 320 px. Real portrait space appears only when a cleared portrait exists; showcase cards use unique cells from the generated portrait sheet.
+- The roster remains a two-column grid down to 320 px. Real portrait space appears only when a cleared portrait exists; development-seeded cards use unique cells from the generated portrait sheet.
 
-The same selection filters the roster without triggering another request. A polite status message announces the result count. Showcase, published, and service-unavailable states remain distinct in source behavior, while public copy stays focused on the organisation. Without JavaScript, all five role panels and supplied subtypes are visible.
+The same selection filters the roster without triggering another request. A polite status message announces the result count. Published, empty, and service-unavailable states remain distinct, while public copy stays focused on the organisation. Without JavaScript, all five role panels and supplied subtypes are visible.
 
 Motion is a deterministic state replacement: selected-label response at 160ms, companion and roster replacement at 300ms, and no travel beyond 12px. There is no autoplay, scroll-driven active role, pointer trail, or animated member carousel.
 
@@ -342,9 +342,9 @@ The composition may change on hover or focus, but no JavaScript is needed.
 ### Administration shell
 
 - A fixed sidebar becomes a focus-contained mobile dialog below the desktop workspace threshold.
-- Pages, Journal, Assessments, Members, Media, Appearance, and Activity use one navigation, heading, toolbar, field, status, pagination, and error system.
+- Pages, Journal, Programs, Practice Builder, Members, Media, Appearance, and Audit log use one navigation, heading, toolbar, field, status, pagination, and error system.
 - Journal authoring stores allowlisted structured JSON. Media nodes hold verified IDs and alt text; map nodes hold finite bounded coordinates.
-- Assessment authoring separates metadata, ordered sections, stimuli, protected keys, validation, four review decisions, publication, and next-draft cloning.
+- Practice Builder separates the fixed format contract, fixed skill quotas, a versioned eligible Question Bank pool, aggregate learner-flag review, validation, four review decisions, publication, and next-revision cloning. It exposes no format/section creation controls.
 - Configuration gates remain visible as operational states. Missing private Assessment R2 credentials disable confidential upload without hiding the media ledger.
 
 ## 10. Route composition
@@ -471,7 +471,7 @@ Reject before review:
 - repeated uppercase eyebrows;
 - decorative section numbers;
 - fake UI, fake metrics, or fake quotes;
-- fictional Member showcase material presented as reviewed roster evidence, or any invented count, tenure, achievement, or contact detail;
+- development Member seed material presented as reviewed roster evidence or copied into production, or any invented count, tenure, achievement, or contact detail;
 - score rings, accuracy-as-proficiency, official-scale conversions, CEFR badges, certificate graphics, or admission language for Practice;
 - decorative admin dashboard cards, giant outlined headings, sticker piles, or publication progress that is not tied to stored state;
 - hierarchy pyramids, orbiting face walls, or three equal profile cards;

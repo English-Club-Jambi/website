@@ -42,6 +42,7 @@ describe("public content manifest", () => {
       "practice",
       "about",
       "activities",
+      "programs",
       "members",
       "journal",
       "contact",

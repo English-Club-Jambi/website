@@ -63,6 +63,12 @@ export const assessmentQuestionBankStatusValidator = v.union(
   v.literal("archived"),
 );
 
+export const assessmentFlagReviewStatusValidator = v.union(
+  v.literal("open"),
+  v.literal("reviewed"),
+  v.literal("dismissed"),
+);
+
 export const assessmentDeliveryModeValidator = v.union(
   v.literal("fixed"),
   v.literal("random-bank"),
@@ -443,6 +449,16 @@ export const attemptPlayerValidator = v.object({
     instructions: v.string(),
   }),
   item: publicAssessmentItemValidator,
+  illustration: v.union(
+    v.object({
+      mediaId: v.id("mediaAssets"),
+      publicUrl: v.string(),
+      alt: v.string(),
+      width: v.number(),
+      height: v.number(),
+    }),
+    v.null(),
+  ),
   stimulus: v.union(publicStimulusValidator, v.null()),
   response: v.union(assessmentResponseInputValidator, v.null()),
   flagged: v.boolean(),

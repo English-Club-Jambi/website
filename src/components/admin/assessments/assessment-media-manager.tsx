@@ -127,7 +127,7 @@ export function AssessmentMediaManager() {
     <>
       <Link className={adminStyles.backLink} href="/admin/assessments">
         <ArrowLeftIcon aria-hidden width={18} height={18} />
-        Assessment catalogue
+        Practice formats
       </Link>
       <AdminPageHeading
         title="Assessment media"

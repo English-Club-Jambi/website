@@ -22,11 +22,15 @@ import {
 } from "./assessmentValidators";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { env, mutation, query } from "./_generated/server";
 import {
   bumpAssessmentRevision,
   getMutableAssessmentVersion,
 } from "./lib/assessmentAdmin";
+import {
+  isRandomBankSection,
+  listEligibleBankQuestionsForSection,
+} from "./lib/assessmentQuestionBank";
 import {
   normalizeBoundedText,
   normalizeKey,
@@ -262,6 +266,7 @@ export const listPage = query({
       .paginate({ ...args.paginationOpts, maximumRowsRead: 20 });
     const page = [];
     for (const definition of result.page) {
+      if (definition.internalOnly === true) continue;
       page.push(await projectDefinition(ctx, definition));
     }
     return { ...result, page };
@@ -471,6 +476,11 @@ export const create = mutation({
   }),
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx, "assessment:edit");
+    if (env.PRACTICE_FORMAT_CREATION_MODE !== "internal-maintenance") {
+      throw new ConvexError({
+        code: "PRACTICE_FORMAT_CATALOG_FIXED" as const,
+      });
+    }
     if (
       args.kind === "club-program-quiz" ||
       (args.profile !== "ec-itp-level-1-aligned-v1" &&
@@ -696,6 +706,10 @@ export const saveSection = mutation({
       timeLimitSeconds,
       audioReplayPolicy: args.audioReplayPolicy,
       itemCount: existing?.itemCount ?? 0,
+      deliveryMode: existing?.deliveryMode,
+      bankProfile: existing?.bankProfile,
+      bankSelectionContract: existing?.bankSelectionContract,
+      bankSeedBatch: existing?.bankSeedBatch,
     };
     const sectionId =
       existing === null
@@ -1234,11 +1248,18 @@ export const validateDraft = mutation({
       .query("assessmentStimuli")
       .withIndex("by_version_id_and_stimulus_key", (q) => q.eq("versionId", version._id))
       .take(201);
+    const poolRules = await ctx.db
+      .query("assessmentVersionQuestionRules")
+      .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+        q.eq("versionId", version._id),
+      )
+      .take(201);
     const blocking: string[] = [];
     if (sections.length === 0 || sections.length > 8) blocking.push("section-count");
     if (items.length === 0 || items.length > 200) blocking.push("item-count");
     if (keys.length !== items.length || keys.length > 200) blocking.push("answer-key-count");
     if (stimuli.length > 200) blocking.push("stimulus-count");
+    if (poolRules.length > 200) blocking.push("question-pool-rule-count");
     if (sections.some((section, index) => section.order !== index)) blocking.push("section-order");
     const sectionById = new Map(sections.map((section) => [section._id, section]));
     const itemCountBySection = new Map<Id<"assessmentSections">, number>();
@@ -1264,6 +1285,21 @@ export const validateDraft = mutation({
     for (const section of sections) {
       if ((itemCountBySection.get(section._id) ?? 0) !== section.itemCount) {
         blocking.push(`section-item-count:${section.sectionKey}`);
+      }
+    }
+    for (const section of sections) {
+      if (definition.profile !== "ec-ibt-style-2026-v1") continue;
+      if (!isRandomBankSection(section)) {
+        blocking.push("question-pool-delivery:" + section.sectionKey);
+        continue;
+      }
+      try {
+        const eligible = await listEligibleBankQuestionsForSection(ctx, section);
+        if (eligible.length < section.itemCount) {
+          blocking.push("question-pool-shortage:" + section.sectionKey);
+        }
+      } catch {
+        blocking.push("question-pool-invalid:" + section.sectionKey);
       }
     }
     const keyedItems = new Set(keys.map((key) => key.itemId));
@@ -1399,6 +1435,19 @@ export const validateDraft = mutation({
           ? checksumFor(version, [
               ...sections.map((section) => section.sectionKey),
               ...items.map((item) => item.itemKey),
+              ...poolRules
+                .slice()
+                .sort((left, right) =>
+                  String(left.bankQuestionId).localeCompare(
+                    String(right.bankQuestionId),
+                  ),
+                )
+                .map(
+                  (rule) =>
+                    String(rule.bankQuestionId) +
+                    ":" +
+                    (rule.allowed ? "allow" : "disable"),
+                ),
             ])
           : undefined,
       updatedAt: now,

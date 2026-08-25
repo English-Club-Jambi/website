@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -23,6 +23,10 @@ const ownerToken = "https://perfect-greyhound-270.convex.site|assessment-owner";
 const publisherToken =
   "https://perfect-greyhound-270.convex.site|assessment-publisher";
 const editorToken = "https://perfect-greyhound-270.convex.site|assessment-editor";
+
+beforeEach(() => {
+  vi.stubEnv("PRACTICE_FORMAT_CREATION_MODE", "internal-maintenance");
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -587,7 +591,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
     ).rejects.toThrow();
   });
 
-  it("uses bounded estimate wording only for the fixed-form estimate model", async () => {
+  it("separates exact delivered-item results from bounded score estimates", async () => {
     const t = createHarness();
     const fixture = await seedPublishedFixture(t, {
       scorePolicy: "practice-estimate-v1",
@@ -632,7 +636,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
         confidence: "low",
       },
       disclaimer:
-        "This is an English Club estimate from an original fixed-form practice bank. It is not an official ETS score, an exact test prediction, a certificate, or evidence for admission.",
+        "The raw result is exact for the original questions delivered in this attempt. The band and 0–120 values are English Club estimates, not an official ETS score, an exact test prediction, a certificate, or evidence for admission.",
     });
     expect(result?.disclaimer).toMatch(/not an official ETS score/i);
     expect(result?.disclaimer).not.toMatch(/predicted TOEFL score/i);
@@ -1097,6 +1101,32 @@ describe("assessment media boundary", () => {
 });
 
 describe("assessment administration and immutable publication", () => {
+  it("keeps the fixed practice-format catalogue closed outside internal maintenance", async () => {
+    vi.stubEnv("PRACTICE_FORMAT_CREATION_MODE", "");
+    const t = createHarness();
+    const { editor } = await bootstrapAdmins(t);
+
+    await expect(
+      editor.mutation(api.adminAssessments.create, {
+        slug: "unplanned-extra-format",
+        kind: "skill-quiz",
+        profile: "ec-ibt-style-2026-v1",
+        adminTitle: "Unplanned extra format",
+        title: "Unplanned Extra Format",
+        summary: "This record must not extend the fixed catalogue from the admin UI.",
+        instructions: "Use one of the installed practice formats instead of adding another.",
+        locale: "en",
+        timePolicy: "untimed",
+        allowResume: true,
+        reviewPolicy: "after-submit",
+        scorePolicy: "practice-estimate-v1",
+        defaultTimingMode: "standard",
+        defaultListeningMode: "transcript-supported",
+        maxAttemptsPerDay: 3,
+      }),
+    ).rejects.toThrow(/PRACTICE_FORMAT_CATALOG_FIXED/);
+  });
+
   it("binds each supported content profile to its matching score policy", async () => {
     const t = createHarness();
     const { editor } = await bootstrapAdmins(t);

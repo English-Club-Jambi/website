@@ -14,6 +14,7 @@ export function SiteFooter({ copy }: { copy: PublicContentFor<"global"> }) {
         <nav className="footer-nav" aria-label={copy.footerNavigationLabel}>
           <Link href="/about">{copy.navAbout}</Link>
           <Link href="/activities">{copy.navActivities}</Link>
+          <Link href="/programs">{copy.navPrograms}</Link>
           <Link href="/members">{copy.navMembers}</Link>
           <Link href="/practice">{copy.navPractice}</Link>
           <Link href="/journal">{copy.navJournal}</Link>

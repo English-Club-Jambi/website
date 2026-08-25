@@ -11,9 +11,10 @@ const mediaBaseUrl = useLocalMediaForQa
 const remotePatterns = mediaBaseUrl
   ? [new URL(`${mediaBaseUrl.replace(/\/+$/, "")}/**`)]
   : [];
+const allowedDevOrigins = getAllowedDevOrigins();
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: getAllowedDevOrigins(),
+  allowedDevOrigins,
   devIndicators: false,
   poweredByHeader: false,
   reactStrictMode: true,

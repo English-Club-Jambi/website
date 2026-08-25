@@ -11,5 +11,6 @@ export default defineApp({
     R2_ASSESSMENT_BUCKET_NAME: v.optional(v.string()),
     R2_ASSESSMENT_ACCESS_KEY_ID: v.optional(v.string()),
     R2_ASSESSMENT_SECRET_ACCESS_KEY: v.optional(v.string()),
+    PRACTICE_FORMAT_CREATION_MODE: v.optional(v.string()),
   },
 });

@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 const runSeededFlow = process.env.RUN_SEEDED_PRACTICE_E2E === "1";
+const runIllustratedQuestion =
+  process.env.RUN_ILLUSTRATED_QUESTION_E2E === "1";
 
 test.describe("seeded four-skill practice flow", () => {
   test.skip(!runSeededFlow, "Requires the idempotent dev practice seed.");
@@ -30,6 +32,124 @@ test.describe("seeded four-skill practice flow", () => {
       scrollWidth: document.documentElement.scrollWidth,
     }));
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+  });
+
+  test("starts the public full-practice live session from its bank-backed manifest", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "desktop-chromium",
+      "One live full-practice manifest is sufficient.",
+    );
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+
+    await page.goto("/practice/full");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Start practice" }).click();
+    await page.waitForURL(/\/practice\/attempt\//);
+    await page.getByRole("button", { name: "Begin section" }).click();
+
+    await expect(page.getByText("QUESTION 1 OF 50")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Question list" })).toBeVisible();
+    await expect(
+      page
+        .getByRole("radio")
+        .first()
+        .or(page.getByRole("combobox", { name: /Blank 1/i })),
+    ).toBeVisible();
+    expect(browserErrors).toEqual([]);
+
+    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      accessibility.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+
+    await page.screenshot({
+      path: "docs/evidence/practice-full-bank-live-desktop-chromium.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  });
+
+  test("delivers the seeded bank illustration inside the immutable live manifest", async ({
+    page,
+  }, testInfo) => {
+    test.skip(!runIllustratedQuestion, "Requires the illustrated Question Bank record.");
+    test.setTimeout(120_000);
+    const illustrationAlt =
+      "Four learners exchanging ideas around a table in a bright room";
+    let found = false;
+
+    for (let attemptNumber = 0; attemptNumber < 2 && !found; attemptNumber += 1) {
+      await page.goto("/practice/full");
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "Start practice" }).click();
+      await page.waitForURL(/\/practice\/attempt\//);
+      await page.getByRole("button", { name: "Begin section" }).click();
+
+      for (let question = 1; question <= 50; question += 1) {
+        await expect(page.getByText(`QUESTION ${question} OF 50`)).toBeVisible();
+        const illustration = page.getByRole("img", { name: illustrationAlt });
+        if (await illustration.isVisible().catch(() => false)) {
+          found = true;
+          const source = await illustration.getAttribute("src");
+          expect(source).toContain("r2.mukhtada.my.id");
+          const geometry = await page.evaluate(() => {
+            const image = document.querySelector<HTMLImageElement>(
+              'img[alt="Four learners exchanging ideas around a table in a bright room"]',
+            );
+            const actions = document.querySelector<HTMLElement>(
+              'nav[aria-label="Question list"]',
+            );
+            const lastAnswer = [...document.querySelectorAll<HTMLElement>(
+              '[role="radio"]',
+            )].at(-1);
+            const imageBox = image?.getBoundingClientRect();
+            const actionsBox = actions?.getBoundingClientRect();
+            const answerBox = lastAnswer?.getBoundingClientRect();
+            return {
+              viewportWidth: document.documentElement.clientWidth,
+              documentWidth: document.documentElement.scrollWidth,
+              imageRight: imageBox?.right ?? 0,
+              answerBottom: answerBox?.bottom ?? 0,
+              actionsTop: actionsBox?.top ?? Number.POSITIVE_INFINITY,
+            };
+          });
+          expect(geometry.documentWidth).toBeLessThanOrEqual(
+            geometry.viewportWidth + 1,
+          );
+          expect(geometry.imageRight).toBeLessThanOrEqual(
+            geometry.viewportWidth + 1,
+          );
+          expect(geometry.answerBottom).toBeLessThanOrEqual(
+            geometry.actionsTop + 1,
+          );
+          const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+          expect(
+            accessibility.violations.filter(
+              (violation) =>
+                violation.impact === "critical" || violation.impact === "serious",
+            ),
+          ).toEqual([]);
+          await page.screenshot({
+            path: `docs/evidence/practice-bank-illustration-live-${testInfo.project.name}.png`,
+            animations: "disabled",
+          });
+          break;
+        }
+        if (question < 50) {
+          await page.getByRole("button", { name: "Next", exact: true }).click();
+        }
+      }
+    }
+    expect(found).toBe(true);
   });
 
   test("completes the Writing sprint and renders its estimated result", async ({
@@ -133,6 +253,68 @@ test.describe("seeded four-skill practice flow", () => {
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
     await page.screenshot({
       path: "docs/evidence/practice-listening-question-mobile-chromium.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  });
+
+  test("keeps a word-completion control inline at every supported width", async ({
+    page,
+  }, testInfo) => {
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+
+    await page.goto("/practice/quick/reading");
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Start practice" }).click();
+    await page.waitForURL(/\/practice\/attempt\//);
+    await page.getByRole("button", { name: "Begin section" }).click();
+
+    const sentence = page.locator("[data-cloze-sentence]");
+    const word = page.locator("[data-cloze-word]");
+    const trigger = page.getByRole("combobox", { name: "Blank 1" });
+    await expect(sentence).toBeVisible();
+    await expect(word).toContainText("migr");
+    await expect(trigger).toHaveAttribute("data-variant", "inline");
+
+    const geometry = await trigger.evaluate((element) => {
+      const triggerBox = element.getBoundingClientRect();
+      const wordBox = element.closest("[data-cloze-word]")?.getBoundingClientRect();
+      return {
+        triggerWidth: triggerBox.width,
+        triggerHeight: triggerBox.height,
+        sameLine:
+          wordBox !== undefined &&
+          Math.abs(wordBox.top + wordBox.height / 2 - (triggerBox.top + triggerBox.height / 2)) < 2,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+      };
+    });
+    expect(geometry.triggerWidth).toBeLessThan(150);
+    expect(geometry.triggerHeight).toBeGreaterThanOrEqual(44);
+    expect(geometry.sameLine).toBe(true);
+    expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+
+    await trigger.click();
+    await page.getByRole("option", { name: "atory" }).click();
+    await expect(trigger).toContainText("atory");
+
+    const accessibility = await new AxeBuilder({ page })
+      .include("[data-cloze-sentence]")
+      .analyze();
+    expect(
+      accessibility.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    expect(browserErrors).toEqual([]);
+
+    await page.screenshot({
+      path: `docs/evidence/practice-cloze-inline-${testInfo.project.name}.png`,
       fullPage: true,
       animations: "disabled",
     });

@@ -7,6 +7,7 @@ const routes = [
   { path: "/", heading: "English grows in company." },
   { path: "/about", heading: "Built around the next sentence." },
   { path: "/activities", heading: "English is the activity." },
+  { path: "/programs", heading: "English leaves the club room." },
   { path: "/members", heading: "Every voice changes the room." },
   { path: "/journal", heading: "Stories inside the room." },
   { path: storyPath, heading: "Leeds the Way: Bridging England and Indonesia" },
@@ -229,7 +230,7 @@ test("member role selector updates context without scroll-driven ambiguity", asy
 
   await expect(allRoles).toBeChecked();
   const memberGrid = page.locator("[data-member-roster]");
-  await expect(memberGrid).toHaveAttribute("data-roster-source", "showcase");
+  await expect(memberGrid).toHaveAttribute("data-roster-source", "convex");
   await expect(memberGrid.locator(":scope > li")).toHaveCount(15);
   await expect(memberGrid.getByText("Nabila Maheswari")).toBeVisible();
   expect(

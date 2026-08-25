@@ -9,7 +9,9 @@ Concept: **The Member Relay**
 
 Extend the public English Club profile with a Member page that explains the club's five role codes and can publish verified member profiles from Convex.
 
-The page must feel active before a roster exists. It does this through a complete role atlas, a user-controlled responsibility selector, one atmospheric group scene, and a 15-profile source-only showcase in a true member grid. The temporary identities and portraits are fictional presentation material, not member records.
+> Historical design direction. The final public route has no source-only roster fallback. The named development deployment uses a guarded 15-profile fictional Convex seed to exercise the same grid; production may expose only consent-cleared member records.
+
+The page must feel active before a roster exists. It does this through a complete role atlas, a user-controlled responsibility selector, one atmospheric group scene, and, in development, a 15-profile seeded roster in a true member grid. The temporary identities and portraits are fictional presentation material, not real member evidence.
 
 ## 2. Evidence boundary
 

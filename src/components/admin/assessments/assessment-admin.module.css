@@ -452,6 +452,324 @@
   font-weight: 780;
 }
 
+.catalogGuide {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1rem 0 2rem;
+  border: 2px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  background: var(--admin-paper);
+  box-shadow: var(--admin-shadow);
+  overflow: hidden;
+}
+
+.catalogGuide > span {
+  min-width: 0;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr);
+  align-content: center;
+  gap: 0.1rem 0.7rem;
+  padding: 0.8rem 1rem;
+}
+
+.catalogGuide > span + span {
+  border-left: 1px solid var(--admin-soft-line);
+}
+
+.catalogGuide b {
+  grid-row: span 2;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  background: var(--admin-cobalt-wash);
+  color: var(--admin-cobalt-dark);
+  font-size: 0.75rem;
+}
+
+.catalogGuide strong {
+  font-size: 0.82rem;
+}
+
+.catalogGuide small {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.poolSection {
+  scroll-margin-top: calc(var(--admin-header-height, 4rem) + 1rem);
+}
+
+.poolFlow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 2px solid var(--admin-line);
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 35%, var(--admin-paper));
+}
+
+.poolFlow > span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr);
+  align-content: center;
+  gap: 0.12rem 0.65rem;
+  padding: 0.9rem 1rem;
+}
+
+.poolFlow > span + span {
+  border-left: 1px solid var(--admin-soft-line);
+}
+
+.poolFlow svg {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--admin-cobalt-dark);
+}
+
+.poolFlow b {
+  font-size: 0.8rem;
+}
+
+.poolFlow small {
+  color: var(--admin-muted);
+  font-size: 0.71rem;
+  line-height: 1.4;
+}
+
+.poolCapacityGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  border-bottom: 2px solid var(--admin-line);
+}
+
+.poolCapacityCard {
+  min-width: 0;
+  min-height: 7.8rem;
+  display: grid;
+  align-content: space-between;
+  gap: 0.55rem;
+  border-right: 1px solid var(--admin-soft-line);
+  padding: 0.9rem 1rem;
+  background: var(--admin-paper);
+}
+
+.poolCapacityCard:last-child {
+  border-right: 0;
+}
+
+.poolCapacityCard[data-short="true"] {
+  background: color-mix(in oklch, oklch(0.92 0.05 28) 60%, var(--admin-paper));
+}
+
+.poolCapacityCard > span {
+  color: var(--admin-muted);
+  font-size: 0.69rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.poolCapacityCard > strong {
+  font-size: clamp(1.6rem, 2.7vw, 2.25rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.poolCapacityCard > strong small {
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  letter-spacing: normal;
+}
+
+.poolCapacityCard > :last-child {
+  justify-self: start;
+}
+
+.poolReadOnlyNotice,
+.poolSignalNote {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 0.85rem 1rem;
+}
+
+.poolReadOnlyNotice {
+  background: oklch(0.95 0.045 90);
+  color: oklch(0.36 0.07 90);
+}
+
+.poolReadOnlyNotice svg,
+.poolSignalNote svg {
+  flex: 0 0 auto;
+  margin-top: 0.05rem;
+}
+
+.poolReadOnlyNotice strong,
+.poolReadOnlyNotice p,
+.poolSignalNote p {
+  margin: 0;
+}
+
+.poolReadOnlyNotice p,
+.poolSignalNote p {
+  max-width: 78ch;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.poolToolbar {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(10rem, 16rem)) minmax(10rem, 1fr);
+  align-items: end;
+  gap: 0.8rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 0.85rem 1rem;
+  background: var(--admin-paper);
+}
+
+.poolToolbar > p {
+  justify-self: end;
+  margin: 0 0 0.75rem;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+}
+
+.poolSignalNote {
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 32%, var(--admin-paper));
+  color: var(--admin-muted);
+}
+
+.poolList {
+  min-width: 0;
+  display: grid;
+}
+
+.poolRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 0.85fr);
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--admin-paper);
+}
+
+.poolRow + .poolRow {
+  border-top: 1px solid var(--admin-soft-line);
+}
+
+.poolQuestionCopy,
+.poolQuestionSide {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.poolQuestionCopy h3,
+.poolQuestionCopy p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.poolQuestionCopy h3 {
+  max-width: 58ch;
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+
+.poolQuestionCopy p {
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.poolQuestionMeta,
+.poolActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.poolQuestionMeta > span:not([class]) {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+}
+
+.poolQuestionMeta > span:not([class]) + span:not([class])::before {
+  content: "/";
+  margin-right: 0.42rem;
+  color: var(--admin-soft-line);
+}
+
+.poolFlagSignal {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  border-left: 3px solid var(--admin-orange);
+  padding: 0.55rem 0.65rem;
+  background: color-mix(in oklch, var(--admin-orange) 10%, var(--admin-paper));
+}
+
+.poolFlagSignal[data-status="reviewed"],
+.poolFlagSignal[data-status="dismissed"] {
+  border-left-color: var(--admin-soft-line);
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 26%, var(--admin-paper));
+}
+
+.poolFlagSignal svg {
+  color: var(--admin-orange-dark);
+}
+
+.poolFlagSignal div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.poolFlagSignal strong {
+  font-size: 0.75rem;
+}
+
+.poolFlagSignal span,
+.poolQuietSignal {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.poolActions {
+  justify-content: flex-end;
+}
+
+.poolPager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 2px solid var(--admin-line);
+  padding: 0.85rem 1rem;
+  background: var(--admin-paper);
+}
+
+.poolPager > span {
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+}
+
 .bankCapacityGrid {
   min-width: 0;
   display: grid;
@@ -510,6 +828,166 @@
   border-bottom: 2px solid var(--admin-line);
   padding: 0.9rem 1rem;
   background: color-mix(in oklch, var(--admin-cobalt-wash) 36%, var(--admin-paper));
+}
+
+.questionCreatePanel {
+  border-bottom: 2px solid var(--admin-line);
+  background: color-mix(in oklch, var(--admin-orange) 12%, var(--admin-paper));
+}
+
+.questionCreateIntro {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 1rem 1.15rem;
+}
+
+.questionCreateIntro > div {
+  min-width: 0;
+}
+
+.questionCreateIntro h3,
+.questionCreateIntro p {
+  margin: 0;
+}
+
+.questionCreateIntro h3 {
+  font-size: 1.1rem;
+}
+
+.questionCreateIntro p {
+  max-width: 66ch;
+  margin-top: 0.25rem;
+  color: var(--admin-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.questionOptionGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.questionCreateFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--admin-soft-line);
+  padding: 0.9rem 1.15rem;
+}
+
+.questionCreateFooter p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.illustrationField {
+  min-width: 0;
+  display: grid;
+  gap: 0.8rem;
+  border: 1px solid var(--admin-soft-line);
+  border-radius: var(--admin-radius-small);
+  padding: 0.9rem;
+  background: var(--admin-paper);
+}
+
+.illustrationField > legend {
+  padding-inline: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 780;
+}
+
+.illustrationField > legend span {
+  margin-left: 0.35rem;
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.illustrationField > p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.illustrationChoices {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.illustrationChoice {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  border: 1px solid var(--admin-soft-line);
+  border-radius: var(--admin-radius-small);
+  padding: 0.4rem;
+  background: var(--admin-paper);
+  color: var(--admin-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.illustrationChoice[data-selected="true"] {
+  border-color: var(--admin-cobalt);
+  box-shadow: inset 0 0 0 1px var(--admin-cobalt);
+  background: var(--admin-cobalt-wash);
+}
+
+.illustrationChoicePreview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: calc(var(--admin-radius-small) - 3px);
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 58%, var(--admin-paper));
+  color: var(--admin-muted);
+}
+
+.illustrationChoicePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.illustrationChoice > span:last-child {
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 680;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.illustrationUpload {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  align-items: end;
+  gap: 0.7rem;
+  border-top: 1px solid var(--admin-soft-line);
+  padding-top: 0.8rem;
+}
+
+.illustrationPending {
+  color: var(--admin-cobalt-dark) !important;
+  font-weight: 700;
 }
 
 .bankWorkspace {
@@ -871,8 +1349,72 @@
 }
 
 @media (max-width: 760px) {
+  .catalogGuide {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogGuide > span + span {
+    border-top: 1px solid var(--admin-soft-line);
+    border-left: 0;
+  }
+
+  .catalogGuide > span {
+    min-height: 68px;
+  }
+
+  .poolFlow,
+  .poolRow {
+    grid-template-columns: 1fr;
+  }
+
+  .poolFlow > span + span {
+    border-top: 1px solid var(--admin-soft-line);
+    border-left: 0;
+  }
+
+  .poolCapacityGrid,
+  .poolToolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .poolCapacityCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .poolCapacityCard:nth-child(n + 3) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .poolToolbar > p {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0;
+  }
+
+  .poolActions {
+    justify-content: flex-start;
+  }
+
   .bankToolbar {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .questionOptionGrid,
+  .illustrationUpload {
+    grid-template-columns: 1fr;
+  }
+
+  .illustrationChoices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .questionCreateFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .questionCreateFooter button {
+    width: 100%;
   }
 
   .bankCapacityGrid {
@@ -975,12 +1517,50 @@
 @media (max-width: 360px) {
   .bankToolbar,
   .bankEditorFields,
-  .bankFacts {
+  .bankFacts,
+  .poolCapacityGrid,
+  .poolToolbar {
     grid-template-columns: 1fr;
+  }
+
+  .poolCapacityCard,
+  .poolCapacityCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .poolCapacityCard:nth-child(n + 2) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .poolRow,
+  .poolFlow > span,
+  .poolToolbar,
+  .poolSignalNote,
+  .poolReadOnlyNotice,
+  .poolPager {
+    padding-inline: 0.75rem;
+  }
+
+  .poolActions,
+  .poolActions button {
+    width: 100%;
+  }
+
+  .poolPager {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .poolPager button {
+    width: 100%;
   }
 
   .bankCapacityGrid {
     grid-template-columns: 1fr;
+  }
+
+  .illustrationChoices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .bankCapacityCard,

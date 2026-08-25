@@ -13,6 +13,7 @@ import {
   IdentificationIcon,
   PaintBrushIcon,
   PhotoIcon,
+  RectangleStackIcon,
   ShieldCheckIcon,
   UsersIcon,
   XMarkIcon,
@@ -73,9 +74,15 @@ const navigation: ReadonlyArray<AdminNavigationItem> = [
     icon: BookOpenIcon,
   },
   {
+    href: "/admin/programs",
+    label: "Programs",
+    description: "Programme record and public work",
+    icon: RectangleStackIcon,
+  },
+  {
     href: "/admin/assessments",
-    label: "Assessments",
-    description: "Forms, questions, and review gates",
+    label: "Practice Builder",
+    description: "Formats, question rules, and review gates",
     icon: AcademicCapIcon,
   },
   {
@@ -97,9 +104,9 @@ const navigation: ReadonlyArray<AdminNavigationItem> = [
     icon: PaintBrushIcon,
   },
   {
-    href: "/admin/activity",
-    label: "Activity",
-    description: "Owner audit trail",
+    href: "/admin/audit",
+    label: "Audit log",
+    description: "Owner-only change history",
     icon: ChartBarSquareIcon,
   },
 ];
@@ -516,6 +523,13 @@ function AuthenticatedAdmin({ children }: { children: ReactNode }) {
 
 export function AdminAccessGate({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
+
+  useEffect(() => {
+    document.documentElement.dataset.adminHydrated = "true";
+    return () => {
+      delete document.documentElement.dataset.adminHydrated;
+    };
+  }, []);
 
   if (isLoading) return <AdminLoading />;
   if (!isAuthenticated) {

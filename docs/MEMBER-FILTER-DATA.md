@@ -1,12 +1,12 @@
 # Member joined-year filter data contract
 
-Status: implementation recommendation
+Status: historical recommendation; implemented through the guarded Convex development seed
 Date: 25 August 2026
 Reference year for the current fixture: 2026
 
 ## 1. Decision
 
-Add `joinedYear` as an optional integer on real Convex member records and as a required demo field on all 15 source-only showcase profiles.
+The implemented contract stores `joinedYear` as an optional integer on member records. All 15 fictional development-seed profiles provide a year so the real Convex filter path can be exercised; production records remain evidence-based and optional.
 
 For a real member, `joinedYear` means the first verified calendar year when that person became part of this English Club in a member, committee, coordinator, core, or board capacity. It does not mean admission year, graduation year, cohort, role start, consent date, profile publication date, or the year a photograph was taken.
 

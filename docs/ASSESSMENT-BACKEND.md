@@ -1,6 +1,6 @@
 # Assessment Lab backend runbook
 
-Status: implemented and tested locally on 26 August 2026. This document covers the Convex and R2 contracts only. It does not claim that a publishable question bank exists.
+Status: implemented and tested against the development Convex deployment on 26 August 2026. This document covers the Convex and R2 contracts. The development bank is seeded for workflow verification; it is not a production content approval.
 
 ## Product boundary
 

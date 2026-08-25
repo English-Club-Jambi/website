@@ -2,6 +2,9 @@ import {
   MEMBER_DEVELOPMENT_SEED_BATCH,
   developmentSeedMembers,
 } from "../content/member-development-seed";
+import { managedDivisionSeeds } from "../content/member-divisions";
+import { seedPosts } from "../content/seed-posts";
+import { checkedInPrograms } from "../content/programs";
 import {
   getPublicContentManifestPages,
   publicContentLocale,
@@ -26,10 +29,32 @@ import {
   internalQuery,
   type MutationCtx,
 } from "./_generated/server";
+import { validateEditorDocument } from "./lib/editorDocument";
 
 const confirmation = "seed-english-club-development-v1" as const;
 const expectedCloudUrl = "https://perfect-greyhound-270.convex.cloud";
 const themeSeedBatch = "public-theme-presets-v1";
+
+function seedPostEditorJson(markdown: string) {
+  const content = markdown
+    .trim()
+    .split(/\n{2,}/)
+    .map((block) => {
+      const heading = block.match(/^##\s+([\s\S]+)$/);
+      const text = (heading?.[1] ?? block)
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\s*\n\s*/g, " ")
+        .trim();
+      return heading === null
+        ? { type: "paragraph", content: [{ type: "text", text }] }
+        : {
+            type: "heading",
+            attrs: { level: 2 },
+            content: [{ type: "text", text }],
+          };
+    });
+  return validateEditorDocument(JSON.stringify({ type: "doc", content }));
+}
 
 function sameThemeRecipe(
   left: ReturnType<typeof normalizeThemeRecipe>,
@@ -122,6 +147,9 @@ export const seedMembers = internalMutation({
   returns: v.object({
     inserted: v.number(),
     existing: v.number(),
+    updated: v.number(),
+    divisionsInserted: v.number(),
+    divisionsExisting: v.number(),
     mediaInserted: v.number(),
     mediaExisting: v.number(),
   }),
@@ -138,8 +166,38 @@ export const seedMembers = internalMutation({
     const now = Date.now();
     let inserted = 0;
     let existingCount = 0;
+    let updated = 0;
+    let divisionsInserted = 0;
+    let divisionsExisting = 0;
     let mediaInserted = 0;
     let mediaExisting = 0;
+
+    const divisionIds = new Map<
+      (typeof managedDivisionSeeds)[number]["legacyKey"],
+      Id<"memberDivisions">
+    >();
+    for (const division of managedDivisionSeeds) {
+      const existingDivision = await ctx.db
+        .query("memberDivisions")
+        .withIndex("by_slug", (q) => q.eq("slug", division.slug))
+        .unique();
+      if (existingDivision === null) {
+        const divisionId = await ctx.db.insert("memberDivisions", {
+          ...division,
+          status: "active",
+          createdAt: now,
+          updatedAt: now,
+        });
+        divisionIds.set(division.legacyKey, divisionId);
+        divisionsInserted += 1;
+      } else {
+        if (existingDivision.legacyKey !== division.legacyKey) {
+          throw new ConvexError({ code: "DEVELOPMENT_SEED_DIVISION_COLLISION" as const });
+        }
+        divisionIds.set(division.legacyKey, existingDivision._id);
+        divisionsExisting += 1;
+      }
+    }
 
     for (const member of developmentSeedMembers) {
       const portrait = bySlug.get(member.slug);
@@ -147,6 +205,13 @@ export const seedMembers = internalMutation({
         throw new ConvexError({ code: "DEVELOPMENT_SEED_PORTRAIT_MISSING" as const });
       }
       validatePortrait(portrait);
+      const expectedDivisionId =
+        "division" in member
+          ? divisionIds.get(member.division)
+          : undefined;
+      if ("division" in member && expectedDivisionId === undefined) {
+        throw new ConvexError({ code: "DEVELOPMENT_SEED_DIVISION_MISSING" as const });
+      }
       const existingMedia = await ctx.db
         .query("mediaAssets")
         .withIndex("by_object_key", (q) => q.eq("objectKey", portrait.objectKey))
@@ -196,6 +261,13 @@ export const seedMembers = internalMutation({
         ) {
           throw new ConvexError({ code: "DEVELOPMENT_SEED_MEMBER_COLLISION" as const });
         }
+        if (existingMember.divisionId !== expectedDivisionId) {
+          await ctx.db.patch("members", existingMember._id, {
+            divisionId: expectedDivisionId,
+            updatedAt: now,
+          });
+          updated += 1;
+        }
         existingCount += 1;
         continue;
       }
@@ -204,6 +276,7 @@ export const seedMembers = internalMutation({
         displayName: member.displayName,
         roleLevel: member.roleLevel,
         ...("division" in member ? { division: member.division } : {}),
+        ...(expectedDivisionId === undefined ? {} : { divisionId: expectedDivisionId }),
         ...("position" in member ? { position: member.position } : {}),
         joinedYear: member.joinedYear,
         shortBio: member.shortBio,
@@ -234,7 +307,15 @@ export const seedMembers = internalMutation({
         createdAt: now,
       });
     }
-    return { inserted, existing: existingCount, mediaInserted, mediaExisting };
+    return {
+      inserted,
+      existing: existingCount,
+      updated,
+      divisionsInserted,
+      divisionsExisting,
+      mediaInserted,
+      mediaExisting,
+    };
   },
 });
 
@@ -380,6 +461,168 @@ export const seedThemePresets = internalMutation({
   },
 });
 
+export const seedJournal = internalMutation({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({
+    inserted: v.number(),
+    migrated: v.number(),
+    existing: v.number(),
+  }),
+  handler: async (ctx) => {
+    assertDevelopmentTarget();
+    const author = await requireSeedAuthor(ctx);
+    let inserted = 0;
+    let migrated = 0;
+    let existingCount = 0;
+    for (const seed of seedPosts) {
+      const existing = await ctx.db
+        .query("posts")
+        .withIndex("by_slug", (q) => q.eq("slug", seed.slug))
+        .unique();
+      if (
+        existing !== null &&
+        (existing.title !== seed.title ||
+          existing.excerpt !== seed.excerpt ||
+          existing.category !== seed.category ||
+          existing.authorName !== seed.authorName)
+      ) {
+        throw new ConvexError({ code: "DEVELOPMENT_SEED_JOURNAL_COLLISION" as const });
+      }
+      if (existing?.publishedRevisionId !== undefined) {
+        const revision = await ctx.db.get(
+          "postRevisions",
+          existing.publishedRevisionId,
+        );
+        if (revision === null || revision.postId !== existing._id) {
+          throw new ConvexError({ code: "DEVELOPMENT_SEED_JOURNAL_COLLISION" as const });
+        }
+        existingCount += 1;
+        continue;
+      }
+
+      const document = seedPostEditorJson(seed.body);
+      const postId =
+        existing?._id ??
+        (await ctx.db.insert("posts", {
+          ...seed,
+          nextRevision: 2,
+          createdBy: author._id,
+          updatedBy: author._id,
+        }));
+      const revisionId = await ctx.db.insert("postRevisions", {
+        postId,
+        revision: 1,
+        slug: seed.slug,
+        title: seed.title,
+        excerpt: seed.excerpt,
+        category: seed.category,
+        authorName: seed.authorName,
+        featured: seed.featured,
+        editorJson: document.editorJson,
+        plainText: document.plainText,
+        createdBy: author._id,
+        createdAt: seed.updatedAt,
+      });
+      await ctx.db.patch("posts", postId, {
+        draftRevisionId: revisionId,
+        publishedRevisionId: revisionId,
+        nextRevision: 2,
+        createdBy: existing?.createdBy ?? author._id,
+        updatedBy: author._id,
+      });
+      if (existing === null) inserted += 1;
+      else migrated += 1;
+    }
+    if (inserted > 0 || migrated > 0) {
+      await ctx.db.insert("cmsAuditEvents", {
+        area: "journal",
+        action: "publish",
+        resourceType: "journal-development-seed",
+        resourceId: "journal-development-seed-v1",
+        summary: `${seedPosts.length} starter stories available to the public Journal and admin workspace`,
+        actorId: author._id,
+        createdAt: Date.now(),
+      });
+    }
+    return { inserted, migrated, existing: existingCount };
+  },
+});
+
+export const seedPrograms = internalMutation({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({
+    inserted: v.number(),
+    existing: v.number(),
+  }),
+  handler: async (ctx) => {
+    assertDevelopmentTarget();
+    const author = await requireSeedAuthor(ctx);
+    let inserted = 0;
+    let existingCount = 0;
+
+    for (const source of checkedInPrograms) {
+      const existing = await ctx.db
+        .query("programs")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (existing !== null) {
+        if (
+          existing.title !== source.title ||
+          existing.summary !== source.summary ||
+          existing.category !== source.category ||
+          existing.deliveryState !== source.deliveryState
+        ) {
+          throw new ConvexError({ code: "DEVELOPMENT_SEED_PROGRAM_COLLISION" as const });
+        }
+        existingCount += 1;
+        continue;
+      }
+
+      const now = Date.now();
+      const programId = await ctx.db.insert("programs", {
+        slug: source.slug,
+        title: source.title,
+        summary: source.summary,
+        category: source.category,
+        deliveryState: source.deliveryState,
+        status: "published",
+        featured: source.featured,
+        sortOrder: source.sortOrder,
+        nextRevision: 2,
+        publishedAt: now,
+        createdBy: author._id,
+        updatedBy: author._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const revisionId = await ctx.db.insert("programRevisions", {
+        programId,
+        revision: 1,
+        ...source,
+        createdBy: author._id,
+        createdAt: now,
+      });
+      await ctx.db.patch("programs", programId, {
+        publishedRevisionId: revisionId,
+      });
+      inserted += 1;
+    }
+
+    if (inserted > 0) {
+      await ctx.db.insert("cmsAuditEvents", {
+        area: "programs",
+        action: "publish",
+        resourceType: "programme-development-seed",
+        resourceId: "verified-programme-catalogue-v1",
+        summary: `${checkedInPrograms.length} sourced programme records available in Programs`,
+        actorId: author._id,
+        createdAt: Date.now(),
+      });
+    }
+    return { inserted, existing: existingCount };
+  },
+});
+
 export const seedPublicContentPage = internalMutation({
   args: {
     confirm: v.literal(confirmation),
@@ -461,7 +704,7 @@ export const seedPublicContentPage = internalMutation({
       const versionId = await ctx.db.insert("siteContentVersions", {
         entryId: current._id,
         revision: current.draftRevision,
-        value: current.draftValue,
+        value: field.defaultValue.trim(),
         publishedBy: author._id,
         publishedAt: now,
       });
@@ -498,10 +741,15 @@ export const verify = internalQuery({
   returns: v.object({
     members: v.number(),
     memberMedia: v.number(),
+    memberDivisions: v.number(),
     themePresets: v.number(),
     publicThemeReady: v.boolean(),
+    journalPublished: v.number(),
+    journalManaged: v.number(),
     contentExpected: v.number(),
     contentPublished: v.number(),
+    programsPublished: v.number(),
+    programsManaged: v.number(),
   }),
   handler: async (ctx) => {
     assertDevelopmentTarget();
@@ -531,6 +779,14 @@ export const verify = internalQuery({
         memberMedia += 1;
       }
     }
+    let memberDivisions = 0;
+    for (const source of managedDivisionSeeds) {
+      const division = await ctx.db
+        .query("memberDivisions")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (division?.legacyKey === source.legacyKey) memberDivisions += 1;
+    }
     const presets = await ctx.db
       .query("publicThemePresets")
       .withIndex("by_site_key_and_preset_key", (q) => q.eq("siteKey", "public"))
@@ -543,6 +799,24 @@ export const verify = internalQuery({
       state === null
         ? null
         : await ctx.db.get("publicThemeVersions", state.publishedVersionId);
+    let journalPublished = 0;
+    let journalManaged = 0;
+    for (const source of seedPosts) {
+      const post = await ctx.db
+        .query("posts")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (post?.status !== "published" || post.publishedAt === undefined) {
+        continue;
+      }
+      journalPublished += 1;
+      if (post.publishedRevisionId === undefined) continue;
+      const revision = await ctx.db.get(
+        "postRevisions",
+        post.publishedRevisionId,
+      );
+      if (revision?.postId === post._id) journalManaged += 1;
+    }
     let contentExpected = 0;
     let contentPublished = 0;
     for (const page of getPublicContentManifestPages()) {
@@ -568,13 +842,34 @@ export const verify = internalQuery({
         if (version?.entryId === entry._id) contentPublished += 1;
       }
     }
+    let programsPublished = 0;
+    let programsManaged = 0;
+    for (const source of checkedInPrograms) {
+      const program = await ctx.db
+        .query("programs")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (program?.status !== "published") continue;
+      programsPublished += 1;
+      if (program.publishedRevisionId === undefined) continue;
+      const revision = await ctx.db.get(
+        "programRevisions",
+        program.publishedRevisionId,
+      );
+      if (revision?.programId === program._id) programsManaged += 1;
+    }
     return {
       members: members.length,
       memberMedia,
+      memberDivisions,
       themePresets: presets.length,
       publicThemeReady: published !== null && published.contractVersion === 1,
+      journalPublished,
+      journalManaged,
       contentExpected,
       contentPublished,
+      programsPublished,
+      programsManaged,
     };
   },
 });

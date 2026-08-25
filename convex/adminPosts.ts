@@ -8,10 +8,14 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
 import { validateEditorDocument } from "./lib/editorDocument";
-import { projectReadyJournalMedia } from "./lib/media";
+import {
+  projectReadyJournalCover,
+  projectReadyJournalMedia,
+} from "./lib/media";
 import {
   postStatusValidator,
   publicInlineMediaValidator,
+  publicMediaProjectionValidator,
 } from "./validators";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -30,6 +34,12 @@ const postSummaryValidator = v.object({
   hasDraft: v.boolean(),
 });
 
+const workspacePostValidator = v.object({
+  ...postSummaryValidator.fields,
+  coverKey: v.optional(v.string()),
+  coverMedia: v.optional(publicMediaProjectionValidator),
+});
+
 const revisionSummaryValidator = v.object({
   _id: v.id("postRevisions"),
   revision: v.number(),
@@ -45,13 +55,16 @@ const revisionViewValidator = v.object({
   authorName: v.string(),
   featured: v.boolean(),
   coverMediaId: v.optional(v.id("mediaAssets")),
+  coverKey: v.optional(v.string()),
+  coverRemoved: v.boolean(),
+  coverMedia: v.optional(publicMediaProjectionValidator),
   editorJson: v.string(),
   plainText: v.string(),
   inlineMedia: v.array(publicInlineMediaValidator),
 });
 
 const workspaceValidator = v.object({
-  post: postSummaryValidator,
+  post: workspacePostValidator,
   draft: v.union(v.null(), revisionViewValidator),
   published: v.union(v.null(), revisionViewValidator),
   legacyBody: v.union(v.null(), v.string()),
@@ -116,7 +129,10 @@ async function toRevisionView(
   revision: Doc<"postRevisions">,
 ) {
   const document = validateEditorDocument(revision.editorJson);
-  const inlineMedia = await projectReadyJournalMedia(ctx, document.mediaIds);
+  const [inlineMedia, coverMedia] = await Promise.all([
+    projectReadyJournalMedia(ctx, document.mediaIds),
+    projectReadyJournalCover(ctx, revision.coverMediaId),
+  ]);
   return {
     ...toRevisionSummary(revision),
     excerpt: revision.excerpt,
@@ -126,9 +142,21 @@ async function toRevisionView(
     ...(revision.coverMediaId === undefined
       ? {}
       : { coverMediaId: revision.coverMediaId }),
+    ...(revision.coverKey === undefined ? {} : { coverKey: revision.coverKey }),
+    coverRemoved: revision.coverRemoved === true,
+    ...(coverMedia === null ? {} : { coverMedia }),
     editorJson: revision.editorJson,
     plainText: revision.plainText,
     inlineMedia,
+  };
+}
+
+async function toWorkspacePost(ctx: QueryCtx, post: Doc<"posts">) {
+  const coverMedia = await projectReadyJournalCover(ctx, post.coverMediaId);
+  return {
+    ...toSummary(post),
+    ...(post.coverKey === undefined ? {} : { coverKey: post.coverKey }),
+    ...(coverMedia === null ? {} : { coverMedia }),
   };
 }
 
@@ -198,7 +226,7 @@ export const getWorkspace = query({
         : toRevisionView(ctx, published),
     ]);
     return {
-      post: toSummary(post),
+      post: await toWorkspacePost(ctx, post),
       draft: draftView,
       published: publishedView,
       legacyBody:
@@ -309,17 +337,31 @@ export const saveDraft = mutation({
       throw new Error("Journal slug is already in use.");
     }
 
-    const coverMediaId =
-      args.coverMediaId === undefined
-        ? currentDraft?.coverMediaId ?? post?.coverMediaId
-        : args.coverMediaId === null
-          ? undefined
-          : args.coverMediaId;
+    let coverMediaId: Id<"mediaAssets"> | undefined;
+    let coverKey: string | undefined;
+    let coverRemoved = false;
+    if (args.coverMediaId === null) {
+      coverRemoved = true;
+    } else if (args.coverMediaId !== undefined) {
+      coverMediaId = args.coverMediaId;
+    } else if (currentDraft?.coverRemoved === true) {
+      coverRemoved = true;
+    } else if (
+      currentDraft?.coverMediaId !== undefined ||
+      currentDraft?.coverKey !== undefined
+    ) {
+      coverMediaId = currentDraft.coverMediaId;
+      coverKey = currentDraft.coverKey;
+    } else {
+      coverMediaId = post?.coverMediaId;
+      coverKey = post?.coverKey;
+    }
     if (coverMediaId !== undefined) {
       const cover = await requireReadyMedia(ctx, coverMediaId);
       if (cover.purpose !== "journal-cover" && cover.purpose !== "page-image") {
         throw new Error("Selected media is not a journal cover.");
       }
+      coverKey = cover.objectKey;
     }
     for (const mediaIdValue of document.mediaIds) {
       const mediaId = ctx.db.normalizeId("mediaAssets", mediaIdValue);
@@ -345,6 +387,7 @@ export const saveDraft = mutation({
             status: "draft",
             featured: args.featured,
             ...(coverMediaId === undefined ? {} : { coverMediaId }),
+            ...(coverKey === undefined ? {} : { coverKey }),
             createdAt: now,
             updatedAt: now,
             nextRevision: nextRevision + 1,
@@ -358,6 +401,8 @@ export const saveDraft = mutation({
       ...metadata,
       featured: args.featured,
       ...(coverMediaId === undefined ? {} : { coverMediaId }),
+      ...(coverKey === undefined ? {} : { coverKey }),
+      ...(coverRemoved ? { coverRemoved: true } : {}),
       editorJson: document.editorJson,
       plainText: document.plainText,
       createdBy: actor._id,
@@ -425,6 +470,10 @@ export const publish = mutation({
       revision.coverMediaId === undefined
         ? null
         : await requireReadyMedia(ctx, revision.coverMediaId);
+    const publishedCoverKey =
+      revision.coverRemoved === true
+        ? undefined
+        : cover?.objectKey ?? revision.coverKey;
     const now = Date.now();
     await ctx.db.patch("posts", post._id, {
       slug: revision.slug,
@@ -434,8 +483,9 @@ export const publish = mutation({
       authorName: revision.authorName,
       featured: revision.featured,
       body: revision.plainText,
-      coverMediaId: revision.coverMediaId,
-      coverKey: cover?.objectKey,
+      coverMediaId:
+        revision.coverRemoved === true ? undefined : revision.coverMediaId,
+      coverKey: publishedCoverKey,
       status: "published",
       publishedAt: now,
       publishedRevisionId: revision._id,

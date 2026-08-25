@@ -21,7 +21,7 @@ Create a public home for the working-name **English Club** that combines a conci
 
 Success means a new visitor can answer these questions quickly: Who is this club for? What happens inside it? Does it feel welcoming? How can I join or make contact? A partner should also find enough context to take the club seriously.
 
-The repository does not contain a confirmed legal name, address, membership price, member count, formal programme list, or verified member roster. The current logo, atmospheric people imagery, and Member portrait sheet are generated working assets. The Member page uses 15 fictional source-only profiles as a complete organisation showcase before reviewed records publish. They are not stored in Convex and do not establish the club's real roster or member total.
+The repository does not contain a confirmed legal name, address, membership price, member count, or verified production member roster. The current logo, atmospheric people imagery, and Member portrait sheet are generated working assets. The announced development deployment contains 15 explicitly fictional profiles and five managed divisions so the complete organisation, filtering, and consent contracts can be tested through Convex. These records are development data, do not establish the club's real roster or member total, and must be removed or replaced by consent-cleared records before production.
 
 ## Brand Personality
 
@@ -49,7 +49,7 @@ The intended emotional sequence is recognition first, then curiosity, then enoug
 5. **Editorial, not institutional.** Blog and event material should read with a calm publication rhythm, while organisation details stay concise and scannable.
 6. **Facts earn permanence.** Confirmed content lives in Convex; uncertain material remains marked as draft data and never appears as an official claim.
 7. **Profiles require permission.** A public name and role need cleared profile consent; a portrait needs its own cleared consent.
-8. **Showcase and records stay separate.** Temporary fictional profiles may complete the pre-seed presentation, but they stay source-only, never conceal an unavailable backend, and yield completely to reviewed Convex records.
+8. **Development data stays development data.** Fictional profiles may exercise the real Convex directory on the named development deployment, but they never conceal an unavailable backend, enter production, or substitute for consent-cleared organisation records.
 
 ## Accessibility & Inclusion
 

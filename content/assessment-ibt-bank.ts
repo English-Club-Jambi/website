@@ -1,5 +1,59 @@
 export type IbtBankSkill = "reading" | "listening" | "writing" | "speaking";
 
+export const IBT_PRACTICE_RESEARCH_SOURCES = [
+  {
+    id: "ets-2026-blueprint",
+    title: "TOEFL iBT Test Content and Structure",
+    url: "https://www.ets.org/toefl/test-takers/ibt/about/content.html",
+    use: "Task-family names, public section counts, and approximate base times only; no ETS questions or answer keys are reproduced.",
+  },
+  {
+    id: "epa-urban-tree-cooling",
+    title: "Benefits of Trees and Vegetation",
+    url: "https://www.epa.gov/heatislands/benefits-trees-and-vegetation",
+    use: "Factual reference for shade, evapotranspiration, placement, and urban heat exposure in the original tree-cooling passage.",
+  },
+  {
+    id: "nih-sleep-memory",
+    title: "Sleep smart: optimizing sleep for declarative learning and memory",
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4428077/",
+    use: "Research reference for replay, consolidation, and transformation of memory; the practice passage and questions are newly written.",
+  },
+  {
+    id: "noaa-reef-soundscape",
+    title: "Soundscape",
+    url: "https://floridakeys.noaa.gov/science/research-highlights/soundscape.html",
+    use: "Factual reference for reef sound sources and hydrophone monitoring in the original reef passage.",
+  },
+  {
+    id: "smithsonian-pottery",
+    title: "Archaeological ceramics and compositional analysis record",
+    url: "https://www.si.edu/object/thin-section-petrography-geochemistry-and-scanning-electron-microscopy-archaeological-ceramics%3Asiris_sil_1158129",
+    use: "CC0 metadata and research reference for mineralogical analysis and ceramic provenance; no book text is reproduced.",
+  },
+  {
+    id: "usda-pollinator-habitat",
+    title: "Habitat Assessment Guide for Pollinators in Yards, Gardens, and Parks",
+    url: "https://www.nrcs.usda.gov/sites/default/files/2024-04/19-038_02_HAG_Yard-Park-Garden.pdf",
+    use: "Factual reference for seasonal forage, nesting, and small urban habitat sites in the original pollinator passage.",
+  },
+  {
+    id: "usfs-seed-germination",
+    title: "Seed Germination and Sowing Options",
+    url: "https://research.fs.usda.gov/treesearch/download/46349.pdf",
+    use: "Factual reference for dormancy, cold-moist treatment, fire, and smoke cues in the original listening talk.",
+  },
+  {
+    id: "usgs-paleoclimate",
+    title: "Paleoclimate Reconstruction from Marine and Lake Sediments",
+    url: "https://www.usgs.gov/centers/spcmsc/science/paleoclimate-reconstruction-marine-and-lake-sediments",
+    use: "Public-domain factual reference for sediment cores, microfossils, salinity, and multi-proxy reconstruction in the original coastline talk.",
+  },
+] as const;
+
+export type IbtPracticeResearchSourceId =
+  (typeof IBT_PRACTICE_RESEARCH_SOURCES)[number]["id"];
+
 export type IbtBankOption = Readonly<{ key: string; label: string }>;
 
 type ChoiceAnswer = Readonly<{
@@ -99,6 +153,28 @@ export type IbtBankDefinition = Readonly<{
 
 export const IBT_PRACTICE_BANK_CHECKSUM =
   "ec-ibt-style-2026-v1-2026-08-26-r1";
+
+const researchSourceByStimulusKey: Readonly<Record<string, IbtPracticeResearchSourceId>> = {
+  "reading-academic-heat": "epa-urban-tree-cooling",
+  "reading-academic-memory": "nih-sleep-memory",
+  "reading-academic-reef": "noaa-reef-soundscape",
+  "reading-academic-clay": "smithsonian-pottery",
+  "reading-academic-insects": "usda-pollinator-habitat",
+  "listening-talk-1": "usfs-seed-germination",
+  "listening-talk-2": "usgs-paleoclimate",
+};
+
+export function researchSourceIdsForBankItem(
+  item: IbtBankItem,
+): readonly IbtPracticeResearchSourceId[] {
+  const source =
+    item.stimulusKey === undefined
+      ? undefined
+      : researchSourceByStimulusKey[item.stimulusKey];
+  return source === undefined
+    ? ["ets-2026-blueprint"]
+    : ["ets-2026-blueprint", source];
+}
 
 const optionKeys = ["a", "b", "c", "d", "e", "f"] as const;
 
@@ -716,8 +792,8 @@ const fullPractice: IbtBankDefinition = {
   kind: "full-practice",
   adminTitle: "Four-skill practice form 1",
   title: "English Club Four-Skill Practice Form 1",
-  summary: "A 90-minute fixed form with 120 original Reading, Listening, Writing, and Speaking tasks shaped around the public 2026 iBT task families.",
-  instructions: "Work independently in section order. The result is exact for this English Club bank; band and 0–120 values are fixed-form estimates rather than official test scores.",
+  summary: "A 90-minute four-skill session assembled from 120 reviewed Reading, Listening, Writing, and Speaking tasks shaped around the public 2026 iBT task families.",
+  instructions: "Work independently in section order. Your raw result is exact for the questions delivered in this attempt; the band and 0–120 values are English Club estimates rather than official test scores.",
   maxAttemptsPerDay: 2,
   sections: [fullReadingSection, fullListeningSection, fullWritingSection, fullSpeakingSection],
 };

@@ -8,6 +8,11 @@ const mocks = vi.hoisted(() => ({
   resolvedAttemptId: "assessmentattempt00000000001" as string | null,
   queryNames: [] as string[],
   transcriptEnabled: false,
+  itemCount: 1,
+  move: vi.fn(async (args: { expectedRevision: number }) => ({
+    ok: true as const,
+    revision: args.expectedRevision + 1,
+  })),
   enableTranscript: vi.fn(async (args: unknown) => {
     void args;
     return { ok: true as const, revision: 4 };
@@ -106,6 +111,7 @@ vi.mock("convex/react", async (importOriginal) => {
               { key: "b", label: "Leave the room" },
             ],
           },
+          illustration: null,
           stimulus: {
             id: "assessmentstimulus0000000001",
             kind: "audio",
@@ -128,9 +134,9 @@ vi.mock("convex/react", async (importOriginal) => {
           ],
           navigation: {
             itemOrder: 0,
-            itemCount: 1,
+            itemCount: mocks.itemCount,
             canGoBack: false,
-            canGoNext: false,
+            canGoNext: mocks.itemCount > 1,
           },
         };
       }
@@ -144,6 +150,9 @@ vi.mock("convex/react", async (importOriginal) => {
           mocks.transcriptEnabled = true;
           return result;
         };
+      }
+      if (name === "assessmentAttempts:move") {
+        return mocks.move;
       }
       return vi.fn(async () => ({ ok: true, revision: 4, savedAt: Date.now() }));
     },
@@ -163,7 +172,9 @@ afterEach(() => {
   mocks.resolvedAttemptId = "assessmentattempt00000000001";
   mocks.queryNames.length = 0;
   mocks.transcriptEnabled = false;
+  mocks.itemCount = 1;
   mocks.enableTranscript.mockClear();
+  mocks.move.mockClear();
 });
 
 function Runner() {
@@ -204,6 +215,7 @@ describe("AttemptRunner reactive boundaries", () => {
   it("leaves an expired question when the server advances to the next section boundary", () => {
     const { rerender } = render(<Runner />);
     expect(screen.getByRole("heading", { name: "What does the speaker plan to do?" })).toBeVisible();
+    expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByText(`${copy.timeLeft} 0:00`)).toBeVisible();
 
     mocks.phase = "section-ready";
@@ -231,5 +243,21 @@ describe("AttemptRunner reactive boundaries", () => {
     rerender(<Runner />);
     expect(screen.getByText("Let us meet the group after class.")).toBeVisible();
     expect(screen.queryByRole("button", { name: copy.switchTranscript })).toBeNull();
+  });
+
+  it("carries a successful navigation revision into the next rapid move", async () => {
+    mocks.itemCount = 3;
+    const user = userEvent.setup();
+    render(<Runner />);
+    const next = screen.getByRole("button", { name: copy.next });
+
+    await user.click(next);
+    await user.click(next);
+
+    await waitFor(() => expect(mocks.move).toHaveBeenCalledTimes(2));
+    expect(mocks.move.mock.calls.map(([args]) => args.expectedRevision)).toEqual([
+      3,
+      4,
+    ]);
   });
 });

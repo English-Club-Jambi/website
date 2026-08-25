@@ -4,6 +4,8 @@ Date: 25 August 2026
 Scope: `/members` filters for Role, Position/Division, and Year joined
 Mode: source audit only; this document is the only file changed
 
+> Historical audit. The final implementation added `joinedYear` and dynamic division data end to end, removed the local showcase fallback, and exercises filters against a guarded 15-profile Convex development seed.
+
 ## Executive decision
 
 The filter can stay client-side for the current directory contract. The page already fetches one consent-gated, indexed, bounded roster of at most 120 records. Filtering that in memory gives immediate interaction without adding a matrix of Convex indexes or unbounded reads.

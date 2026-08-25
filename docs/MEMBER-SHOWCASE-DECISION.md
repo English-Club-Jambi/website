@@ -1,9 +1,11 @@
 # Member Showcase Decision
 
-Status: implemented and authoritative
+Status: superseded on 26 August 2026 by the guarded Convex development seed
 Date: 25 August 2026
 Route: `/members`
 Supersedes: `MEMBER-PLACEHOLDER-DECISION.md`
+
+> Historical decision record. The local `src/content/member-showcase.ts` fallback was removed. The same fictional identities now live in `content/member-development-seed.ts` and are written only by the target-locked, idempotent development seed to `perfect-greyhound-270`. Production must contain no development seed batch and may publish only consent-cleared records.
 
 ## Request interpreted
 
@@ -14,10 +16,10 @@ The user also explicitly authorised temporary fictional identities and generated
 ## Evidence boundary
 
 - No verified English Club roster, identity-to-role assignment, or real portrait consent exists in the repository.
-- The 15 displayed identities are fictional and live only in `src/content/member-showcase.ts`.
-- The identities are never seeded or written to Convex.
+- The 15 identities are fictional and are authored in `content/member-development-seed.ts`.
+- The guarded development command writes them to Convex with `seedBatch: member-directory-v1`; they are not production data.
 - The portrait sheet is generated media. It does not depict or identify English Club members.
-- A successful non-empty `members:listPublished` result replaces the complete showcase with consent-cleared Convex records.
+- The public route renders only `members:listPublished`; there is no local roster fallback.
 - If the query is unavailable, the page shows an honest unavailable state instead of using showcase data to hide the failure.
 - Real names still require cleared profile consent. Real portraits still require separate cleared photo consent.
 

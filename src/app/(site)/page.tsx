@@ -15,7 +15,7 @@ import { PageContainer, TextLink } from "@/components/ui";
 import { buildProgrammeQuiz } from "@/content/assessment";
 import { media } from "@/content/media";
 import { getActivityThemes } from "@/content/site-copy";
-import { getLocalPublishedPosts } from "@/lib/journal";
+import { getPublishedPosts } from "@/lib/journal";
 import { absoluteUrl } from "@/lib/seo";
 import { serializeJsonLd } from "@/lib/structured-data";
 
@@ -40,12 +40,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [copy, activitiesCopy, globalCopy] = await Promise.all([
+  const [copy, activitiesCopy, globalCopy, posts] = await Promise.all([
     getPublicPageContent("home"),
     getPublicPageContent("activities"),
     getPublicPageContent("global"),
+    getPublishedPosts(3),
   ]);
-  const posts = getLocalPublishedPosts(3);
   const programmeQuestions = buildProgrammeQuiz(
     getActivityThemes(activitiesCopy),
     {

@@ -25,6 +25,10 @@ function readCredentials(): AdminCredentials {
 async function signIn(page: Page) {
   const credentials = readCredentials();
   await page.goto("/admin");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-admin-hydrated",
+    "true",
+  );
   await page.getByLabel("Email address").fill(credentials.email);
   await page.getByLabel("Password").fill(credentials.password);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -34,6 +38,8 @@ async function signIn(page: Page) {
 }
 
 test.describe("admin journal page editor", () => {
+  test.describe.configure({ timeout: 60_000 });
+
   test.skip(
     !credentialPath,
     "Set ADMIN_JOURNAL_CREDENTIALS_PATH or ADMIN_TOUCH_CREDENTIALS_PATH to run this private gate.",

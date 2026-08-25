@@ -2,7 +2,7 @@
 
 Status: implemented direction; final source authority is `MEMBER-SHOWCASE-DECISION.md`
 
-> Findings about the former 14-row fixture are historical evidence. The final implementation uses 15 source-only identities, all required assignments, and a 5/4/3/2-column contact sheet.
+> Findings about the former 14-row fixture are historical evidence. The final development implementation uses 15 seed-batch-labelled Convex identities, all required assignments, and a 5/4/3/2-column contact sheet. Production must not contain this fictional seed.
 
 This document turns the current roster into a public organization profile. It is intentionally bounded: keep the existing hero and role map, replace the long placeholder list with one editorial contact sheet, and do not add a second interaction model.
 

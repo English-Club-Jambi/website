@@ -378,6 +378,8 @@ export const saveSingleChoice = mutation({
         status: bankEntry?.status ?? ("paused" as const),
         profile: definition.profile,
         fullPracticeEligible: bankEntry?.fullPracticeEligible ?? false,
+        origin: bankEntry?.origin ?? ("assessment-source" as const),
+        illustrationMediaId: bankEntry?.illustrationMediaId,
         contentFingerprint: questionContentFingerprint(
           section.skill,
           itemValues.prompt,

@@ -184,6 +184,11 @@ test.describe("private authenticated admin touch smoke", () => {
     await expectTouchClickTrace(page, newStory);
     await expect(page).toHaveURL(/\/admin\/journal\/new$/);
 
+    const journalBody = page.getByRole("textbox", { name: "Journal body" });
+    await expect(journalBody).toBeVisible({ timeout: 20_000 });
+    await journalBody.fill("Listening notes from the Thursday circle");
+    await journalBody.selectText();
+
     const editorLink = page.getByRole("button", { name: "Link" });
     await expect(editorLink).toBeEnabled({ timeout: 20_000 });
     await expectTouchClickTrace(page, editorLink);

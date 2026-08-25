@@ -2,13 +2,14 @@
 
 ## What shipped
 
-The admin assessment lane is a Convex-backed authoring and release workspace. New private definitions use the four-skill `ec-ibt-style-2026-v1` profile and its bounded `practice-estimate-v1` policy. The workspace never writes to a published version, and creating a draft does not bypass the content or review gates.
+The admin assessment lane is a Convex-backed control and release workspace for the fixed Practice Format catalogue. Administrators manage which reviewed Question Bank items may appear in each format; they do not create additional formats. The workspace never writes to a published version, and starting a working revision does not bypass the content or review gates.
 
 Routes:
 
-- `/admin/assessments` — cursor-paged catalogue, visibility filter, create entry point, and media entry point.
-- `/admin/assessments/new` — creates an empty private `full-practice` or `skill-quiz` definition.
-- `/admin/assessments/[assessmentId]` — version metadata, ordered sections, validation, four review decisions, publication gates, and next-draft lifecycle.
+- `/admin/assessments` — cursor-paged fixed catalogue, visibility filter, Question Bank entry point, and media entry point. It has no Create Practice Format action.
+- `/admin/assessments/questions` — capacity ledger, cursor-paged bank, Add Question builder, skill-grouped task-family control, optional reviewed R2 illustration, and activation settings.
+- `/admin/assessments/new` — compatibility redirect back to the fixed catalogue; it cannot create a format.
+- `/admin/assessments/[assessmentId]` — fixed skill structure, versioned allow/disable rules, aggregate learner flags, validation, four review decisions, publication gates, and next-revision lifecycle.
 - `/admin/assessments/[assessmentId]/sections/[sectionId]` — ordered stimuli and questions, protected answer keys, and version-scoped public media selectors.
 - `/admin/assessments/media` — private-source upload, short-lived review preview, and reviewed public derivative workflow.
 
@@ -26,16 +27,17 @@ The UI hides unavailable actions, but Convex remains the authority for every rea
 
 ## Safe authoring lifecycle
 
-1. Create an empty private definition or choose an existing draft.
-   Convex binds `ec-ibt-style-2026-v1` to `practice-estimate-v1` and the legacy ITP profile to `raw-objective`; mismatched client input is rejected.
-2. Save learner-facing metadata, sections, stimuli, and single-choice questions. Every change includes `expectedContentRevision`.
-3. Reorder or remove content through bounded Convex mutations. Section removal remains disabled while its item count is non-zero; Convex also rejects a section containing stimuli.
+1. Choose one of the installed formats and start its next private working revision when changes are needed.
+2. Adjust learner-facing metadata and decide which eligible Question Bank items are allowed or disabled for that exact revision. Every change includes `expectedContentRevision`.
+3. Keep the installed skill structure and quotas fixed. A live attempt draws an eligible set at Start and permanently pins the selected question IDs and order to that attempt.
 4. Run automated validation for the exact revision.
 5. Record academic, rights, accessibility, and bias decisions for that same revision.
 6. Publish only when `publishReadiness.ready` is true on the server. The browser does not reproduce publication policy.
-7. A published version remains immutable. **Create next draft** starts the bounded clone. `cloning` closes authoring; `clone-failed` offers the idempotent **Resume draft copy** action.
+7. A published version remains immutable. **Start next revision** starts the bounded clone. `cloning` closes authoring; `clone-failed` offers the idempotent **Resume revision copy** action.
 
 Correct answers are returned only by administrator queries and edited in a visually separate protected-key panel. Public practice queries never receive that key data.
+
+Question Bank authoring is separate from Practice Format creation. A newly authored single-choice question creates its source item, private answer key, and bank metadata together, then remains paused and excluded from full practice. An editor can attach no image, choose an existing ready Question illustration, or upload a new image directly to R2 with required alternative text. Live attempts pin the selected media ID together with the question manifest.
 
 ## Assessment R2 setup and gate
 
@@ -74,10 +76,11 @@ Stimulus selectors use `adminMedia.listAssessmentPage` with the exact assessment
 - Ordered content has named Heroicon controls with explicit first/last disabled states.
 - Destructive changes use a labelled modal confirmation, Escape/cancel handling, pending lock, and focus return.
 - Layout contracts cover 1120, 760, and 360 px breakpoints plus reduced motion.
-- Focused unit result: 8 files, 20 tests passed.
-- Integrated Vitest result: 34 files, 133 tests passed.
+- Fixed-format UI result: 3 files, 10 tests passed.
+- Integrated unit result: 45 files, 162 tests passed.
+- Integrated backend result: 8 files, 63 tests passed.
 - Next route generation and full TypeScript check passed.
-- Authenticated visual harness: desktop, Pixel 7, and 320 px; no horizontal overflow; Axe returned zero violations; reduced motion enabled.
+- Fixed-format visual harness: desktop, Pixel 7, and 320 px; no horizontal overflow; controls are at least 44 px; Axe returned zero violations; reduced motion enabled.
 
 Evidence:
 

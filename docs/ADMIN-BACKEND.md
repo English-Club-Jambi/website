@@ -50,7 +50,7 @@ Before every `convex env set`, `convex dev --once`, or deploy command, identify 
 Generate the keys headlessly. Do not run the interactive Convex Auth wizard.
 
 ```bash
-node -e 'import("jose").then(async({generateKeyPair,exportPKCS8,exportJWK})=>{const k=await generateKeyPair("RS256",{extractable:true});const priv=await exportPKCS8(k.privateKey);const pub=await exportJWK(k.publicKey);process.stdout.write(JSON.stringify({JWT_PRIVATE_KEY:priv.trimEnd().replace(/\n/g," "),JWKS:JSON.stringify({keys:[{use:"sig",...pub}]})}))})' > .auth-keys.json
+node -e 'import("jose").then(async({generateKeyPair,exportPKCS8,exportJWK})=>{const k=await generateKeyPair("RS256",{extractable:true});const priv=await exportPKCS8(k.privateKey);const pub=await exportJWK(k.publicKey);process.stdout.write(JSON.stringify({JWT_PRIVATE_KEY:priv.trimEnd().replace(/\n/g," "),JWKS:JSON.stringify({keys:[{use:"sig",...pub}]})}))})' > .convex-auth-jwt-keys.json
 ```
 
 Set these deployment variables without printing their values into logs:
@@ -67,13 +67,13 @@ npx convex env set "JWKS=<value>"
 npx convex env set "SITE_URL=http://localhost:3987"
 ```
 
-Delete `.auth-keys.json` immediately after the values are stored. It is not application source and must never be committed.
+Delete `.convex-auth-jwt-keys.json` immediately after the values are stored. It is not application source and must never be committed. `.auth-keys.json` is reserved for the ignored operator-owned admin credential record and must never be overwritten by signing-key output.
 
 For production, set `SITE_URL` to the exact HTTPS site origin and generate a separate key pair. Do not reuse development signing keys.
 
 ### 2. R2 credentials
 
-Set these in the same Convex cloud deployment:
+Set these in the Convex cloud deployment:
 
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
@@ -85,9 +85,13 @@ Set these in the same Convex cloud deployment:
 
 The presigned upload URL must use the R2 S3 endpoint. Cloudflare does not support presigned PUTs through a custom public domain. The custom domain is the read URL after verification.
 
+The Next.js runtime also needs `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, and `R2_API` as server-only variables. It uses them to reject any relay target outside the configured bucket; it does not receive either S3 secret.
+
 ### 3. R2 CORS
 
-Apply an origin-specific CORS policy to the bucket. Add the production origin when it exists; do not replace it with `*`.
+The current editor sends the file body to the same-origin `/api/admin/media-upload` route. That route accepts only a five-minute Convex-issued PUT URL for the configured HTTPS R2 bucket, checks the signed method, path, size, MIME type, cache control, and signature shape, then streams the body to R2 without following redirects. Convex still performs the final `HeadObject` check before marking the media ready.
+
+This relay keeps the editor working when the bucket has no CORS policy. A direct browser PUT removes one network hop and remains the preferred production path once an origin-specific bucket policy is installed. Add the production origin when it exists; do not replace it with `*`.
 
 ```json
 [
@@ -119,6 +123,12 @@ The terminal prompts for the profile and hides password input. Automation may us
 The narrow `--repair-placeholder <exact-value>` option can rebind a sole active legacy owner only when its token identifier exactly matches, it has no Auth user binding, and the requested role remains owner. It cannot replace an arbitrary or multi-admin deployment.
 
 `--recover-existing` is only for an interrupted operator flow that already created the named Password account. It must be combined with the exact guarded placeholder repair in that migration case. Recovery binds the verified Auth user first, rotates the password second, and invalidates existing sessions last; normal provisioning must not set this flag.
+
+A provisioned Password credential is persistent. Convex Auth keeps a one-way hash
+on `authAccounts`; the application has no password-expiry timer and normal sign-in or
+session refresh never rotates it. Expiring or invalidating an `authSession` does not
+change the Password account secret. Run automated QA with a separate
+development-only administrator rather than recovering a human operator account.
 
 ## API contract
 
@@ -163,16 +173,25 @@ The editor payload is JSON, not HTML. The backend accepts a fixed Tiptap-compati
 
 Published journal DTOs retain the legacy optional `coverKey` and add an optional `coverMedia` object with the exact shape `{ mediaId, publicUrl, alt, width, height }`. The detail query, featured query, bounded list, and six-item archive page resolve it from the published post's `coverMediaId`; they never inspect the current draft revision's cover. Only ready `journal-cover` or `page-image` records with verified dimensions are projected. A missing, pending, rejected, archived, or wrong-purpose asset leaves `coverMedia` absent while `coverKey` remains available for checked-in legacy covers. This costs at most one indexed document read per returned story: six for an archive page and twelve for the explicitly capped legacy list.
 
+Cover editing is tri-state: an omitted argument preserves the current revision or
+legacy cover, a reviewed media ID replaces it, and `null` records an explicit removal
+on the immutable draft revision. Public reads continue following
+`publishedRevisionId` until publication. Their `updatedAt` and sitemap value use the
+publication timestamp, so saving a private body or cover draft cannot leak editorial
+activity into public metadata.
+
 ### Media and R2
 
 | Function | Permission | Contract |
 | --- | --- | --- |
-| `api.r2.createAdminUploadUrl` | `media:upload` | UUID key, fixed MIME allowlist, 10 MiB maximum, five-minute PUT |
+| `api.r2.createAdminUploadUrl` | `media:upload` | UUID key, fixed MIME allowlist, 10 MiB maximum, five-minute PUT with signed size, MIME type, and cache control |
 | `api.r2.verifyAdminUpload` | `media:upload` | HEAD checks content type, byte size, and immutable cache control |
 | `api.adminMedia.listPage` | `media:read` | cursor page of exactly 24 for one status and optional purpose |
 | `api.adminMedia.archive` | `media:upload` | keeps the R2 object but removes it from ready selection |
 
 Allowed admin upload types are AVIF, JPEG, PNG, and WebP. Member portraits are restricted to AVIF or WebP and use `members/profiles/<uuid>.<ext>`, matching the public member-photo contract. Other CMS media uses `uploads/<purpose>/<uuid>.<ext>`. SVG is intentionally excluded from browser-admin uploads.
+
+AWS SDK versions from 3.729.0 add CRC32 to S3 PUT calls by default. Presigning without a body turns that default into a checksum for an empty payload, which cannot describe the later image bytes. The R2 signer uses `requestChecksumCalculation: "WHEN_REQUIRED"`, binds `content-length`, `content-type`, and `cache-control`, and leaves the payload hash as `UNSIGNED-PAYLOAD`. The same-origin route rejects checksum query parameters it cannot prove against the streamed body; the following HEAD check supplies the authoritative size and metadata gate.
 
 A ready media view returns `https://r2.mukhtada.my.id/<objectKey>`. The database stores the object key, not an old `r2.dev` URL.
 
@@ -231,6 +250,7 @@ Backend tests prove:
 - published cover projections carry exactly five reviewed fields across detail, featured, list, and archive DTOs while draft, archived, and wrong-purpose covers remain unavailable;
 - theme publish/rollback is permissioned and evented;
 - R2 signing rejects non-admins before any credential lookup;
+- the same-origin relay rejects cross-site requests, foreign hosts, path traversal, altered signature shapes, unsigned metadata, missing sizes, and files over 10 MiB before contacting R2;
 - a member portrait cannot publish until its media record is verified;
 - ready URLs use `r2.mukhtada.my.id`.
 

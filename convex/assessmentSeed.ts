@@ -1,6 +1,8 @@
 import {
   IBT_PRACTICE_BANK_CHECKSUM,
+  IBT_PRACTICE_RESEARCH_SOURCES,
   ibtPracticeBank,
+  researchSourceIdsForBankItem,
   type IbtBankDefinition,
   type IbtBankItem,
 } from "../content/assessment-ibt-bank";
@@ -59,6 +61,9 @@ function provenanceJson(definition: IbtBankDefinition) {
     definition: definition.slug,
     rights: "project-authored",
     publicBlueprintReference: "ETS 2026 public task families and counts",
+    researchSources: IBT_PRACTICE_RESEARCH_SOURCES,
+    contentPolicy:
+      "Facts were researched from the listed sources; passages, prompts, options, transcripts, and answer keys are English Club originals.",
   });
 }
 
@@ -512,6 +517,12 @@ export const seedQuestionBank = internalMutation({
         )
         .take(9);
       for (const section of sections) {
+        const sourceSection = source.sections.find(
+          (entry) => entry.key === section.sectionKey,
+        );
+        if (sourceSection === undefined) {
+          throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+        }
         const items = await ctx.db
           .query("assessmentItems")
           .withIndex("by_section_id_and_order", (q) =>
@@ -522,7 +533,9 @@ export const seedQuestionBank = internalMutation({
           throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
         }
         const fullPracticeEligible = source.kind === "full-practice";
-        if (fullPracticeEligible) {
+        const usesQuestionBank =
+          source.kind === "full-practice" || source.kind === "skill-quiz";
+        if (usesQuestionBank) {
           await ctx.db.patch("assessmentSections", section._id, {
             deliveryMode: "random-bank",
             bankProfile: "ec-ibt-style-2026-v1",
@@ -577,6 +590,15 @@ export const seedQuestionBank = internalMutation({
             continue;
           }
           const taskFamily = taskFamilyForItemKey(item.itemKey);
+          const sourceItem = sourceSection.items.find(
+            (entry) => entry.key === item.itemKey,
+          );
+          if (sourceItem === undefined) {
+            throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+          }
+          const sourceTags = researchSourceIdsForBankItem(
+            sourceItem,
+          ).map((sourceId) => `source-${sourceId}`);
           await ctx.db.insert("assessmentQuestionBank", {
             bankKey,
             sourceDefinitionId: definition._id,
@@ -591,7 +613,12 @@ export const seedQuestionBank = internalMutation({
             fullPracticeEligible,
             contentFingerprint: `ec-ibt-style-2026-v1:${section.skill}:${item.itemKey}`,
             promptSearch: normalizeBankPrompt(item.prompt),
-            tags: [section.skill, taskFamily],
+            tags: [
+              section.skill,
+              taskFamily,
+              "original-question",
+              ...sourceTags,
+            ],
             seedBatch: IBT_PRACTICE_BANK_CHECKSUM,
             createdBy: author._id,
             updatedBy: author._id,
@@ -728,19 +755,28 @@ export const verifyQuestionBank = internalQuery({
     if (rows.length > 200) {
       throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
     }
-    const full = await ctx.db
-      .query("assessmentDefinitions")
-      .withIndex("by_slug", (q) => q.eq("slug", "four-skill-practice-form-1"))
-      .unique();
-    const sections =
-      full?.publishedVersionId === undefined
-        ? []
-        : await ctx.db
-            .query("assessmentSections")
-            .withIndex("by_version_id_and_order", (q) =>
-              q.eq("versionId", full.publishedVersionId!),
-            )
-            .take(9);
+    let randomSections = 0;
+    for (const source of ibtPracticeBank) {
+      const definition = await ctx.db
+        .query("assessmentDefinitions")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (definition?.publishedVersionId === undefined) continue;
+      const sections = await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_order", (q) =>
+          q.eq("versionId", definition.publishedVersionId!),
+        )
+        .take(9);
+      if (sections.length > 8) {
+        throw new ConvexError({ code: "ASSESSMENT_STRUCTURE_INVALID" as const });
+      }
+      randomSections += sections.filter(
+        (section) =>
+          section.deliveryMode === "random-bank" &&
+          section.bankSelectionContract === 1,
+      ).length;
+    }
     const skills = ["reading", "listening", "writing", "speaking"] as const;
     return {
       total: rows.length,
@@ -748,11 +784,7 @@ export const verifyQuestionBank = internalQuery({
       eligible: rows.filter(
         (row) => row.status === "ready" && row.fullPracticeEligible,
       ).length,
-      randomSections: sections.filter(
-        (section) =>
-          section.deliveryMode === "random-bank" &&
-          section.bankSelectionContract === 1,
-      ).length,
+      randomSections,
       bySkill: skills.map((skill) => ({
         skill,
         ready: rows.filter(

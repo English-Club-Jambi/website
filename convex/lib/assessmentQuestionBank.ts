@@ -6,6 +6,9 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 type AssessmentReadCtx = Pick<QueryCtx | MutationCtx, "db">;
 type QuestionBankMutationCtx = Pick<MutationCtx, "db">;
 
+export const QUESTION_BANK_AUTHORING_LEDGER_SLUG =
+  "question-bank-authoring-ledger";
+
 export type AssessmentTaskFamily =
   | "complete-words"
   | "read-daily-life"
@@ -30,6 +33,7 @@ export type DeliveredAssessmentItem = {
   order: number;
   targetSectionId: Id<"assessmentSections">;
   bankQuestionId?: Id<"assessmentQuestionBank">;
+  illustrationMediaId?: Id<"mediaAssets">;
 };
 
 const taskFamilyByPrefix: ReadonlyArray<
@@ -158,6 +162,40 @@ export function normalizeQuestionBankTags(values: readonly string[]) {
   return tags;
 }
 
+export function questionBankSourceIsReady(
+  row: Doc<"assessmentQuestionBank">,
+  item: Doc<"assessmentItems"> | null,
+  answerKey: Doc<"assessmentAnswerKeys"> | null,
+  version: Doc<"assessmentVersions"> | null,
+  definition: Doc<"assessmentDefinitions"> | null,
+) {
+  if (
+    item === null ||
+    answerKey === null ||
+    version === null ||
+    definition === null ||
+    item.versionId !== row.sourceVersionId ||
+    item.sectionId !== row.sourceSectionId ||
+    answerKey.versionId !== row.sourceVersionId ||
+    version.definitionId !== definition._id ||
+    definition._id !== row.sourceDefinitionId
+  ) {
+    return false;
+  }
+  if (row.origin === "bank-authored") {
+    return (
+      definition.internalOnly === true &&
+      definition.slug === QUESTION_BANK_AUTHORING_LEDGER_SLUG &&
+      version.status === "ready"
+    );
+  }
+  return (
+    version.status === "published" &&
+    definition.visibility === "published" &&
+    definition.publishedVersionId === version._id
+  );
+}
+
 export function isRandomBankSection(section: Doc<"assessmentSections">) {
   return section.deliveryMode === "random-bank";
 }
@@ -186,6 +224,7 @@ export async function deliveredItemAt(
       order: selection.order,
       targetSectionId: section._id,
       bankQuestionId: selection.bankQuestionId,
+      illustrationMediaId: selection.illustrationMediaId,
     };
   }
 
@@ -228,6 +267,7 @@ export async function listDeliveredSectionItems(
         order: selection.order,
         targetSectionId: section._id,
         bankQuestionId: selection.bankQuestionId,
+        illustrationMediaId: selection.illustrationMediaId,
       });
     }
     return result;
@@ -284,6 +324,121 @@ export function shuffled<T>(values: readonly T[]) {
   return result;
 }
 
+export async function listEligibleBankQuestionsForSection(
+  ctx: AssessmentReadCtx,
+  section: Doc<"assessmentSections">,
+) {
+  if (
+    !isRandomBankSection(section) ||
+    section.bankProfile === undefined ||
+    section.bankSelectionContract !== 1 ||
+    section.itemCount < 1 ||
+    section.itemCount > 80
+  ) {
+    throw new ConvexError({ code: "QUESTION_BANK_SECTION_INVALID" as const });
+  }
+  const version = await ctx.db.get("assessmentVersions", section.versionId);
+  const definition =
+    version === null
+      ? null
+      : await ctx.db.get("assessmentDefinitions", version.definitionId);
+  if (version === null || definition === null) {
+    throw new ConvexError({ code: "QUESTION_BANK_SECTION_INVALID" as const });
+  }
+  const [rows, rules] = await Promise.all([
+    ctx.db
+      .query("assessmentQuestionBank")
+      .withIndex("by_profile_and_status_and_skill", (q) =>
+        q
+          .eq("profile", section.bankProfile!)
+          .eq("status", "ready")
+          .eq("skill", section.skill),
+      )
+      .take(201),
+    ctx.db
+      .query("assessmentVersionQuestionRules")
+      .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+        q.eq("versionId", version._id),
+      )
+      .take(201),
+  ]);
+  if (rows.length > 200 || rules.length > 200) {
+    throw new ConvexError({ code: "QUESTION_BANK_POOL_LIMIT" as const });
+  }
+  const ruleByQuestion = new Map(
+    rules.map((rule) => [rule.bankQuestionId, rule.allowed]),
+  );
+  const eligible: Array<Doc<"assessmentQuestionBank">> = [];
+  const fingerprints = new Set<string>();
+  for (const row of rows) {
+    const allowedByDefault =
+      definition.kind === "full-practice"
+        ? row.fullPracticeEligible
+        : row.sourceDefinitionId === definition._id;
+    if (!(ruleByQuestion.get(row._id) ?? allowedByDefault)) continue;
+    if (fingerprints.has(row.contentFingerprint)) continue;
+    const [item, answerKey] = await Promise.all([
+      ctx.db.get("assessmentItems", row.sourceItemId),
+      ctx.db
+        .query("assessmentAnswerKeys")
+        .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+        .unique(),
+    ]);
+    if (
+      item === null ||
+      answerKey === null ||
+      item.versionId !== row.sourceVersionId ||
+      item.sectionId !== row.sourceSectionId ||
+      answerKey.versionId !== row.sourceVersionId
+    ) {
+      continue;
+    }
+    const [sourceVersion, sourceDefinition] = await Promise.all([
+      ctx.db.get("assessmentVersions", row.sourceVersionId),
+      ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+    ]);
+    if (
+      !questionBankSourceIsReady(
+        row,
+        item,
+        answerKey,
+        sourceVersion,
+        sourceDefinition,
+      )
+    ) {
+      continue;
+    }
+    if (item.stimulusId !== undefined) {
+      const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
+      if (
+        stimulus === null ||
+        stimulus.versionId !== item.versionId ||
+        stimulus.sectionId !== item.sectionId
+      ) {
+        continue;
+      }
+      if (stimulus.kind === "audio") {
+        const media =
+          stimulus.mediaId === undefined
+            ? null
+            : await ctx.db.get("mediaAssets", stimulus.mediaId);
+        if (
+          media === null ||
+          media.status !== "ready" ||
+          media.access !== "public" ||
+          media.purpose !== "assessment-audio" ||
+          media.assessmentVersionId !== item.versionId
+        ) {
+          continue;
+        }
+      }
+    }
+    fingerprints.add(row.contentFingerprint);
+    eligible.push(row);
+  }
+  return eligible;
+}
+
 export async function prepareRandomSelectionPlans(
   ctx: QuestionBankMutationCtx,
   sections: readonly Doc<"assessmentSections">[],
@@ -294,87 +449,7 @@ export async function prepareRandomSelectionPlans(
   >();
   for (const section of sections) {
     if (!isRandomBankSection(section)) continue;
-    if (
-      section.bankProfile === undefined ||
-      section.bankSelectionContract !== 1 ||
-      section.itemCount < 1 ||
-      section.itemCount > 80
-    ) {
-      throw new ConvexError({ code: "QUESTION_BANK_SECTION_INVALID" as const });
-    }
-    const rows = await ctx.db
-      .query("assessmentQuestionBank")
-      .withIndex("by_profile_and_status_and_skill", (q) =>
-        q
-          .eq("profile", section.bankProfile!)
-          .eq("status", "ready")
-          .eq("skill", section.skill),
-      )
-      .take(81);
-    if (rows.length > 80) {
-      throw new ConvexError({ code: "QUESTION_BANK_POOL_LIMIT" as const });
-    }
-    const eligible: Array<Doc<"assessmentQuestionBank">> = [];
-    const fingerprints = new Set<string>();
-    for (const row of rows) {
-      if (!row.fullPracticeEligible || fingerprints.has(row.contentFingerprint)) {
-        continue;
-      }
-      const [item, answerKey] = await Promise.all([
-        ctx.db.get("assessmentItems", row.sourceItemId),
-        ctx.db
-          .query("assessmentAnswerKeys")
-          .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
-          .unique(),
-      ]);
-      if (
-        item === null ||
-        answerKey === null ||
-        item.versionId !== row.sourceVersionId ||
-        item.sectionId !== row.sourceSectionId ||
-        answerKey.versionId !== row.sourceVersionId
-      ) {
-        continue;
-      }
-      const [sourceVersion, sourceDefinition] = await Promise.all([
-        ctx.db.get("assessmentVersions", row.sourceVersionId),
-        ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
-      ]);
-      if (
-        sourceVersion?.status !== "published" ||
-        sourceDefinition?.visibility !== "published" ||
-        sourceDefinition.publishedVersionId !== sourceVersion._id
-      ) {
-        continue;
-      }
-      if (item.stimulusId !== undefined) {
-        const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
-        if (
-          stimulus === null ||
-          stimulus.versionId !== item.versionId ||
-          stimulus.sectionId !== item.sectionId
-        ) {
-          continue;
-        }
-        if (stimulus.kind === "audio") {
-          const media =
-            stimulus.mediaId === undefined
-              ? null
-              : await ctx.db.get("mediaAssets", stimulus.mediaId);
-          if (
-            media === null ||
-            media.status !== "ready" ||
-            media.access !== "public" ||
-            media.purpose !== "assessment-audio" ||
-            media.assessmentVersionId !== item.versionId
-          ) {
-            continue;
-          }
-        }
-      }
-      fingerprints.add(row.contentFingerprint);
-      eligible.push(row);
-    }
+    const eligible = await listEligibleBankQuestionsForSection(ctx, section);
     if (eligible.length < section.itemCount) {
       throw new ConvexError({
         code: "QUESTION_BANK_POOL_SHORTAGE" as const,

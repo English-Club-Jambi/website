@@ -229,7 +229,7 @@ Acceptance:
 - Publish `/members` as a Server Component with one bounded interactive role selector.
 - Show all five role codes and every supplied Coordinator, Core Member, and Board subtype in server-rendered HTML.
 - Treat role codes as classifications, not scores, ranks, or a required progression path.
-- Read a bounded public member view model from Convex. When the query succeeds with zero records, show the documented 15-profile source-only showcase. Never use it when the backend is unavailable or write it to Convex.
+- Read a bounded public member view model from Convex. The named development deployment may contain the guarded 15-profile fictional seed; production may return only consent-cleared records from its own deployment. Never mask an unavailable backend with local data.
 - Require `published` status and cleared profile consent at the indexed query boundary.
 - Require separate cleared photo consent before a portrait object key reaches the browser.
 - Keep personal email, telephone, student identifiers, private social links, consent notes, and administrative fields out of the public response.
@@ -241,8 +241,8 @@ Acceptance:
 - Native exclusive controls work with pointer, touch, Tab, Space, and browser-standard arrow behavior.
 - Selection changes the role explanation and roster filter without moving focus.
 - Every supplied role and subtype remains available without JavaScript.
-- Temporary names, portraits, biographies, and assignments stay inside the documented fictional showcase and never become database facts. No count, tenure, achievement, or contact claim is invented.
-- All 15 showcase profiles disappear as soon as Convex returns one or more real consent-cleared profiles.
+- Development names, portraits, biographies, assignments, and their seed-batch marker remain non-production Convex data. No count, tenure, achievement, or contact claim is invented.
+- Production launch verifies that no development seed batch remains and that every returned profile passes the real consent gates.
 - The roster is a true responsive 5/4/3/2-column contact sheet. No org-chart pyramid, floating-card wall, grid/list switch, or scroll-driven active state appears.
 - Reduced motion removes travel and stagger without removing state feedback.
 - The route is discoverable in primary/mobile navigation, footer, canonical metadata, and sitemap.
@@ -362,7 +362,7 @@ Acceptance:
 - With `NEXT_PUBLIC_MEDIA_BASE_URL` set, Next.js resolves images only from the configured R2 custom-domain host and prefix.
 - With the variable unset, the same manifest resolves to local QA derivatives.
 - Reusing an existing reviewed object key is rejected; replacements use a new versioned key.
-- Public CMS upload and private Assessment upload each pass reserve, presigned PUT, `HeadObject`, and verification stages before the record becomes selectable.
+- Public CMS upload passes reserve, a validated same-origin relay to the presigned R2 PUT, `HeadObject`, and verification stages before the record becomes selectable. Private Assessment upload keeps its separate direct presigned path and remains disabled until its bucket and exact CORS are configured.
 - Private Assessment upload remains a release blocker until its separate bucket, exact CORS policy, credentials, and real SHA-256 round trip have been configured and verified. This bucket is not configured in the current environment.
 
 ### FR-12 Resilience
@@ -419,6 +419,12 @@ Acceptance:
 - `ec-itp-level-1-aligned-v1` remains a legacy `raw-objective` contract. New four-skill definitions bind `ec-ibt-style-2026-v1` to `practice-estimate-v1`; mismatched profile/policy input fails server-side.
 - Fixed-form section estimates are transparent derivatives of this bank's practice points. An overall estimate appears only when all four skills are present. Never label any value as an official score, predicted TOEFL score, calibrated equivalent, CEFR band, certificate, placement, admission guidance, or personalised learning claim.
 - Keep definitions, immutable versions, checks, approvals, sections, stimuli, items, answer keys, attempts, responses, and result revisions as separate Convex records.
+- Keep the five Practice Formats fixed. The protected catalogue has no create action; an operator-only maintenance gate protects the legacy server creation function.
+- Treat Question Bank as reusable inventory and each Practice Format as a versioned delivery rule. Admins can allow or disable eligible questions per working revision without changing a live published attempt.
+- Provide an Add Question builder for original single-choice items. Require skill, skill-compatible task family, difficulty, prompt, four distinct choices, one private correct key, and optional answer note/tags. Save new items as paused and excluded from full practice until an editor deliberately activates them.
+- Let an administrator attach no image, select a ready Question illustration from the reviewed R2 library, or upload an AVIF/JPEG/PNG/WebP image with required alternative text. Reject pending, archived, private, wrong-purpose, non-image, or dimensionless media.
+- At Start, select a skill- and quota-valid set from the published format, then persist the selected bank IDs and order for the life of the attempt.
+- Project learner flags to administrators only as aggregate current/total counts and review state. Never expose the participant, attempt ID, saved response, or answer key through this editorial signal.
 - Require original-content, academic, rights, accessibility, and bias gates before publication. If no reviewed version is public, show an honest unavailable state; never fall back to local questions.
 
 Acceptance:
@@ -429,6 +435,9 @@ Acceptance:
 - Malformed, absent, and cross-owner attempt/result IDs have the same public failure shape.
 - Private attempt and result routes are disallowed by `robots.ts`; `/practice` is present in sitemap and public navigation.
 - The result is reproducible from the immutable published version and current result revision.
+- Disabling a question changes only a working revision, invalidates its earlier validation/approvals, and cannot publish when a skill pool falls below its fixed quota.
+- A Question Bank item created through Admin exists in Convex rather than a browser fixture, appears under the selected status filter, and can enter a random public manifest only after its status and format eligibility permit it.
+- When a selected bank item has an illustration, Live Session renders its reviewed R2 projection and accessible alternative text before the prompt. A text-only item retains the same question layout without a vacant media box.
 
 ## Content requirements
 

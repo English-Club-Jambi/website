@@ -53,6 +53,25 @@ function mutationId(prefix: string) {
 
 export { isPlausibleAttemptId };
 
+export function QuestionIllustration({
+  illustration,
+}: {
+  illustration: AttemptPlayer["illustration"];
+}) {
+  if (illustration === null) return null;
+  return (
+    <figure className={styles.questionIllustration}>
+      <Image
+        src={illustration.publicUrl}
+        alt={illustration.alt}
+        width={illustration.width}
+        height={illustration.height}
+        sizes="(max-width: 760px) 100vw, 760px"
+      />
+    </figure>
+  );
+}
+
 function useModalBodyLock(open: boolean) {
   useEffect(() => {
     if (!open) return;
@@ -524,9 +543,11 @@ function QuestionWorkspace({
         expectedRevision: attemptRevisionRef.current,
       });
       if (!result.ok) {
+        attemptRevisionRef.current = result.currentRevision;
         setError(copy.saveError);
         return false;
       }
+      attemptRevisionRef.current = result.revision;
       return true;
     } catch {
       setError(copy.saveError);
@@ -625,6 +646,7 @@ function QuestionWorkspace({
         />
 
         <section className={styles.questionPrompt} aria-labelledby={`question-${player.item.id}`}>
+          <QuestionIllustration illustration={player.illustration} />
           <h1 id={`question-${player.item.id}`} ref={questionHeadingRef} tabIndex={-1}>
             {player.item.prompt}
           </h1>

@@ -45,11 +45,12 @@ describe("AdminShellView", () => {
       "Overview",
       "Pages",
       "Journal",
-      "Assessments",
+      "Programs",
+      "Practice Builder",
       "Members",
       "Media",
       "Appearance",
-      "Activity",
+      "Audit log",
     ]) {
       expect(screen.getAllByRole("link", { name: new RegExp(`^${label}`) }).length).toBeGreaterThan(0);
     }

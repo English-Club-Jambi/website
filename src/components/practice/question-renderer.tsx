@@ -10,7 +10,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
 import type { PublicContentFor } from "@content/public-content";
@@ -58,6 +58,13 @@ export function responseIsAnswered(response: PublicAssessmentResponse) {
 
 function responseWordCount(value: string) {
   return value.trim().match(/[A-Za-z]+(?:['’][A-Za-z]+)?/g)?.length ?? 0;
+}
+
+function splitTrailingWordFragment(part: string) {
+  const match = part.match(/^([\s\S]*?)([\p{L}\p{M}'’\-]+)$/u);
+  return match
+    ? { prefix: match[1], trailingWord: match[2] }
+    : { prefix: part, trailingWord: "" };
 }
 
 function LocalSpeakingRehearsal({
@@ -242,33 +249,49 @@ export function QuestionRenderer({
     case "cloze-select": {
       const answers = response.kind === "cloze" ? response.gapAnswers : [];
       return (
-        <div className={styles.clozeAnswer} aria-label={copy.completeBlanks}>
+        <div
+          className={styles.clozeAnswer}
+          aria-label={copy.completeBlanks}
+          aria-disabled={disabled ? "true" : undefined}
+          data-cloze-sentence
+        >
           {item.stemParts.map((part, index) => {
             const gap = item.gaps[index];
             const value = gap
               ? answers.find((answer) => answer.gapKey === gap.key)?.choiceKey
               : undefined;
+            const { prefix, trailingWord } = splitTrailingWordFragment(part);
             return (
-              <div className={styles.clozePart} key={`${item.id}-part-${index}`}>
-                {part ? <p>{part}</p> : null}
+              <Fragment key={`${item.id}-part-${index}`}>
                 {gap ? (
-                  <SelectField
-                    label={`${copy.blank} ${index + 1}`}
-                    value={value}
-                    disabled={disabled}
-                    placeholder={copy.choosePhrase}
-                    options={gap.options.map((option) => ({
-                      value: option.key,
-                      label: option.label,
-                    }))}
-                    onValueChange={(choiceKey) => {
-                      const next = answers.filter((answer) => answer.gapKey !== gap.key);
-                      next.push({ gapKey: gap.key, choiceKey });
-                      onChange({ kind: "cloze", gapAnswers: next });
-                    }}
-                  />
-                ) : null}
-              </div>
+                  <>
+                    {prefix}
+                    <span className={styles.clozeWord} data-cloze-word>
+                      {trailingWord}
+                      <SelectField
+                        label={`${copy.blank} ${index + 1}`}
+                        value={value}
+                        disabled={disabled}
+                        placeholder={copy.chooseWord}
+                        variant="inline"
+                        options={gap.options.map((option) => ({
+                          value: option.key,
+                          label: option.label,
+                        }))}
+                        onValueChange={(choiceKey) => {
+                          const next = answers.filter(
+                            (answer) => answer.gapKey !== gap.key,
+                          );
+                          next.push({ gapKey: gap.key, choiceKey });
+                          onChange({ kind: "cloze", gapAnswers: next });
+                        }}
+                      />
+                    </span>
+                  </>
+                ) : (
+                  part
+                )}
+              </Fragment>
             );
           })}
         </div>

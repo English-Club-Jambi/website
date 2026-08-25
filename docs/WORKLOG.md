@@ -29,6 +29,7 @@ The repository now contains two major product lanes beyond the public organisati
 - Every attempt is bound to `identity.tokenIdentifier`. `resolveMine` normalizes a string route ID before typed lookup and gives malformed, missing, and cross-owner IDs the same unavailable result.
 - Player projections omit answer keys. Submission is allowed only from the final eligible section. Results report exact bank outcomes with section, time, mode, and estimate limits; answer review is cursor-paginated at 20.
 - The authoring backend separates definitions, immutable versions, validation/provenance checks, four approval types, sections, stimuli, items, answer keys, attempts, responses, and immutable result revisions.
+- Practice Builder now treats the installed full form and four skill sprints as a fixed catalogue. The admin has no creation entry point: each format controls a versioned allowed Question Bank pool, fixed skill quotas, and aggregate privacy-safe learner flag signals. Questions and order are pinned when a learner starts.
 - Public Assessment media must be explicit `public`, ready, correct-purpose, same-version media. Confidential sources require a separate private R2 bucket, distinct credentials, checksum verification, and publisher-only public derivative.
 
 ### Integration gates still open
@@ -48,12 +49,12 @@ The repository now contains two major product lanes beyond the public organisati
 - Four browser-native admin confirmations were replaced by one reusable async rounded-neobrutal modal shared with Assessment. A first browser run found a native-dialog Tab escape; focus containment was repaired and rerun clean.
 - Real-phone LAN access had returned HTML while Next.js denied JavaScript chunks with HTTP 403. The exact-host development allowlist now includes detected LAN IPv4 addresses and optional validated hosts. Public and authenticated Admin touch traces pass at Pixel 7 and 320 px without failed Next assets.
 - The Journal mobile archive now aligns metadata above a title-and-thumbnail row. The former 50.47 px disconnect is 12 px, and the title and image begin on the same horizontal line.
-- Final static and behavior gates passed: TypeScript, ESLint, 116 unit tests, 45 Convex tests, 145 browser cases with 23 intentional skips, Convex codegen/type validation, zero dependency vulnerabilities, and a 30-entry production build.
+- Final static and behavior gates passed after the fixed-format revision: TypeScript, ESLint, 162 unit tests, 63 Convex tests, an effective 155 browser cases with 73 intentional project/credential skips, Convex development sync, and an isolated production build. The focused admin harness is Axe-clean at desktop, Pixel 7, and 320 px.
 - Port 3987 remained live throughout the closeout and returned HTTP 200 for Home and Admin.
 
 ## 25 August public and Member baseline
 
-The former photo-led implementation was rebuilt as **The Conversation Relay**. Light is the default, a saved dark choice applies before paint, language carries the identity, and documentary photographs serve as evidence. The Member extension uses **The Member Relay**: five equal responsibility channels, one deterministic selector, a role companion, and a 15-profile source-only showcase that yields completely to real consented records.
+The former photo-led implementation was rebuilt as **The Conversation Relay**. Light is the default, a saved dark choice applies before paint, language carries the identity, and documentary photographs serve as evidence. This section records the 25 August Member baseline; on 26 August the local showcase was replaced by a guarded 15-profile Convex development seed plus five managed divisions.
 
 Delivered:
 
@@ -62,7 +63,7 @@ Delivered:
 - A generated faded homepage scene, a generated Member scene, and a deterministic SVG mark. Exact prompts and decisions are in `GENERATED-ASSET-LEDGER.md`.
 - Heroicons 2.2.0 for interface symbols. Authored source contains no text glyph standing in for an icon.
 - Convex Cloud for journal, contact, consent-gated Member profiles, and internal R2 signing and verification.
-- A 15-profile fictional roster showcase across all five roles, with generated portraits, Heroicons, complete subtype coverage, and no Convex writes.
+- A 15-profile fictional roster showcase across all five roles, with generated portraits, Heroicons, and complete subtype coverage. This was the 25 August baseline and was migrated to the target-locked Convex development seed on 26 August.
 - Cloudflare R2 Standard for six cleared generated derivatives; documentary derivatives remain blocked by consent.
 - Research, design, product, architecture, database, setup, cloud, and QA documents synchronized to that baseline implementation.
 
@@ -126,7 +127,7 @@ The Member wave produced:
 - Added an additive Convex `members` table with public indexes, internal reviewed upsert, and cross-field validation.
 - The public query requires `published` plus cleared profile consent and projects only safe fields.
 - Portrait metadata crosses the public boundary only when separate photo consent is cleared.
-- Convex Cloud currently returns an empty public list. The route responds with 15 fictional source-only profiles in a true grid. Generated faces, names, and biographies never enter Convex and disappear when any real profile publishes.
+- Historical 25 August state: Convex Cloud returned an empty public list and the route supplied a local showcase. Current state: the development deployment returns 15 fictional, seed-batch-labelled profiles and five managed divisions from Convex; production must remove this batch and use consent-cleared records only.
 
 ### Convex Cloud and R2
 
@@ -185,3 +186,14 @@ The integrated source is present. Public production release still requires:
 Raw participant/photo/audio masters are local consent-gated inputs and are intentionally excluded from Git. A fresh clone contains only reviewed public derivatives and evidence intended for the repository; it must not be treated as a source-media archive.
 
 No public production deployment was performed.
+
+## 26 August 2026 — Question Bank authoring and illustrated Live Session
+
+- Added a real Add Question path to the protected Question Bank. It writes a source item, private answer key, and paused bank entry to Convex with request-id and content-fingerprint guards.
+- Reused the grouped Select contract so task families are visibly separated by skill and invalid cross-skill values are rejected again on the server.
+- Added optional Question illustration selection and direct reviewed R2 upload. Text-only questions remain first-class and do not render an empty attachment region.
+- Pinned the selected illustration media ID in the random attempt manifest and projected only ready public image records into Live Session.
+- Seeded one illustrated Reading question through the real admin interface on the development deployment. The bank now contains 146 records, with 121 eligible for full practice and a Reading capacity of 51 for a quota of 50.
+- Browser verification exercised Add Question at desktop, Pixel 7, and 320 px, then waited for the illustrated question to appear through the random public bank draw at the same widths.
+- A narrow rapid-navigation run exposed a stale attempt-revision race. The client now carries the revision returned by each move mutation instead of waiting only for the reactive query, and a focused regression test covers two immediate Next actions.
+- One duplicate media ledger row created during a failed idempotency test was archived. The selected R2 object remains ready and attached; the public attempt continued to resolve it.

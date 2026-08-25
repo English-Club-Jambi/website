@@ -41,6 +41,7 @@ const purposeOptions = [
   { value: "member-photo", label: "Member portrait" },
   { value: "page-image", label: "Page image" },
   { value: "brand", label: "Brand asset" },
+  { value: "assessment-image", label: "Question illustration" },
 ] as const;
 
 const uploadPurposeOptions = purposeOptions.slice(1);
@@ -128,7 +129,7 @@ function MediaUploadForm() {
       </div>
       {error ? <AdminError>{error}</AdminError> : null}
       <footer className={styles.formFooter}>
-        <p>{message || "The browser uploads directly to R2, then Convex verifies the object metadata."}</p>
+        <p>{message || "The file transfers to Cloudflare R2, then Convex verifies its type, size, and dimensions."}</p>
         <button className={styles.primaryButton} type="submit" disabled={pending}>
           <ArrowUpTrayIcon aria-hidden width={18} height={18} />
           {pending ? "Uploading and verifying…" : "Upload image"}

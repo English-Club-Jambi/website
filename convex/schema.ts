@@ -4,6 +4,7 @@ import { v } from "convex/values";
 
 import {
   assessmentAnswerKeyValidator,
+  assessmentFlagReviewStatusValidator,
   assessmentItemValidator,
   assessmentKindValidator,
   assessmentDeliveryModeValidator,
@@ -37,6 +38,8 @@ import {
   eventStatusValidator,
   memberConsentStatusValidator,
   memberDivisionValidator,
+  memberDivisionStatusValidator,
+  memberPreCoordinatorRoleValidator,
   memberPhotoValidator,
   memberPositionValidator,
   memberProfileStatusValidator,
@@ -51,6 +54,9 @@ import {
   mediaPurposeValidator,
   mediaStatusValidator,
   postStatusValidator,
+  programCategoryValidator,
+  programDeliveryStateValidator,
+  programStatusValidator,
   publicThemeSnapshotValidator,
   themeEventActionValidator,
   themeRecipeValidator,
@@ -100,11 +106,58 @@ export default defineSchema({
     authorName: v.string(),
     featured: v.boolean(),
     coverMediaId: v.optional(v.id("mediaAssets")),
+    coverKey: v.optional(v.string()),
+    coverRemoved: v.optional(v.boolean()),
     editorJson: v.string(),
     plainText: v.string(),
     createdBy: v.id("adminUsers"),
     createdAt: v.number(),
   }).index("by_post_id_and_revision", ["postId", "revision"]),
+
+  programs: defineTable({
+    slug: v.string(),
+    title: v.string(),
+    summary: v.string(),
+    category: programCategoryValidator,
+    deliveryState: programDeliveryStateValidator,
+    status: programStatusValidator,
+    featured: v.boolean(),
+    sortOrder: v.number(),
+    draftRevisionId: v.optional(v.id("programRevisions")),
+    publishedRevisionId: v.optional(v.id("programRevisions")),
+    nextRevision: v.number(),
+    publishedAt: v.optional(v.number()),
+    createdBy: v.id("adminUsers"),
+    updatedBy: v.id("adminUsers"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_status_and_sort_order", ["status", "sortOrder"])
+    .index("by_status_and_updated_at", ["status", "updatedAt"])
+    .index("by_updated_at", ["updatedAt"]),
+
+  programRevisions: defineTable({
+    programId: v.id("programs"),
+    revision: v.number(),
+    slug: v.string(),
+    title: v.string(),
+    summary: v.string(),
+    body: v.string(),
+    category: programCategoryValidator,
+    deliveryState: programDeliveryStateValidator,
+    audience: v.string(),
+    dateLabel: v.optional(v.string()),
+    startsAt: v.optional(v.number()),
+    locationLabel: v.optional(v.string()),
+    communityBenefit: v.string(),
+    sourceLabel: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    featured: v.boolean(),
+    sortOrder: v.number(),
+    createdBy: v.id("adminUsers"),
+    createdAt: v.number(),
+  }).index("by_program_id_and_revision", ["programId", "revision"]),
 
   events: defineTable({
     slug: v.string(),
@@ -140,11 +193,27 @@ export default defineSchema({
     ])
     .index("by_status_created_at", ["status", "createdAt"]),
 
+  memberDivisions: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    summary: v.optional(v.string()),
+    status: memberDivisionStatusValidator,
+    legacyKey: v.optional(memberDivisionValidator),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_sort_order", ["sortOrder"])
+    .index("by_status_and_sort_order", ["status", "sortOrder"]),
+
   members: defineTable({
     slug: v.string(),
     displayName: v.string(),
     roleLevel: memberRoleLevelValidator,
     division: v.optional(memberDivisionValidator),
+    divisionId: v.optional(v.id("memberDivisions")),
+    roleBeforeCoordinator: v.optional(memberPreCoordinatorRoleValidator),
     position: v.optional(memberPositionValidator),
     joinedYear: v.optional(v.number()),
     shortBio: v.optional(v.string()),
@@ -176,6 +245,7 @@ export default defineSchema({
       "profileStatus",
       "updatedAt",
     ])
+    .index("by_division_id_and_role_level", ["divisionId", "roleLevel"])
     .index("by_updated_at", ["updatedAt"]),
 
   adminUsers: defineTable({
@@ -307,6 +377,7 @@ export default defineSchema({
     kind: assessmentKindValidator,
     profile: assessmentProfileValidator,
     adminTitle: v.string(),
+    internalOnly: v.optional(v.boolean()),
     publishedVersionId: v.optional(v.id("assessmentVersions")),
     draftVersionId: v.optional(v.id("assessmentVersions")),
     nextVersion: v.number(),
@@ -456,6 +527,10 @@ export default defineSchema({
     status: assessmentQuestionBankStatusValidator,
     profile: assessmentProfileValidator,
     fullPracticeEligible: v.boolean(),
+    origin: v.optional(
+      v.union(v.literal("assessment-source"), v.literal("bank-authored")),
+    ),
+    illustrationMediaId: v.optional(v.id("mediaAssets")),
     contentFingerprint: v.string(),
     promptSearch: v.string(),
     tags: v.array(v.string()),
@@ -467,7 +542,14 @@ export default defineSchema({
   })
     .index("by_bank_key", ["bankKey"])
     .index("by_source_item_id", ["sourceItemId"])
+    .index("by_content_fingerprint", ["contentFingerprint"])
     .index("by_profile_and_status_and_skill", ["profile", "status", "skill"])
+    .index("by_profile_status_skill_and_eligibility", [
+      "profile",
+      "status",
+      "skill",
+      "fullPracticeEligible",
+    ])
     .index("by_status_and_updated_at", ["status", "updatedAt"])
     .index("by_status_and_difficulty_and_updated_at", [
       "status",
@@ -480,6 +562,49 @@ export default defineSchema({
       "status",
       "difficulty",
       "updatedAt",
+    ]),
+
+  assessmentVersionQuestionRules: defineTable({
+    versionId: v.id("assessmentVersions"),
+    bankQuestionId: v.id("assessmentQuestionBank"),
+    allowed: v.boolean(),
+    updatedBy: v.id("adminUsers"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_version_id_and_bank_question_id", [
+      "versionId",
+      "bankQuestionId",
+    ])
+    .index("by_version_id_and_allowed_and_updated_at", [
+      "versionId",
+      "allowed",
+      "updatedAt",
+    ]),
+
+  assessmentQuestionFlagSignals: defineTable({
+    definitionId: v.id("assessmentDefinitions"),
+    latestVersionId: v.id("assessmentVersions"),
+    bankQuestionId: v.id("assessmentQuestionBank"),
+    activeFlagCount: v.number(),
+    totalFlagEvents: v.number(),
+    lastFlaggedAt: v.number(),
+    reviewStatus: assessmentFlagReviewStatusValidator,
+    reviewedBy: v.optional(v.id("adminUsers")),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_definition_id_and_bank_question_id", [
+      "definitionId",
+      "bankQuestionId",
+    ])
+    .index("by_definition_id_and_last_flagged_at", [
+      "definitionId",
+      "lastFlaggedAt",
+    ])
+    .index("by_definition_id_and_review_status_and_last_flagged_at", [
+      "definitionId",
+      "reviewStatus",
+      "lastFlaggedAt",
     ]),
 
   assessmentAttempts: defineTable({
@@ -543,6 +668,7 @@ export default defineSchema({
     sectionId: v.id("assessmentSections"),
     bankQuestionId: v.id("assessmentQuestionBank"),
     itemId: v.id("assessmentItems"),
+    illustrationMediaId: v.optional(v.id("mediaAssets")),
     order: v.number(),
     selectedAt: v.number(),
     selectionContract: v.literal(1),

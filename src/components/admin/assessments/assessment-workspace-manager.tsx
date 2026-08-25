@@ -4,7 +4,6 @@ import { ArrowLeftIcon, CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/o
 import type { FunctionReturnType } from "convex/server";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import type { Route } from "next";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
@@ -28,17 +27,12 @@ import type {
   AssessmentReviewType,
 } from "./assessment-admin-ui";
 import { getAssessmentAdminCapabilities } from "./assessment-admin-permissions";
-import { AdminConfirmDialog } from "../admin-confirm-dialog";
 import styles from "./assessment-admin.module.css";
-import { assessmentRevisionConflict } from "./assessment-order";
 import {
   AssessmentMetadataForm,
   type AssessmentMetadataInput,
 } from "./assessment-metadata-form";
-import {
-  AssessmentSectionForm,
-  type AssessmentSectionInput,
-} from "./assessment-section-form";
+import { AssessmentQuestionPoolManager } from "./assessment-question-pool-manager";
 import {
   AssessmentWorkspaceView,
   type AssessmentWorkspaceModel,
@@ -48,7 +42,7 @@ type Workspace = NonNullable<
   FunctionReturnType<typeof api.adminAssessments.getWorkspace>
 >;
 type WorkspaceDraft = NonNullable<Workspace["draft"]>;
-type EditorMode = "metadata" | "section" | null;
+type EditorMode = "metadata" | null;
 
 const reviewTypes: ReadonlyArray<AssessmentReviewType> = [
   "academic",
@@ -181,7 +175,6 @@ function modelFor(workspace: Workspace): AssessmentWorkspaceModel {
       ...(section.timeLimitSeconds === null
         ? {}
         : { timeLimitSeconds: section.timeLimitSeconds }),
-      href: `/admin/assessments/${workspace.definition.definitionId}/sections/${section.sectionId}` as Route<`/admin/assessments/${string}/sections/${string}`>,
     })),
     reviews: draft === null ? [] : reviewsFor(workspace, draft.contentRevision),
     gates: gatesFor(workspace),
@@ -271,20 +264,16 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
     definitionId: definitionId as Id<"assessmentDefinitions">,
   });
   const updateMetadata = useMutation(api.adminAssessments.updateMetadata);
-  const saveSection = useMutation(api.adminAssessments.saveSection);
   const validateDraft = useMutation(api.adminAssessments.validateDraft);
   const recordApproval = useMutation(api.adminAssessments.recordApproval);
   const publish = useMutation(api.adminAssessments.publish);
   const createDraftFromPublished = useMutation(api.adminAssessments.createDraftFromPublished);
   const resumeDraftClone = useMutation(api.adminAssessments.resumeDraftClone);
-  const deleteSection = useMutation(api.adminAssessments.deleteSection);
-  const moveSection = useMutation(api.adminAssessments.moveSection);
   const [editor, setEditor] = useState<EditorMode>(null);
   const [reviewType, setReviewType] = useState<AssessmentReviewType | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   if (workspace === undefined) {
     return <AdminLoadingRows label="Loading assessment workspace" />;
@@ -292,8 +281,8 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
   if (workspace === null) {
     return (
       <AdminEmpty
-        title="Assessment not found"
-        description="The definition may have been removed or the link may be incomplete."
+        title="Practice format not found"
+        description="The format may have been removed or the link may be incomplete."
       />
     );
   }
@@ -327,35 +316,6 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
       }
       setEditor(null);
       setStatusMessage(`Metadata saved as revision ${result.contentRevision}.`);
-    });
-  }
-
-  async function handleSection(input: AssessmentSectionInput) {
-    if (!draft) return;
-    await run(async () => {
-      const result = await saveSection({
-        ...(input.sectionId
-          ? { sectionId: input.sectionId as Id<"assessmentSections"> }
-          : {}),
-        versionId: draft.versionId,
-        expectedContentRevision: draft.contentRevision,
-        sectionKey: input.sectionKey,
-        skill: input.skill,
-        order: input.order,
-        title: input.title,
-        instructions: input.instructions,
-        ...(input.timeLimitSeconds === undefined
-          ? {}
-          : { timeLimitSeconds: input.timeLimitSeconds }),
-        ...(input.audioReplayPolicy === undefined
-          ? {}
-          : { audioReplayPolicy: input.audioReplayPolicy }),
-      });
-      if (!result.ok) {
-        throw new Error(`Revision changed to ${result.currentRevision}. Review the latest draft before saving again.`);
-      }
-      setEditor(null);
-      setStatusMessage(`Section saved as revision ${result.contentRevision}.`);
     });
   }
 
@@ -422,41 +382,15 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
     });
   }
 
-  async function handleMoveSection(sectionId: string, targetOrder: number) {
-    if (!draft) return;
-    await run(async () => {
-      const result = await moveSection({
-        sectionId: sectionId as Id<"assessmentSections">,
-        targetOrder,
-        expectedContentRevision: draft.contentRevision,
-      });
-      if (!result.ok) throw new Error(assessmentRevisionConflict(result.currentRevision));
-      setStatusMessage(`Section order saved as revision ${result.contentRevision}.`);
-    });
-  }
-
-  async function handleDeleteSection() {
-    if (!draft || deleteTarget === null) return;
-    await run(async () => {
-      const result = await deleteSection({
-        sectionId: deleteTarget.id as Id<"assessmentSections">,
-        expectedContentRevision: draft.contentRevision,
-      });
-      if (!result.ok) throw new Error(assessmentRevisionConflict(result.currentRevision));
-      setStatusMessage(`${deleteTarget.title} removed in revision ${result.contentRevision}.`);
-      setDeleteTarget(null);
-    });
-  }
-
   return (
     <>
       <Link className={adminStyles.backLink} href="/admin/assessments">
         <ArrowLeftIcon aria-hidden width={18} height={18} />
-        Assessment catalogue
+        Practice formats
       </Link>
       <AdminPageHeading
-        title="Assessment workspace"
-        description="Author one immutable version, validate it, collect four current decisions, then hand publication back to Convex."
+        title="Practice format workspace"
+        description="Maintain one fixed delivery blueprint: its learner-facing contract, skill quotas, eligible Question Bank pool, flag review, and release evidence."
       />
 
       {statusMessage ? <p className={styles.successNotice} role="status">{statusMessage}</p> : null}
@@ -471,18 +405,6 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
             error={error || undefined}
             onCancel={() => setEditor(null)}
             onSave={handleMetadata}
-          />
-        </AdminSection>
-      ) : null}
-
-      {editor === "section" && draft ? (
-        <AdminSection title="Add a versioned section" description="The section remains pinned to this private draft.">
-          <AssessmentSectionForm
-            timed={draft.timePolicy === "per-section"}
-            pending={pending}
-            error={error || undefined}
-            onCancel={() => setEditor(null)}
-            onSave={handleSection}
           />
         </AdminSection>
       ) : null}
@@ -509,22 +431,15 @@ export function AssessmentWorkspaceManager({ definitionId }: { definitionId: str
         publishing={pending}
         onValidate={draft && capabilities.canEdit ? () => void handleValidate() : undefined}
         onEditMetadata={draft && capabilities.canEdit ? () => setEditor("metadata") : undefined}
-        onAddSection={draft && capabilities.canEdit ? () => setEditor("section") : undefined}
         onOpenReview={draft && capabilities.canReview ? setReviewType : undefined}
         onPublish={draft && capabilities.canPublish ? () => void handlePublish() : undefined}
         onCreateNextDraft={!draft && workspace.published && capabilities.canEdit ? () => void handleCreateNextDraft() : undefined}
         onResumeClone={draft && ["cloning", "clone-failed"].includes(draft.status) && capabilities.canEdit ? () => void handleResumeClone() : undefined}
-        onMoveSection={draft && capabilities.canEdit ? (sectionId, targetOrder) => void handleMoveSection(sectionId, targetOrder) : undefined}
-        onDeleteSection={draft && capabilities.canEdit ? (id, title) => setDeleteTarget({ id, title }) : undefined}
       />
-      <AdminConfirmDialog
-        open={deleteTarget !== null}
-        title={`Remove ${deleteTarget?.title ?? "section"}?`}
-        description="Only an empty section can be removed. Its position is compacted and the draft revision changes; the published version is not affected."
-        confirmLabel="Remove empty section"
-        pending={pending}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => void handleDeleteSection()}
+      <AssessmentQuestionPoolManager
+        definitionId={workspace.definition.definitionId}
+        canEdit={capabilities.canEdit}
+        canReview={capabilities.canReview}
       />
     </>
   );

@@ -1,5 +1,5 @@
-import { AssessmentCreateManager } from "@/components/admin/assessments/assessment-create-manager";
+import { redirect } from "next/navigation";
 
 export default function AdminNewAssessmentPage() {
-  return <AssessmentCreateManager />;
+  redirect("/admin/assessments");
 }

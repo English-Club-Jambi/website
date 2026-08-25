@@ -7,7 +7,6 @@ import { PageContainer, TextLink } from "@/components/ui";
 import { getMedia } from "@/content/media";
 import {
   formatPublishedDate,
-  getLocalPostSlugs,
   getPublishedPost,
 } from "@/lib/journal";
 import { absoluteUrl } from "@/lib/seo";
@@ -18,7 +17,7 @@ type StoryProps = {
 };
 
 export function generateStaticParams() {
-  return getLocalPostSlugs();
+  return [];
 }
 
 export async function generateMetadata({ params }: StoryProps): Promise<Metadata> {

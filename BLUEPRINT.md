@@ -41,9 +41,9 @@ Boundary rules:
 - Published page copy and public colour tokens may replace checked-in defaults only through immutable Convex publication pointers.
 - `NEXT_PUBLIC_MEDIA_BASE_URL` selects the exact R2 custom-domain prefix. When absent, the same object keys resolve to local QA derivatives.
 - R2 API credentials never enter the browser. The current public read path needs no R2 token.
-- General CMS browser uploads receive a short-lived presigned PUT and exact required headers. Assessment source media uses separate private-bucket credentials; missing private configuration blocks reservation and upload.
+- General CMS browser uploads receive a short-lived presigned PUT contract, then send bytes through a validated same-origin streaming route because the current public bucket has no usable CORS policy. Assessment source media uses separate private-bucket credentials; missing private configuration blocks reservation and upload.
 - Published journal data comes from Convex when configured; the fallback is explicit in source and uses the same seed records.
-- Published real-member data comes only from Convex. A successful empty result activates the 15-profile source-only showcase; a failed query remains unavailable and never activates it.
+- Published member data comes only from Convex. The named development deployment contains a guarded 15-profile fictional seed; production may expose only consent-cleared records. A failed query remains unavailable and is never replaced by local fixture data.
 - Convex providers are scoped: `/practice` gets the Auth/Convex provider needed for Anonymous-owned attempts, and `/admin` gets the Auth/Convex provider needed for reactive protected work. Static organisation routes keep server adapters and discrete client leaves.
 - Raw HTML is disabled in Markdown rendering.
 - Admin route visibility is a UX gate only. Every protected Convex query, mutation, and action derives the signed identity, resolves an active `adminUsers` row through its stable Auth-account binding (with a legacy token fallback), and checks a server-owned permission.
@@ -56,7 +56,7 @@ Boundary rules:
 | `/` | Static Server Component with client leaves | Local copy, R2-or-local media manifest, local seed journal preview | Sentence Playground, Prompt Mixer, Activity Relay, documentary handoff, Journal Relay, intent close | Complete server default; optional media can disappear |
 | `/about` | Static Server Component | Local copy and one optional R2-or-local image | Distinct route sentence, principle composition, evidence boundary | Missing image leaves a complete text composition |
 | `/activities` | Static Server Component with client relay | Local activity themes and R2-or-local media | Route phrase, Activity Relay, timetable caution | Default activity renders before hydration |
-| `/members` | Server Component with one client role selector | Convex public profiles, code-owned role taxonomy and source-only showcase, generated R2-or-local media | Atmospheric opening, five responsibility channels, role companion, responsive member contact sheet | A successful empty query shows the showcase; failure stays unavailable |
+| `/members` | Server Component with one client role selector | Convex public profiles, managed divisions, code-owned role taxonomy, reviewed R2 media | Atmospheric opening, five responsibility channels, role companion, responsive member contact sheet | Empty and unavailable states stay distinct; no local roster fallback |
 | `/journal` | Dynamic Server Component | Published post summaries, cursor page of 6 | Dense ruled archive with server links and pagination | First-page checked-in fallback; later-page failure stays explicit |
 | `/journal/[slug]` | Server | Published post by slug | Article masthead, reviewed cover, Markdown or structured body, return path | `notFound()` for unknown or non-public slug |
 | `/contact` | Server shell plus client form | Local copy, query intent, Convex mutation | Intent-aware type field plus existing form cycle | Inline retry; fields remain populated |
@@ -107,7 +107,7 @@ One generated adult group scene sits behind an asymmetric opening and fades into
 
 The main body contains a native exclusive role selector with `All roles` and codes `0` through `4`. Five equal-height channels keep every public label and scope sentence visible. Selection updates one companion field and filters a separately labelled public roster. All role panels and supplied subtype labels remain in server HTML; without JavaScript, they all become visible.
 
-The roster receives the public Convex view model first. A successful empty result activates 15 source-only fictional profiles with generated portrait cells, Heroicon role symbols, names, assignments, and short biographies. They are never written to Convex. One real returned profile removes the complete showcase. A failed adapter says that the directory could not be reached and does not use the showcase.
+The roster receives only the public Convex view model. On the named development deployment, a guarded seed batch supplies 15 fictional profiles with generated portrait cells, Heroicon role symbols, names, assignments, and short biographies so the real query, filter, grid, and consent contracts can be tested. Production must contain no development seed batch and may expose only consent-cleared records. A failed adapter says that the directory could not be reached and never substitutes local roster data.
 
 ### Journal
 
@@ -363,7 +363,7 @@ The action never logs message bodies or email addresses. Convex remains the auth
 
 1. The CLI operator helper remains available for reviewed checked-in derivatives with an immutable key and exact MIME type.
 2. An authenticated CMS editor may reserve a server-generated UUID object key through a permission-checked Convex action.
-3. Convex returns a PUT URL valid for 300 seconds and exact `Content-Type` plus `Cache-Control` headers. The CLI or browser sends bytes directly to the R2 S3 API.
+3. Convex returns a PUT URL valid for 300 seconds and exact signed size, `Content-Type`, and `Cache-Control` headers. The operator CLI may send directly; the current browser sends the body to `/api/admin/media-upload`, which validates the configured bucket, signature shape, method, path, size, MIME, and cache policy before streaming to the R2 S3 API.
 4. `HeadObject` must match content type, byte size, and immutable cache control before the media row becomes ready.
 5. A ready public record projects `https://r2.mukhtada.my.id/<objectKey>`. The signed URL and credentials are never stored in Convex, application logs, analytics, or screenshots.
 
@@ -494,6 +494,10 @@ Archive DTOs contain summaries and at most one reviewed cover projection. They d
 
 Published catalog and briefing DTOs contain definition/version identity, titles, instructions, declared modes, section summaries, and reviewed public media only. The pre-submit Player DTO contains one current public item, optional stimulus, saved response, response/attempt revisions, deadline state, and at most 50 current-section navigator entries. It contains no answer key, explanation, provenance, draft media URL, approval note, author ID, or score.
 
+The five Practice Formats are installed internally and cannot be added from Admin. Question Bank is the reusable inventory and has its own Add Question flow. That flow writes the prompt and choices to an internal source ledger, keeps the answer key in its private table, and creates a paused bank row for review. An optional illustration must be a ready public `assessment-image` record delivered from `r2.mukhtada.my.id`; a text-only question has no attachment record. A format working revision stores optional per-question allow/disable rules on top of its canonical skill pool. Validation checks that every fixed section quota can be satisfied. Start performs the structured random draw from the immutable published rules and stores the selected bank/item IDs, optional illustration media ID, and order in `assessmentAttemptItems`, so resume never redraws and a later bank edit cannot swap the attempt's illustration.
+
+Learner flags feed `assessmentQuestionFlagSignals` as aggregate editorial evidence. The protected format workspace receives only current count, lifetime events, latest time, and open/reviewed/dismissed state. Participant identity, attempt identifiers, responses, and answer keys are deliberately absent.
+
 Result DTOs contain raw `correct`, `possible`, and `omitted` counts; ordered section rows; timing and Listening modes; and a fixed claim disclaimer. Answer projections and explanations are available only through the owned, post-submit, section-ordered review query with a 20-item cursor page.
 
 ### Public theme contract
@@ -524,7 +528,7 @@ An administrator edits seven structured OKLCH anchors for both modes. Convex der
 | Activity selection | Focus, selected control, prompt, evidence note, and optional image remain synchronised |
 | Member default | `All roles` is checked, all five channels are visible, and the complete taxonomy remains in server HTML |
 | Member role selection | Native checked state, companion copy, and roster filter update together without moving focus |
-| Member directory empty | The complete 15-profile source-only organisation showcase appears in the real responsive grid; no fixture or QA disclosure enters public copy |
+| Member directory empty | The responsibility atlas remains useful and the roster reports an honest empty state; the development deployment normally exercises the populated path through its guarded Convex seed |
 | Member directory unavailable | Role atlas remains useful and the roster states that the service could not be reached |
 | Member portrait withheld | A verified text monogram replaces the image; no pending object key reaches the browser |
 | Journal loading | Route-level skeleton uses final row dimensions and no pulsing wall of grey cards |
