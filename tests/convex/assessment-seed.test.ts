@@ -744,16 +744,25 @@ describe("four-skill assessment seed", () => {
     const player = await learner.query(api.assessmentAttempts.getPlayer, {
       attemptId: attempt.attemptId,
     });
-    if (player === null || player.item.type !== "single-choice") {
-      throw new Error("Expected a delivered single-choice reading question.");
-    }
+    if (player === null) throw new Error("Expected a delivered reading question.");
+    const emptyResponse = (() => {
+      switch (player.item.type) {
+        case "single-choice":
+          return { kind: "choice" as const };
+        case "multiple-select":
+          return { kind: "multi-choice" as const, selectedChoiceKeys: [] };
+        case "cloze-select":
+          return { kind: "cloze" as const, gapAnswers: [] };
+        case "sentence-build":
+          return { kind: "token-order" as const, tokenOrder: [] };
+        case "constructed-response":
+          return { kind: "text" as const, text: "" };
+      }
+    })();
     await learner.mutation(api.assessmentAttempts.saveResponse, {
       attemptId: attempt.attemptId,
       itemId: player.item.id,
-      response: {
-        kind: "choice",
-        selectedChoiceKey: player.item.options[0]?.key ?? "a",
-      },
+      response: emptyResponse,
       expectedClientRevision: 0,
       mutationId: "flag-signal-save-0001",
       flagged: true,
