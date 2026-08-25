@@ -40,6 +40,7 @@ The repository now contains two major product lanes beyond the public organisati
 ### 26 August release closeout
 
 - The missing `adminUsers:bootstrapState` runtime contract was removed from the client and backend surface, generated bindings were refreshed, and `/admin` returned HTTP 200 without console or page errors.
+- The first manual sign-in attempt correctly exposed that no Password identity existed, but Convex surfaced its internal `InvalidAccountId` code. The client now treats that code and related credential failures as one non-enumerating message, points supervised first-time operators to the explicit setup mode, persists the selected `signIn`/`signUp` flow in form data, and keeps unknown server details out of the page.
 - The current Convex function/schema bundle was pushed only to development deployment `perfect-greyhound-270`. Direct Admin and Assessment queries resolve, while the public Assessment catalogue honestly returns no entries until a reviewed version publishes.
 - Public R2 returned `{ "ok": true }`; the custom domain serves reviewed derivatives. The separate confidential Assessment bucket remains deliberately unavailable rather than falling back to public storage.
 - Four browser-native admin confirmations were replaced by one reusable async rounded-neobrutal modal shared with Assessment. A first browser run found a native-dialog Tab escape; focus containment was repaired and rerun clean.

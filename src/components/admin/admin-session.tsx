@@ -125,18 +125,50 @@ export function canPublish(admin: Pick<AdminUser, "role">) {
   return admin.role === "publisher" || admin.role === "owner";
 }
 
-function cleanAuthError(error: unknown) {
+type PasswordFlow = "signIn" | "signUp";
+
+function cleanAuthError(
+  error: unknown,
+  {
+    flow,
+    allowInitialAccountSetup,
+  }: {
+    flow: PasswordFlow;
+    allowInitialAccountSetup: boolean;
+  },
+) {
   const message = error instanceof Error ? error.message : String(error);
-  if (/invalid credentials/i.test(message)) {
+
+  if (/TooManyFailedAttempts|too many (?:failed )?(?:sign-in|login) attempts/i.test(message)) {
+    return "Too many sign-in attempts. Wait a moment, then try again.";
+  }
+
+  if (/InvalidAccountId|InvalidSecret|invalid credentials|invalid password/i.test(message)) {
+    if (flow === "signIn" && allowInitialAccountSetup) {
+      return "The email or password is incorrect. If this is the first account, choose “Set up the first administrator account” below.";
+    }
     return "The email or password is incorrect.";
   }
+
   if (/already exists|already.*account/i.test(message)) {
-    return "An account already exists for this email address.";
+    return allowInitialAccountSetup
+      ? "An account already exists for this email address. Return to sign in."
+      : "An account already exists for this email address.";
   }
-  const finalLine = message.split("\n").at(-1)?.trim();
-  return finalLine && finalLine.length <= 220
-    ? finalLine.replace(/^Uncaught Error:\s*/i, "")
-    : "The request could not be completed. Try again.";
+
+  if (/enter a valid email address/i.test(message)) {
+    return "Enter a valid email address.";
+  }
+
+  if (/name must be between 2 and 100 characters/i.test(message)) {
+    return "Name must be between 2 and 100 characters.";
+  }
+
+  if (/password must be 12.+128 characters/i.test(message)) {
+    return "Password must be 12–128 characters and include upper-case, lower-case, and numeric characters.";
+  }
+
+  return "The request could not be completed. Try again.";
 }
 
 export function AdminSignIn({
@@ -166,7 +198,12 @@ export function AdminSignIn({
     try {
       await signIn("password", form);
     } catch (error) {
-      setMessage(cleanAuthError(error));
+      setMessage(
+        cleanAuthError(error, {
+          flow,
+          allowInitialAccountSetup,
+        }),
+      );
     } finally {
       setPending(false);
     }
@@ -201,6 +238,7 @@ export function AdminSignIn({
         </div>
 
         <form className={styles.authForm} onSubmit={handleSubmit}>
+          <input type="hidden" name="flow" value={flow} />
           {flow === "signUp" ? (
             <label className={styles.field} htmlFor={nameId}>
               <span>Display name</span>
