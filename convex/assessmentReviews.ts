@@ -11,7 +11,7 @@ import {
   publicStimulusValidator,
 } from "./assessmentValidators";
 import type { Doc } from "./_generated/dataModel";
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
 import { requireOwnedAttempt } from "./lib/assessmentAuth";
 import {
   publicItemFromDoc,
@@ -19,6 +19,7 @@ import {
 } from "./lib/assessmentModel";
 import { scoreObjectiveResponse } from "./lib/assessmentScoring";
 import { publicAssessmentR2UrlForMedia } from "./lib/media";
+import { isRandomBankSection } from "./lib/assessmentQuestionBank";
 
 const reviewItemValidator = v.object({
   item: publicAssessmentItemValidator,
@@ -69,6 +70,73 @@ function answerProjection(key: Doc<"assessmentAnswerKeys">) {
   }
 }
 
+async function projectReviewItem(
+  ctx: QueryCtx,
+  attempt: Doc<"assessmentAttempts">,
+  section: Doc<"assessmentSections">,
+  item: Doc<"assessmentItems">,
+) {
+  const [key, response, stimulusRow] = await Promise.all([
+    ctx.db
+      .query("assessmentAnswerKeys")
+      .withIndex("by_item_id", (q) => q.eq("itemId", item._id))
+      .unique(),
+    ctx.db
+      .query("assessmentResponses")
+      .withIndex("by_attempt_id_and_item_id", (q) =>
+        q.eq("attemptId", attempt._id).eq("itemId", item._id),
+      )
+      .unique(),
+    item.stimulusId === undefined
+      ? Promise.resolve(null)
+      : ctx.db.get("assessmentStimuli", item.stimulusId),
+  ]);
+  if (key === null || key.versionId !== item.versionId) {
+    throw new ConvexError({ code: "ASSESSMENT_STRUCTURE_INVALID" as const });
+  }
+  let stimulus = null;
+  if (
+    stimulusRow !== null &&
+    stimulusRow.versionId === item.versionId &&
+    stimulusRow.sectionId === item.sectionId
+  ) {
+    let mediaUrl: string | null = null;
+    if (stimulusRow.mediaId !== undefined) {
+      const media = await ctx.db.get("mediaAssets", stimulusRow.mediaId);
+      mediaUrl = publicAssessmentR2UrlForMedia(
+        media,
+        stimulusRow.versionId,
+        stimulusRow.kind,
+      );
+    }
+    stimulus = {
+      id: stimulusRow._id,
+      kind: stimulusRow.kind,
+      title: stimulusRow.title ?? null,
+      body: stimulusRow.body ?? null,
+      mediaUrl,
+      transcript: stimulusRow.transcript ?? null,
+      alt: stimulusRow.alt ?? null,
+    };
+  }
+  const scored = scoreObjectiveResponse(item, key, response);
+  return {
+    item: publicItemFromDoc(item),
+    section: {
+      id: section._id,
+      title: section.title,
+      skill: section.skill,
+      order: section.order,
+    },
+    stimulus,
+    response: response === null ? null : publicResponseFromDoc(response),
+    correctAnswer: answerProjection(key),
+    explanation: item.explanation ?? null,
+    answered: scored.answered,
+    correct: scored.correct,
+  };
+}
+
 export const listMinePage = query({
   args: {
     attemptId: v.id("assessmentAttempts"),
@@ -104,6 +172,28 @@ export const listMinePage = query({
     if (progress === null) {
       throw new ConvexError({ code: "INVALID_SECTION_ORDER" as const });
     }
+    const section = await ctx.db.get("assessmentSections", progress.sectionId);
+    if (section === null || section.versionId !== attempt.versionId) {
+      throw new ConvexError({ code: "ASSESSMENT_STRUCTURE_INVALID" as const });
+    }
+    if (isRandomBankSection(section)) {
+      const result = await ctx.db
+        .query("assessmentAttemptItems")
+        .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
+          q.eq("attemptId", attempt._id).eq("sectionId", section._id),
+        )
+        .paginate({ ...args.paginationOpts, maximumRowsRead: 20 });
+      const page = [];
+      for (const selection of result.page) {
+        const item = await ctx.db.get("assessmentItems", selection.itemId);
+        if (item === null) {
+          throw new ConvexError({ code: "QUESTION_BANK_SOURCE_MISSING" as const });
+        }
+        page.push(await projectReviewItem(ctx, attempt, section, item));
+      }
+      return { ...result, page };
+    }
+
     const result = await ctx.db
       .query("assessmentItems")
       .withIndex("by_section_id_and_order", (q) =>
@@ -112,71 +202,7 @@ export const listMinePage = query({
       .paginate({ ...args.paginationOpts, maximumRowsRead: 20 });
     const page = [];
     for (const item of result.page) {
-      const [section, key, response, stimulusRow] = await Promise.all([
-        ctx.db.get("assessmentSections", item.sectionId),
-        ctx.db
-          .query("assessmentAnswerKeys")
-          .withIndex("by_item_id", (q) => q.eq("itemId", item._id))
-          .unique(),
-        ctx.db
-          .query("assessmentResponses")
-          .withIndex("by_attempt_id_and_item_id", (q) =>
-            q.eq("attemptId", attempt._id).eq("itemId", item._id),
-          )
-          .unique(),
-        item.stimulusId === undefined
-          ? Promise.resolve(null)
-          : ctx.db.get("assessmentStimuli", item.stimulusId),
-      ]);
-      if (
-        section === null ||
-        section.versionId !== attempt.versionId ||
-        key === null ||
-        key.versionId !== attempt.versionId
-      ) {
-        throw new ConvexError({ code: "ASSESSMENT_STRUCTURE_INVALID" as const });
-      }
-      let stimulus = null;
-      if (
-        stimulusRow !== null &&
-        stimulusRow.versionId === attempt.versionId &&
-        stimulusRow.sectionId === section._id
-      ) {
-        let mediaUrl: string | null = null;
-        if (stimulusRow.mediaId !== undefined) {
-          const media = await ctx.db.get("mediaAssets", stimulusRow.mediaId);
-          mediaUrl = publicAssessmentR2UrlForMedia(
-            media,
-            attempt.versionId,
-            stimulusRow.kind,
-          );
-        }
-        stimulus = {
-          id: stimulusRow._id,
-          kind: stimulusRow.kind,
-          title: stimulusRow.title ?? null,
-          body: stimulusRow.body ?? null,
-          mediaUrl,
-          transcript: stimulusRow.transcript ?? null,
-          alt: stimulusRow.alt ?? null,
-        };
-      }
-      const scored = scoreObjectiveResponse(item, key, response);
-      page.push({
-        item: publicItemFromDoc(item),
-        section: {
-          id: section._id,
-          title: section.title,
-          skill: section.skill,
-          order: section.order,
-        },
-        stimulus,
-        response: response === null ? null : publicResponseFromDoc(response),
-        correctAnswer: answerProjection(key),
-        explanation: item.explanation ?? null,
-        answered: scored.answered,
-        correct: scored.correct,
-      });
+      page.push(await projectReviewItem(ctx, attempt, section, item));
     }
     return { ...result, page };
   },

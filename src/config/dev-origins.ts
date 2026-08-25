@@ -9,6 +9,7 @@ type NetworkInterfaceMap = Record<
 >;
 
 const exactOriginEnvironmentKey = "NEXT_ALLOWED_DEV_ORIGINS";
+const projectDevelopmentHosts = ["englishclub.mukhtada.my.id"] as const;
 
 function isIPv4Address(value: string) {
   const octets = value.split(".");
@@ -83,6 +84,7 @@ export function getAllowedDevOrigins({
     new Set([
       "localhost",
       "127.0.0.1",
+      ...projectDevelopmentHosts,
       ...getLanIPv4Hosts(interfaces),
       ...configuredHosts,
     ]),

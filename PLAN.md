@@ -1,13 +1,13 @@
 # Delivery Plan
 
 Last updated: 26 August 2026
-Current phase: Admin CMS and Assessment Lab integration; final cloud and release verification
+Current phase: integrated development release verified; production-only gates remain
 
 ## Outcome
 
 Deliver a production-ready English Club organisation profile, landing page, journal, Member directory, Assessment Lab, and protected administration workspace in Next.js. The public experience is clean and bright by default, supports a persistent dark theme, and uses language-led interaction rather than image-led templates.
 
-Convex remains the application database and authorization boundary. Cloudflare R2 Standard stores reviewed public derivatives; confidential Assessment source media requires a separate private R2 bucket. The private Assessment bucket is not configured, so confidential upload and public Assessment release remain blocked. The implementation must retain factual restraint, privacy controls, accessibility, and test evidence.
+Convex remains the application database and authorization boundary. Cloudflare R2 Standard stores reviewed public derivatives; confidential Assessment source media requires a separate private R2 bucket. The private Assessment bucket is not configured, so confidential upload and production Assessment release remain blocked. The explicit development seed remains available only for flow testing. The implementation must retain factual restraint, privacy controls, accessibility, and test evidence.
 
 ## Current design decision
 
@@ -138,8 +138,8 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Remove the stale `adminUsers:bootstrapState` call and every browser setup choice; `/admin` is sign-in only.
 - [x] Use server-side `CONVEX_URL` for Next adapters and pass the resolved deployment URL into scoped browser providers. `NEXT_PUBLIC_CONVEX_URL` is not required.
 - [x] Preserve port `3987` while running focused admin, public mobile, journal, and Practice checks.
-- [ ] Push the final integrated Convex schema/functions to the announced development deployment after all lanes are stable.
-- [ ] Run the final integrated lint, typecheck, unit, backend, production-build, Playwright, Axe, reduced-motion, responsive, and screenshot gates.
+- [x] Push the final integrated Convex schema/functions to the announced development deployment after all lanes are stable.
+- [x] Run the final integrated lint, typecheck, unit, backend, production-build, Playwright, Axe, reduced-motion, responsive, and screenshot gates.
 - [ ] Run a secret scan and commit only reviewed source and documentation.
 
 ## Working rules
@@ -255,16 +255,17 @@ Exit condition: a real owner can sign in and manage reviewed content without any
 - [x] Build `/practice`, full/quick briefings, runner, result review, Home programme quiz, and the assessment authoring workspace.
 - [x] Verify malformed/cross-owner IDs, key privacy, section lifecycle, transcript persistence, deletion, publication approvals, clone recovery, and media relationship guards in isolated tests.
 - [ ] Configure and smoke-test the private Assessment R2 bucket without falling back to the public bucket.
-- [ ] Supply an approved original question bank before any public assessment is published.
+- [x] Supply a typed original development bank and prove one full plus four quick flows without treating the seed as production approval.
+- [ ] Move any production candidate through current validation/provenance plus academic, rights, accessibility, and bias approvals.
 
 Exit condition: the technical path is proven and every content, rights, retention, and private-media gate is explicit.
 
 ### Gate J: Integrated certification
 
-- [ ] Generate Convex types and push the final schema/functions to the announced cloud development deployment.
-- [ ] Run every static and browser gate on the combined public, admin, journal, Member, theme, and Assessment surfaces.
-- [ ] Inspect desktop, phone, 320px, light, dark, reduced-motion, admin, Practice, and unavailable/configuration-gate screenshots.
-- [ ] Reconcile `docs/QA-REPORT.md`, `docs/WORKLOG.md`, and `docs/INTEGRATION-REVIEW.md` with the final command output.
+- [x] Generate Convex types and push the final schema/functions to the announced cloud development deployment.
+- [x] Run every static and browser gate on the combined public, admin, journal, Member, theme, and Assessment surfaces.
+- [x] Inspect desktop, phone, 320px, light, dark, reduced-motion, admin, Practice, and unavailable/configuration-gate screenshots.
+- [x] Reconcile `docs/QA-REPORT.md`, `docs/WORKLOG.md`, and `docs/INTEGRATION-REVIEW.md` with the final command output.
 
 Exit condition: source, cloud behavior, documents, and evidence describe the same release state.
 

@@ -21,6 +21,12 @@ import {
 } from "./lib/assessmentAuth";
 import { finalizeSectionAndMaybeSubmit } from "./lib/assessmentEngine";
 import {
+  assertDeliveredItem,
+  deliveredItemAt,
+  listDeliveredSectionItems,
+  prepareRandomSelectionPlans,
+} from "./lib/assessmentQuestionBank";
+import {
   normalizeRequestId,
   normalizeResponseForItem,
   publicItemFromDoc,
@@ -308,6 +314,7 @@ export const start = mutation({
     if (attemptsToday.length >= version.maxAttemptsPerDay) {
       throw new ConvexError({ code: "DAILY_ATTEMPT_LIMIT" as const });
     }
+    const randomSelectionPlans = await prepareRandomSelectionPlans(ctx, sections);
     const attemptId = await ctx.db.insert("assessmentAttempts", {
       versionId: version._id,
       definitionId: definition._id,
@@ -336,6 +343,19 @@ export const start = mutation({
         answeredCount: 0,
         flaggedCount: 0,
       });
+      const selection = randomSelectionPlans.get(section._id) ?? [];
+      for (let order = 0; order < selection.length; order += 1) {
+        const bankQuestion = selection[order];
+        await ctx.db.insert("assessmentAttemptItems", {
+          attemptId,
+          sectionId: section._id,
+          bankQuestionId: bankQuestion._id,
+          itemId: bankQuestion.sourceItemId,
+          order,
+          selectedAt: now,
+          selectionContract: 1,
+        });
+      }
     }
     return {
       attemptId,
@@ -563,13 +583,14 @@ export const getPlayer = query({
     if (progress === null || progress.status !== "in-progress") return null;
     const section = await ctx.db.get("assessmentSections", progress.sectionId);
     if (section === null || section.versionId !== attempt.versionId) return null;
-    const item = await ctx.db
-      .query("assessmentItems")
-      .withIndex("by_section_id_and_order", (q) =>
-        q.eq("sectionId", section._id).eq("order", attempt.currentItemOrder),
-      )
-      .unique();
-    if (item === null || item.versionId !== attempt.versionId) return null;
+    const delivered = await deliveredItemAt(
+      ctx,
+      attempt._id,
+      section,
+      attempt.currentItemOrder,
+    );
+    if (delivered === null) return null;
+    const { item } = delivered;
     const response = await ctx.db
       .query("assessmentResponses")
       .withIndex("by_attempt_id_and_item_id", (q) =>
@@ -581,12 +602,11 @@ export const getPlayer = query({
       .withIndex("by_attempt_id_and_order", (q) => q.eq("attemptId", attempt._id))
       .take(9);
     if (allProgress.length > 8) return null;
-    const sectionItems = await ctx.db
-      .query("assessmentItems")
-      .withIndex("by_section_id_and_order", (q) =>
-        q.eq("sectionId", section._id),
-      )
-      .take(51);
+    const sectionItems = await listDeliveredSectionItems(
+      ctx,
+      attempt._id,
+      section,
+    );
     const sectionResponses = await ctx.db
       .query("assessmentResponses")
       .withIndex("by_attempt_id_and_section_id_and_item_id", (q) =>
@@ -603,15 +623,15 @@ export const getPlayer = query({
       const stimulusRow = await ctx.db.get("assessmentStimuli", item.stimulusId);
       if (
         stimulusRow !== null &&
-        stimulusRow.versionId === attempt.versionId &&
-        stimulusRow.sectionId === section._id
+        stimulusRow.versionId === item.versionId &&
+        stimulusRow.sectionId === item.sectionId
       ) {
         let mediaUrl: string | null = null;
         if (stimulusRow.mediaId !== undefined) {
           const media = await ctx.db.get("mediaAssets", stimulusRow.mediaId);
           mediaUrl = publicAssessmentR2UrlForMedia(
             media,
-            attempt.versionId,
+            stimulusRow.versionId,
             stimulusRow.kind,
           );
         }
@@ -650,23 +670,23 @@ export const getPlayer = query({
       response: response === null ? null : publicResponseFromDoc(response),
       flagged: response?.flagged ?? false,
       itemStates: sectionItems.map((candidate) => {
-        const saved = responseByItem.get(candidate._id);
+        const saved = responseByItem.get(candidate.item._id);
         return {
-          itemId: candidate._id,
+          itemId: candidate.item._id,
           itemOrder: candidate.order,
           answered:
             saved === undefined
               ? false
               : responseIsAnswered(publicResponseFromDoc(saved)),
           flagged: saved?.flagged ?? false,
-          current: candidate._id === item._id,
+          current: candidate.item._id === item._id,
         };
       }),
       navigation: {
-        itemOrder: item.order,
+        itemOrder: delivered.order,
         itemCount: section.itemCount,
-        canGoBack: item.order > 0,
-        canGoNext: item.order + 1 < section.itemCount,
+        canGoBack: delivered.order > 0,
+        canGoNext: delivered.order + 1 < section.itemCount,
       },
     };
   },
@@ -688,14 +708,12 @@ export const saveResponse = mutation({
       return { ok: false as const, code: "section_closed" as const };
     }
     const mutationId = normalizeRequestId(args.mutationId, "mutationId");
-    const item = await ctx.db.get("assessmentItems", args.itemId);
-    if (item === null || item.versionId !== attempt.versionId) {
-      throw new ConvexError({ code: "ITEM_NOT_FOUND" as const });
-    }
     const progress = await ctx.db
       .query("assessmentAttemptSections")
-      .withIndex("by_attempt_id_and_section_id", (q) =>
-        q.eq("attemptId", attempt._id).eq("sectionId", item.sectionId),
+      .withIndex("by_attempt_id_and_order", (q) =>
+        q
+          .eq("attemptId", attempt._id)
+          .eq("order", attempt.currentSectionOrder),
       )
       .unique();
     if (
@@ -704,6 +722,19 @@ export const saveResponse = mutation({
       progress.status !== "in-progress"
     ) {
       throw new ConvexError({ code: "SECTION_NOT_AVAILABLE" as const });
+    }
+    const section = await ctx.db.get("assessmentSections", progress.sectionId);
+    if (section === null || section.versionId !== attempt.versionId) {
+      throw new ConvexError({ code: "SECTION_NOT_AVAILABLE" as const });
+    }
+    const item = await assertDeliveredItem(
+      ctx,
+      attempt._id,
+      section,
+      args.itemId,
+    );
+    if (item === null) {
+      throw new ConvexError({ code: "ITEM_NOT_FOUND" as const });
     }
     const now = Date.now();
     if (progress.deadlineAt !== undefined && now >= progress.deadlineAt) {
@@ -737,7 +768,7 @@ export const saveResponse = mutation({
     const documentBase = {
       attemptId: attempt._id,
       versionId: attempt.versionId,
-      sectionId: item.sectionId,
+      sectionId: progress.sectionId,
       itemId: item._id,
       clientRevision: nextRevision,
       lastMutationId: mutationId,
@@ -799,18 +830,22 @@ export const move = mutation({
     if (progress === null || progress.status !== "in-progress") {
       throw new ConvexError({ code: "SECTION_NOT_AVAILABLE" as const });
     }
-    const item = await ctx.db
-      .query("assessmentItems")
-      .withIndex("by_section_id_and_order", (q) =>
-        q.eq("sectionId", progress.sectionId).eq("order", args.itemOrder),
-      )
-      .unique();
-    if (item === null || item.versionId !== attempt.versionId) {
+    const section = await ctx.db.get("assessmentSections", progress.sectionId);
+    if (section === null || section.versionId !== attempt.versionId) {
+      throw new ConvexError({ code: "INVALID_NAVIGATION" as const });
+    }
+    const delivered = await deliveredItemAt(
+      ctx,
+      attempt._id,
+      section,
+      args.itemOrder,
+    );
+    if (delivered === null) {
       throw new ConvexError({ code: "INVALID_NAVIGATION" as const });
     }
     const now = Date.now();
     await ctx.db.patch("assessmentAttempts", attempt._id, {
-      currentItemOrder: item.order,
+      currentItemOrder: delivered.order,
       revision: attempt.revision + 1,
       lastActivityAt: now,
     });
@@ -1066,7 +1101,7 @@ export const deleteMine = mutation({
   returns: v.object({ deleted: v.literal(true) }),
   handler: async (ctx, args) => {
     const { attempt } = await requireOwnedAttempt(ctx, args.attemptId);
-    const [responses, progressRows, results] = await Promise.all([
+    const [responses, progressRows, selectedItems, results] = await Promise.all([
       ctx.db
         .query("assessmentResponses")
         .withIndex("by_attempt_id_and_updated_at", (q) =>
@@ -1080,6 +1115,12 @@ export const deleteMine = mutation({
         )
         .take(9),
       ctx.db
+        .query("assessmentAttemptItems")
+        .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
+          q.eq("attemptId", attempt._id),
+        )
+        .take(201),
+      ctx.db
         .query("assessmentResults")
         .withIndex("by_attempt_id_and_revision", (q) =>
           q.eq("attemptId", attempt._id),
@@ -1089,6 +1130,7 @@ export const deleteMine = mutation({
     if (
       responses.length > 200 ||
       progressRows.length > 8 ||
+      selectedItems.length > 200 ||
       results.length > 8
     ) {
       throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
@@ -1110,6 +1152,9 @@ export const deleteMine = mutation({
     }
     for (const progress of progressRows) {
       await ctx.db.delete("assessmentAttemptSections", progress._id);
+    }
+    for (const selectedItem of selectedItems) {
+      await ctx.db.delete("assessmentAttemptItems", selectedItem._id);
     }
     for (const result of results) {
       await ctx.db.delete("assessmentResults", result._id);

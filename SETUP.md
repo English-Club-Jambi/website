@@ -152,11 +152,25 @@ npm run admin:provision -- \
 
 `--generate-password` prints the temporary password once after a successful run. Store it in a password manager. Do not put a password in shell arguments, source, Markdown, or Git.
 
+If an earlier operator action created the Password account but failed before it could bind the sole legacy placeholder owner, recover that exact account instead of attempting a second sign-up:
+
+```bash
+npm run admin:provision -- \
+  --name "Reviewed administrator" \
+  --email "admin@example.com" \
+  --role owner \
+  --generate-password \
+  --recover-existing \
+  --repair-placeholder "THE_EXACT_LEGACY_TOKEN"
+```
+
+This recovery is intentionally narrow: the email must already identify a Password account, the legacy deployment must contain exactly one active unbound owner with the exact supplied token, and the requested role must remain `owner`. The account is bound first, then its password is rotated and prior sessions are invalidated. Do not use `--recover-existing` for normal account creation.
+
 3. Open `/admin` and sign in with that issued account.
 4. Confirm the owner workspace appears, sign out, sign in again, and verify the stable Auth-account binding survives the new session.
 5. Verify editor and publisher negative permissions and the audit event.
 
-The internal action uses the installed Password provider to hash the credential and then verifies the resulting Password account before binding it. Browser calls with `flow=signUp` are rejected. Protected functions resolve the signed identity against the stable issuer plus Convex Auth user ID, with the legacy complete-token lookup retained only for existing records. The last active owner cannot be demoted or disabled.
+The internal action uses the installed Password provider to hash the credential and then verifies the resulting Password account before binding it. The explicit recovery path verifies and binds the existing account before rotating its credential. Browser calls with `flow=signUp` are rejected. Protected functions resolve the signed identity against the stable issuer plus Convex Auth user ID, with the legacy complete-token lookup retained only for existing records. The last active owner cannot be demoted or disabled.
 
 The client must not call `adminUsers:bootstrapState`; that deployment-era public function is not part of the current UI contract. `adminUsers:bootstrapOwner` remains a legacy internal migration seam and is not the operator account-creation workflow.
 
@@ -222,8 +236,9 @@ Public routes:
 - `/practice`
 - `/practice/full`
 - `/practice/quick/listening`
-- `/practice/quick/structure`
 - `/practice/quick/reading`
+- `/practice/quick/writing`
+- `/practice/quick/speaking`
 - `/practice/attempt/[attemptId]`
 - `/practice/result/[attemptId]`
 - `/journal`
@@ -241,7 +256,7 @@ Protected administration:
 - `/admin/appearance`
 - `/admin/activity`
 
-The five public navigation links are About, Activities, Members, Practice, and Journal. Attempt/result routes are owner-only and disallowed by robots. Admin is noindex/nofollow and absent from public navigation.
+The five public navigation links are About, Activities, Members, Practice, and Journal. Attempt/result routes are owned by the Anonymous learner identity that created them and are disallowed by robots. Admin is noindex/nofollow and absent from public navigation.
 
 ## 10. Initial content and data
 
@@ -260,7 +275,15 @@ npx convex run members:listPublished '{}'
 
 When it returns `[]`, the route uses the 15-profile fictional source showcase. Those records are not members, are never written to Convex, and disappear when the first reviewed profile publishes.
 
-Assessment does not use a local question fallback. Until original authored content passes validation/provenance checks and the four academic, rights, accessibility, and bias approvals, `/practice` shows the honest unavailable state for that mode.
+Assessment does not use a local question fallback. The development deployment may be populated with the checked-in original bank for end-to-end flow testing. Announce and verify the exact non-production target first, install `espeak-ng`, `ffmpeg`, and `ffprobe`, then run:
+
+```bash
+npm run practice:seed
+npx convex run assessmentSeed:verifyIbtPractice \
+  '{"confirm":"seed-ec-ibt-style-2026-v1"}'
+```
+
+The seed is checksum-bound and idempotent. It publishes one fixed 120-task four-skill form, four quick forms, and 52 generated MP3 derivatives under `https://r2.mukhtada.my.id/assessments/`. It is a development operator path, not evidence that the production human-review workflow ran. A production candidate still requires the current validation/provenance check and four current-revision academic, rights, accessibility, and bias approvals.
 
 The page-copy CMS supports at most 200 entries for one page/locale. The current Practice manifest fits within that contract. A manifest change that would create entry 201 must be split or redesigned before deployment.
 
@@ -285,6 +308,8 @@ npm run r2:upload-reviewed -- \
   images/<versioned-object-name>.webp \
   image/webp
 ```
+
+`R2_API` may be copied from a Cloudflare dashboard URL that includes the bucket path. Operator scripts validate the account hostname and reduce that value to the S3 account origin before constructing SDK requests; browser reads never use the S3 endpoint.
 
 ### Journal
 

@@ -14,10 +14,13 @@ import {
   getMemberJoinedYearOptions,
 } from "@/content/member-filters";
 import {
-  getMemberRosterMode,
-  isShowcaseMember,
-  memberShowcase,
-} from "@/content/member-showcase";
+  developmentSeedMembers,
+} from "@content/member-development-seed";
+
+const seededRoster = developmentSeedMembers.map((member) => ({
+  ...member,
+  updatedAt: 0,
+}));
 
 describe("member role contract", () => {
   it("preserves the five supplied role classifications", () => {
@@ -77,46 +80,32 @@ describe("member role contract", () => {
 
 describe("member organization roster", () => {
   it("keeps fifteen fictional profiles valid, complete, and varied", () => {
-    expect(memberShowcase).toHaveLength(15);
-    expect(new Set(memberShowcase.map((member) => member.slug)).size).toBe(15);
-    expect(new Set(memberShowcase.map((member) => member.displayName)).size).toBe(15);
+    expect(developmentSeedMembers).toHaveLength(15);
+    expect(new Set(developmentSeedMembers.map((member) => member.slug)).size).toBe(15);
+    expect(new Set(developmentSeedMembers.map((member) => member.displayName)).size).toBe(15);
     expect(
       new Set(
-        memberShowcase.map(
+        developmentSeedMembers.map(
           (member) => `${member.portraitCell.column}:${member.portraitCell.row}`,
         ),
       ).size,
     ).toBe(15);
-    expect(new Set(memberShowcase.map((member) => member.roleLevel))).toEqual(
+    expect(new Set(developmentSeedMembers.map((member) => member.roleLevel))).toEqual(
       new Set([0, 1, 2, 3, 4]),
     );
     expect(
-      memberShowcase.reduce<Record<number, number>>((counts, member) => {
+      developmentSeedMembers.reduce<Record<number, number>>((counts, member) => {
         counts[member.joinedYear] = (counts[member.joinedYear] ?? 0) + 1;
         return counts;
       }, {}),
     ).toEqual({ 2022: 2, 2023: 3, 2024: 4, 2025: 4, 2026: 2 });
-    expect(getMemberRosterMode({ state: "ready", members: [] })).toBe(
-      "showcase",
-    );
-    expect(getMemberRosterMode({ state: "unavailable", members: [] })).toBe(
-      "unavailable",
-    );
     expect(
-      getMemberRosterMode({
-        state: "ready",
-        members: [memberShowcase[0]],
-      }),
-    ).toBe("published");
-
-    expect(
-      memberShowcase.some(
+      developmentSeedMembers.some(
         (member) => "position" in member && member.position === "treasury",
       ),
     ).toBe(true);
 
-    for (const member of memberShowcase) {
-      expect(isShowcaseMember(member)).toBe(true);
+    for (const member of developmentSeedMembers) {
       expect(isValidMemberJoinedYear(member.joinedYear, 2026)).toBe(true);
       expect(member.displayName).not.toMatch(/voice|placeholder|sample|test/i);
       expect(member.shortBio).not.toMatch(/placeholder|sample|test|convex/i);
@@ -131,15 +120,15 @@ describe("member organization roster", () => {
   });
 
   it("combines role, responsibility, and joined year filters", () => {
-    const coordinatorOptions = getMemberAssignmentOptions(memberShowcase, 2);
+    const coordinatorOptions = getMemberAssignmentOptions(seededRoster, 2);
     expect(coordinatorOptions).toHaveLength(5);
-    expect(getMemberJoinedYearOptions(memberShowcase)).toEqual({
+    expect(getMemberJoinedYearOptions(seededRoster)).toEqual({
       years: [2026, 2025, 2024, 2023, 2022],
       includesUnknown: false,
     });
 
     expect(
-      filterMemberRoster(memberShowcase, {
+      filterMemberRoster(seededRoster, {
         role: 2,
         assignment: "all",
         joinedYear: 2025,
@@ -151,7 +140,7 @@ describe("member organization roster", () => {
     ]);
 
     expect(
-      filterMemberRoster(memberShowcase, {
+      filterMemberRoster(seededRoster, {
         role: 4,
         assignment: "all",
         joinedYear: 2026,

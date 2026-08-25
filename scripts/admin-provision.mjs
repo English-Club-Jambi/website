@@ -15,7 +15,7 @@ function parseArgs(values) {
       throw new Error(`Unexpected argument: ${value}`);
     }
     const key = value.slice(2);
-    if (key === "generate-password") {
+    if (key === "generate-password" || key === "recover-existing") {
       parsed.set(key, true);
       continue;
     }
@@ -134,6 +134,7 @@ async function main() {
       email,
       password,
       role,
+      ...(flags.has("recover-existing") ? { recoverExistingAccount: true } : {}),
       ...(flags.has("repair-placeholder")
         ? {
             replaceSoleLegacyTokenIdentifier: flags.get("repair-placeholder"),

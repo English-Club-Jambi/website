@@ -2009,6 +2009,10 @@
     flex: 1 1 0;
   }
 
+  .questionActions {
+    position: static;
+  }
+
   .navigatorPanel {
     width: 100%;
   }

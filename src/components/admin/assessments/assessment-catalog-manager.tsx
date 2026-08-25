@@ -3,6 +3,7 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  CircleStackIcon,
   DocumentPlusIcon,
   InformationCircleIcon,
   PhotoIcon,
@@ -55,7 +56,7 @@ function mapCatalogRow(row: CatalogRow) {
 export function AssessmentCatalogManager() {
   const admin = useAdminSession();
   const capabilities = getAssessmentAdminCapabilities(admin.role);
-  const [visibility, setVisibility] = useState<Visibility>("draft");
+  const [visibility, setVisibility] = useState<Visibility>("published");
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const cursor = cursors.at(-1) ?? null;
   const result = useQuery(api.adminAssessments.listPage, {
@@ -79,6 +80,10 @@ export function AssessmentCatalogManager() {
         description="Build original English practice, keep answer keys private, and publish only the exact revision approved by every reviewer."
         actions={
           <>
+            <Link className={adminStyles.secondaryButton} href="/admin/assessments/questions">
+              <CircleStackIcon aria-hidden width={18} height={18} />
+              Question bank
+            </Link>
             <Link className={adminStyles.secondaryButton} href="/admin/assessments/media">
               <PhotoIcon aria-hidden width={18} height={18} />
               Assessment media

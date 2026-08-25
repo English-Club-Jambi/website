@@ -239,7 +239,14 @@ function MemberEditor({
           <strong>{member ? `Edit ${member.displayName}` : "Add a member profile"}</strong>
           <span>{getMemberRoleDefinition(form.roleLevel).scope}</span>
         </div>
-        {member ? <AdminStatus tone={memberStatusTone(member.profileStatus)}>{member.profileStatus}</AdminStatus> : null}
+        {member ? (
+          <div className={styles.buttonRow}>
+            {member.recordOrigin === "development-seed" ? (
+              <AdminStatus tone="neutral">Development seed</AdminStatus>
+            ) : null}
+            <AdminStatus tone={memberStatusTone(member.profileStatus)}>{member.profileStatus}</AdminStatus>
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.formGridWide}>
@@ -507,7 +514,9 @@ export function MemberManager() {
                   onClick={() => setSelectedId(member._id)}
                 >
                   <strong>{member.displayName}</strong>
-                  <small>{getMemberRoleDefinition(member.roleLevel).label} / Updated {formatAdminDate(member.updatedAt)}</small>
+                  <small>
+                    {getMemberRoleDefinition(member.roleLevel).label} / {member.recordOrigin === "development-seed" ? "Development seed / " : ""}Updated {formatAdminDate(member.updatedAt)}
+                  </small>
                 </button>
               ))
             )}

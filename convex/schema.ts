@@ -6,12 +6,16 @@ import {
   assessmentAnswerKeyValidator,
   assessmentItemValidator,
   assessmentKindValidator,
+  assessmentDeliveryModeValidator,
   assessmentProfileValidator,
+  assessmentQuestionBankStatusValidator,
+  assessmentQuestionDifficultyValidator,
   assessmentResponseValidator,
   assessmentReviewDecisionValidator,
   assessmentReviewTypeValidator,
   attemptSectionStatusValidator,
   assessmentSkillValidator,
+  assessmentTaskFamilyValidator,
   assessmentVersionStatusValidator,
   assessmentVisibilityValidator,
   attemptOwnerKindValidator,
@@ -37,6 +41,7 @@ import {
   memberPositionValidator,
   memberProfileStatusValidator,
   memberRoleLevelValidator,
+  memberRecordOriginValidator,
   adminRoleValidator,
   adminStatusValidator,
   cmsActionValidator,
@@ -149,6 +154,8 @@ export default defineSchema({
     profileConsentUpdatedAt: v.optional(v.number()),
     photoConsentStatus: memberConsentStatusValidator,
     photoConsentUpdatedAt: v.optional(v.number()),
+    recordOrigin: v.optional(memberRecordOriginValidator),
+    seedBatch: v.optional(v.string()),
     sortOrder: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -398,6 +405,10 @@ export default defineSchema({
     timeLimitSeconds: v.optional(v.number()),
     audioReplayPolicy: v.optional(audioReplayPolicyValidator),
     itemCount: v.number(),
+    deliveryMode: v.optional(assessmentDeliveryModeValidator),
+    bankProfile: v.optional(assessmentProfileValidator),
+    bankSelectionContract: v.optional(v.literal(1)),
+    bankSeedBatch: v.optional(v.string()),
   })
     .index("by_version_id_and_order", ["versionId", "order"])
     .index("by_version_id_and_section_key", ["versionId", "sectionKey"]),
@@ -432,6 +443,44 @@ export default defineSchema({
   assessmentAnswerKeys: defineTable(assessmentAnswerKeyValidator)
     .index("by_item_id", ["itemId"])
     .index("by_version_id_and_item_id", ["versionId", "itemId"]),
+
+  assessmentQuestionBank: defineTable({
+    bankKey: v.string(),
+    sourceDefinitionId: v.id("assessmentDefinitions"),
+    sourceVersionId: v.id("assessmentVersions"),
+    sourceSectionId: v.id("assessmentSections"),
+    sourceItemId: v.id("assessmentItems"),
+    skill: assessmentSkillValidator,
+    taskFamily: assessmentTaskFamilyValidator,
+    difficulty: assessmentQuestionDifficultyValidator,
+    status: assessmentQuestionBankStatusValidator,
+    profile: assessmentProfileValidator,
+    fullPracticeEligible: v.boolean(),
+    contentFingerprint: v.string(),
+    promptSearch: v.string(),
+    tags: v.array(v.string()),
+    seedBatch: v.optional(v.string()),
+    createdBy: v.id("adminUsers"),
+    updatedBy: v.id("adminUsers"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_bank_key", ["bankKey"])
+    .index("by_source_item_id", ["sourceItemId"])
+    .index("by_profile_and_status_and_skill", ["profile", "status", "skill"])
+    .index("by_status_and_updated_at", ["status", "updatedAt"])
+    .index("by_status_and_difficulty_and_updated_at", [
+      "status",
+      "difficulty",
+      "updatedAt",
+    ])
+    .index("by_skill_and_status_and_updated_at", ["skill", "status", "updatedAt"])
+    .index("by_skill_and_status_and_difficulty_and_updated_at", [
+      "skill",
+      "status",
+      "difficulty",
+      "updatedAt",
+    ]),
 
   assessmentAttempts: defineTable({
     versionId: v.id("assessmentVersions"),
@@ -488,6 +537,30 @@ export default defineSchema({
   })
     .index("by_attempt_id_and_order", ["attemptId", "order"])
     .index("by_attempt_id_and_section_id", ["attemptId", "sectionId"]),
+
+  assessmentAttemptItems: defineTable({
+    attemptId: v.id("assessmentAttempts"),
+    sectionId: v.id("assessmentSections"),
+    bankQuestionId: v.id("assessmentQuestionBank"),
+    itemId: v.id("assessmentItems"),
+    order: v.number(),
+    selectedAt: v.number(),
+    selectionContract: v.literal(1),
+  })
+    .index("by_attempt_id_and_section_id_and_order", [
+      "attemptId",
+      "sectionId",
+      "order",
+    ])
+    .index("by_attempt_id_and_item_id", ["attemptId", "itemId"])
+    .index("by_attempt_id_and_bank_question_id", [
+      "attemptId",
+      "bankQuestionId",
+    ])
+    .index("by_bank_question_id_and_selected_at", [
+      "bankQuestionId",
+      "selectedAt",
+    ]),
 
   assessmentResponses: defineTable(assessmentResponseValidator)
     .index("by_attempt_id_and_item_id", ["attemptId", "itemId"])
@@ -551,6 +624,18 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_site_key", ["siteKey"]),
+
+  publicThemePresets: defineTable({
+    siteKey: v.literal("public"),
+    presetKey: v.string(),
+    name: v.string(),
+    description: v.string(),
+    recipe: themeRecipeValidator,
+    snapshot: publicThemeSnapshotValidator,
+    seedBatch: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_site_key_and_preset_key", ["siteKey", "presetKey"]),
 
   publicThemeVersions: defineTable({
     siteKey: v.literal("public"),

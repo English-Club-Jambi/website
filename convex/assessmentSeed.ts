@@ -9,6 +9,11 @@ import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { publicAssessmentDerivativeKey } from "./lib/assessmentMedia";
+import {
+  difficultyForPosition,
+  normalizeBankPrompt,
+  taskFamilyForItemKey,
+} from "./lib/assessmentQuestionBank";
 
 const confirmation = "seed-ec-ibt-style-2026-v1" as const;
 
@@ -466,6 +471,153 @@ export const attachPublicAudio = internalMutation({
   },
 });
 
+export const seedQuestionBank = internalMutation({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({
+    inserted: v.number(),
+    existing: v.number(),
+    eligible: v.number(),
+    randomSections: v.number(),
+  }),
+  handler: async (ctx) => {
+    const author = await requireSeedAuthor(ctx);
+    let inserted = 0;
+    let existingCount = 0;
+    let eligible = 0;
+    let randomSections = 0;
+    const now = Date.now();
+    for (const source of ibtPracticeBank) {
+      const definition = await ctx.db
+        .query("assessmentDefinitions")
+        .withIndex("by_slug", (q) => q.eq("slug", source.slug))
+        .unique();
+      if (definition === null || definition.publishedVersionId === undefined) {
+        throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+      }
+      const version = await ctx.db.get(
+        "assessmentVersions",
+        definition.publishedVersionId,
+      );
+      if (
+        version === null ||
+        version.status !== "published" ||
+        version.contentChecksum !== checksumForSlug(source.slug)
+      ) {
+        throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+      }
+      const sections = await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_order", (q) =>
+          q.eq("versionId", version._id),
+        )
+        .take(9);
+      for (const section of sections) {
+        const items = await ctx.db
+          .query("assessmentItems")
+          .withIndex("by_section_id_and_order", (q) =>
+            q.eq("sectionId", section._id),
+          )
+          .take(section.itemCount + 1);
+        if (items.length !== section.itemCount) {
+          throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+        }
+        const fullPracticeEligible = source.kind === "full-practice";
+        if (fullPracticeEligible) {
+          await ctx.db.patch("assessmentSections", section._id, {
+            deliveryMode: "random-bank",
+            bankProfile: "ec-ibt-style-2026-v1",
+            bankSelectionContract: 1,
+            bankSeedBatch: IBT_PRACTICE_BANK_CHECKSUM,
+          });
+          randomSections += 1;
+        }
+        for (const item of items) {
+          const key = await ctx.db
+            .query("assessmentAnswerKeys")
+            .withIndex("by_item_id", (q) => q.eq("itemId", item._id))
+            .unique();
+          if (key === null || key.versionId !== version._id) {
+            throw new ConvexError({ code: "ASSESSMENT_KEYSET_INCOMPLETE" as const });
+          }
+          if (item.stimulusId !== undefined) {
+            const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
+            if (stimulus === null) {
+              throw new ConvexError({ code: "ASSESSMENT_SEED_VERIFY_INVALID" as const });
+            }
+            if (stimulus.kind === "audio") {
+              const media =
+                stimulus.mediaId === undefined
+                  ? null
+                  : await ctx.db.get("mediaAssets", stimulus.mediaId);
+              if (
+                media === null ||
+                media.status !== "ready" ||
+                media.access !== "public" ||
+                media.purpose !== "assessment-audio"
+              ) {
+                throw new ConvexError({ code: "ASSESSMENT_SEED_AUDIO_INVALID" as const });
+              }
+            }
+          }
+          const bankKey = `${IBT_PRACTICE_BANK_CHECKSUM}/${source.slug}/${section.sectionKey}/${item.itemKey}`;
+          const existing = await ctx.db
+            .query("assessmentQuestionBank")
+            .withIndex("by_bank_key", (q) => q.eq("bankKey", bankKey))
+            .unique();
+          if (existing !== null) {
+            if (
+              existing.sourceItemId !== item._id ||
+              existing.sourceVersionId !== version._id ||
+              existing.sourceSectionId !== section._id
+            ) {
+              throw new ConvexError({ code: "QUESTION_BANK_SEED_COLLISION" as const });
+            }
+            existingCount += 1;
+            eligible += existing.fullPracticeEligible ? 1 : 0;
+            continue;
+          }
+          const taskFamily = taskFamilyForItemKey(item.itemKey);
+          await ctx.db.insert("assessmentQuestionBank", {
+            bankKey,
+            sourceDefinitionId: definition._id,
+            sourceVersionId: version._id,
+            sourceSectionId: section._id,
+            sourceItemId: item._id,
+            skill: section.skill,
+            taskFamily,
+            difficulty: difficultyForPosition(item.order, section.itemCount),
+            status: "ready",
+            profile: "ec-ibt-style-2026-v1",
+            fullPracticeEligible,
+            contentFingerprint: `ec-ibt-style-2026-v1:${section.skill}:${item.itemKey}`,
+            promptSearch: normalizeBankPrompt(item.prompt),
+            tags: [section.skill, taskFamily],
+            seedBatch: IBT_PRACTICE_BANK_CHECKSUM,
+            createdBy: author._id,
+            updatedBy: author._id,
+            createdAt: now,
+            updatedAt: now,
+          });
+          inserted += 1;
+          eligible += fullPracticeEligible ? 1 : 0;
+        }
+      }
+    }
+    if (inserted > 0) {
+      await ctx.db.insert("cmsAuditEvents", {
+        area: "assessment",
+        action: "update",
+        resourceType: "question-bank-seed",
+        resourceId: IBT_PRACTICE_BANK_CHECKSUM,
+        summary: `${inserted + existingCount} original questions indexed in the bank`,
+        actorId: author._id,
+        createdAt: now,
+      });
+    }
+    return { inserted, existing: existingCount, eligible, randomSections };
+  },
+});
+
 const verificationSectionValidator = v.object({
   skill: v.union(
     v.literal("reading"),
@@ -548,5 +700,71 @@ export const verifyIbtPractice = internalQuery({
       });
     }
     return { definitions };
+  },
+});
+
+export const verifyQuestionBank = internalQuery({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({
+    total: v.number(),
+    ready: v.number(),
+    eligible: v.number(),
+    randomSections: v.number(),
+    bySkill: v.array(
+      v.object({
+        skill: v.union(
+          v.literal("reading"),
+          v.literal("listening"),
+          v.literal("writing"),
+          v.literal("speaking"),
+        ),
+        ready: v.number(),
+        eligible: v.number(),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("assessmentQuestionBank").take(201);
+    if (rows.length > 200) {
+      throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
+    }
+    const full = await ctx.db
+      .query("assessmentDefinitions")
+      .withIndex("by_slug", (q) => q.eq("slug", "four-skill-practice-form-1"))
+      .unique();
+    const sections =
+      full?.publishedVersionId === undefined
+        ? []
+        : await ctx.db
+            .query("assessmentSections")
+            .withIndex("by_version_id_and_order", (q) =>
+              q.eq("versionId", full.publishedVersionId!),
+            )
+            .take(9);
+    const skills = ["reading", "listening", "writing", "speaking"] as const;
+    return {
+      total: rows.length,
+      ready: rows.filter((row) => row.status === "ready").length,
+      eligible: rows.filter(
+        (row) => row.status === "ready" && row.fullPracticeEligible,
+      ).length,
+      randomSections: sections.filter(
+        (section) =>
+          section.deliveryMode === "random-bank" &&
+          section.bankSelectionContract === 1,
+      ).length,
+      bySkill: skills.map((skill) => ({
+        skill,
+        ready: rows.filter(
+          (row) => row.skill === skill && row.status === "ready",
+        ).length,
+        eligible: rows.filter(
+          (row) =>
+            row.skill === skill &&
+            row.status === "ready" &&
+            row.fullPracticeEligible,
+        ).length,
+      })),
+    };
   },
 });

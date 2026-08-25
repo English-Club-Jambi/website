@@ -9,6 +9,7 @@
  */
 
 import type * as adminAssessmentItems from "../adminAssessmentItems.js";
+import type * as adminAssessmentQuestionBank from "../adminAssessmentQuestionBank.js";
 import type * as adminAssessments from "../adminAssessments.js";
 import type * as adminAudit from "../adminAudit.js";
 import type * as adminContent from "../adminContent.js";
@@ -29,6 +30,7 @@ import type * as assessmentSeed from "../assessmentSeed.js";
 import type * as assessmentValidators from "../assessmentValidators.js";
 import type * as assessments from "../assessments.js";
 import type * as auth from "../auth.js";
+import type * as developmentSeed from "../developmentSeed.js";
 import type * as http from "../http.js";
 import type * as lib_adminAuth from "../lib/adminAuth.js";
 import type * as lib_assessmentAdmin from "../lib/assessmentAdmin.js";
@@ -37,6 +39,7 @@ import type * as lib_assessmentEngine from "../lib/assessmentEngine.js";
 import type * as lib_assessmentEstimate from "../lib/assessmentEstimate.js";
 import type * as lib_assessmentMedia from "../lib/assessmentMedia.js";
 import type * as lib_assessmentModel from "../lib/assessmentModel.js";
+import type * as lib_assessmentQuestionBank from "../lib/assessmentQuestionBank.js";
 import type * as lib_assessmentScoring from "../lib/assessmentScoring.js";
 import type * as lib_editorDocument from "../lib/editorDocument.js";
 import type * as lib_media from "../lib/media.js";
@@ -58,6 +61,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   adminAssessmentItems: typeof adminAssessmentItems;
+  adminAssessmentQuestionBank: typeof adminAssessmentQuestionBank;
   adminAssessments: typeof adminAssessments;
   adminAudit: typeof adminAudit;
   adminContent: typeof adminContent;
@@ -78,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   assessmentValidators: typeof assessmentValidators;
   assessments: typeof assessments;
   auth: typeof auth;
+  developmentSeed: typeof developmentSeed;
   http: typeof http;
   "lib/adminAuth": typeof lib_adminAuth;
   "lib/assessmentAdmin": typeof lib_assessmentAdmin;
@@ -86,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   "lib/assessmentEstimate": typeof lib_assessmentEstimate;
   "lib/assessmentMedia": typeof lib_assessmentMedia;
   "lib/assessmentModel": typeof lib_assessmentModel;
+  "lib/assessmentQuestionBank": typeof lib_assessmentQuestionBank;
   "lib/assessmentScoring": typeof lib_assessmentScoring;
   "lib/editorDocument": typeof lib_editorDocument;
   "lib/media": typeof lib_media;

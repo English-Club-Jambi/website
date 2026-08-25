@@ -452,6 +452,263 @@
   font-weight: 780;
 }
 
+.bankCapacityGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.bankCapacityCard {
+  min-width: 0;
+  min-height: 8.5rem;
+  display: grid;
+  align-content: space-between;
+  gap: 0.6rem;
+  border-right: 1px solid var(--admin-soft-line);
+  padding: 0.9rem 1rem;
+  background: var(--admin-paper);
+}
+
+.bankCapacityCard:last-child {
+  border-right: 0;
+}
+
+.bankCapacityCard[data-ready="true"] {
+  background: color-mix(in oklch, oklch(0.91 0.045 150) 38%, var(--admin-paper));
+}
+
+.bankCapacityCard > span {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bankCapacityCard > strong {
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+}
+
+.bankCapacityCard > strong small {
+  color: var(--admin-muted);
+  font-size: 0.82rem;
+  letter-spacing: normal;
+}
+
+.bankCapacityCard > :last-child {
+  justify-self: start;
+}
+
+.bankToolbar {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(5rem, auto);
+  align-items: end;
+  gap: 0.8rem;
+  border-bottom: 2px solid var(--admin-line);
+  padding: 0.9rem 1rem;
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 36%, var(--admin-paper));
+}
+
+.bankWorkspace {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, 0.85fr);
+}
+
+.bankList {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  border-right: 2px solid var(--admin-line);
+}
+
+.bankRow {
+  min-width: 0;
+  border-bottom: 1px solid var(--admin-soft-line);
+}
+
+.bankRow button {
+  width: 100%;
+  min-width: 0;
+  min-height: 5.5rem;
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--admin-paper);
+  color: var(--admin-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--admin-ease),
+    box-shadow 160ms var(--admin-ease);
+}
+
+.bankRow button:hover,
+.bankRow[data-active="true"] button {
+  background: var(--admin-cobalt-wash);
+}
+
+.bankRow[data-active="true"] button {
+  box-shadow: inset 4px 0 0 var(--admin-cobalt);
+}
+
+.bankRowIndex {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-small);
+  background: var(--admin-paper);
+  color: var(--admin-cobalt-dark);
+}
+
+.bankRowCopy {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bankRowCopy strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.84rem;
+  line-height: 1.38;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bankRowCopy small {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bankEditor {
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: grid;
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 28%, var(--admin-paper));
+}
+
+.bankEditor > header {
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 0.9rem 1rem;
+}
+
+.bankEditor > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.bankEditor > header span {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+}
+
+.bankEditor h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bankEditorPrompt {
+  margin: 0;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 1rem;
+  font-size: 0.86rem;
+  font-weight: 680;
+  line-height: 1.5;
+}
+
+.bankEditorFields {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.bankEligibility {
+  grid-column: 1 / -1;
+  align-items: start;
+}
+
+.bankEligibility > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.bankEligibility small {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.bankFacts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--admin-soft-line);
+}
+
+.bankFacts > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+  border-right: 1px solid var(--admin-soft-line);
+  padding: 0.7rem;
+}
+
+.bankFacts > div:last-child {
+  border-right: 0;
+}
+
+.bankFacts dt {
+  color: var(--admin-muted);
+  font-size: 0.64rem;
+}
+
+.bankFacts dd {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 730;
+  overflow-wrap: anywhere;
+}
+
+.bankEditor > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.bankEditor > footer p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
 .successNotice,
 .accessNotice {
   margin: 0 0 1rem;
@@ -574,6 +831,31 @@
 }
 
 @media (max-width: 1120px) {
+  .bankCapacityGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bankCapacityCard:nth-child(3) {
+    border-right: 0;
+  }
+
+  .bankCapacityCard:nth-child(n + 4) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .bankWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .bankList {
+    border-right: 0;
+  }
+
+  .bankEditor {
+    position: static;
+    border-top: 2px solid var(--admin-line);
+  }
+
   .proofDesk {
     grid-template-columns: 1fr;
   }
@@ -589,6 +871,58 @@
 }
 
 @media (max-width: 760px) {
+  .bankToolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bankCapacityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bankCapacityCard,
+  .bankCapacityCard:nth-child(3) {
+    border-right: 1px solid var(--admin-soft-line);
+  }
+
+  .bankCapacityCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .bankCapacityCard:nth-child(n + 3) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .bankRow button {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+  }
+
+  .bankRow button > :last-child {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .bankEditorFields,
+  .bankFacts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bankFacts > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .bankFacts > div:nth-child(n + 3) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .bankEditor > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bankEditor > footer button {
+    width: 100%;
+  }
+
   .catalogRow {
     grid-template-columns: 1fr auto;
   }
@@ -639,6 +973,35 @@
 }
 
 @media (max-width: 360px) {
+  .bankToolbar,
+  .bankEditorFields,
+  .bankFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .bankCapacityGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bankCapacityCard,
+  .bankCapacityCard:nth-child(2n),
+  .bankCapacityCard:nth-child(3) {
+    border-right: 0;
+  }
+
+  .bankCapacityCard:nth-child(n + 2) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
+  .bankFacts > div,
+  .bankFacts > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .bankFacts > div:nth-child(n + 2) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
   .catalogRow,
   .workspaceHeader,
   .revisionBar,

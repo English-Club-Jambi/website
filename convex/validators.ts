@@ -108,6 +108,11 @@ export const memberConsentStatusValidator = v.union(
   v.literal("revoked"),
 );
 
+export const memberRecordOriginValidator = v.union(
+  v.literal("reviewed"),
+  v.literal("development-seed"),
+);
+
 export const memberPhotoValidator = v.object({
   objectKey: v.string(),
   width: v.number(),

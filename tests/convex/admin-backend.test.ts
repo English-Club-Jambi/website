@@ -180,6 +180,80 @@ describe("admin authentication and authorization", () => {
     });
   });
 
+  it("recovers an orphaned Password account before rebinding the sole placeholder owner", async () => {
+    vi.stubEnv("CONVEX_SITE_URL", testIssuer);
+    const t = convexTest(schema, modules);
+    const placeholderId = await t.mutation(
+      internal.adminUsers.bootstrapOwner,
+      {
+        tokenIdentifier: "TOKEN_DARI_UI",
+        displayName: "Placeholder Owner",
+      },
+    );
+
+    await expect(
+      t.action(internal.adminProvisioning.provisionPasswordAdmin, {
+        displayName: "Orphaned Owner",
+        email: "orphaned-owner@example.com",
+        password: "OriginalOrphanPassword12",
+        role: "owner",
+        replaceSoleLegacyTokenIdentifier: "WRONG_PLACEHOLDER",
+      }),
+    ).rejects.toThrow("placeholder owner repair is not safe");
+
+    const orphaned = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "orphaned-owner@example.com"),
+        )
+        .unique(),
+    );
+    expect(orphaned?.secret).toBeTruthy();
+    if (orphaned === null) throw new Error("Expected orphaned account fixture.");
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        userId: orphaned.userId,
+        expirationTime: Date.now() + 60_000,
+      });
+    });
+
+    const recovered = await t.action(
+      internal.adminProvisioning.provisionPasswordAdmin,
+      {
+        displayName: "Recovered Owner",
+        email: "orphaned-owner@example.com",
+        password: "RotatedRecoveryPassword12",
+        role: "owner",
+        replaceSoleLegacyTokenIdentifier: "TOKEN_DARI_UI",
+        recoverExistingAccount: true,
+      },
+    );
+    expect(recovered.adminUserId).toBe(placeholderId);
+    expect(recovered.authUserId).toBe(orphaned.userId);
+
+    const recoveredState = await t.run(async (ctx) => {
+      const account = await ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "orphaned-owner@example.com"),
+        )
+        .unique();
+      const sessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", orphaned.userId))
+        .take(2);
+      return { account, sessions };
+    });
+    expect(recoveredState.account?.secret).not.toBe(orphaned.secret);
+    expect(recoveredState.sessions).toHaveLength(0);
+  });
+
   it("keeps unauthenticated, unknown, disabled, and insufficient roles out", async () => {
     const { t, owner, editor } = await bootstrap();
     await expect(

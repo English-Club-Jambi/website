@@ -135,8 +135,9 @@ function ThemePreview({ recipe, mode }: { recipe: ThemeRecipe; mode: ThemeModeNa
 export function AppearanceManager() {
   const workspace = useQuery(api.adminThemes.getWorkspace, {});
   const versions = useQuery(api.adminThemes.listVersions, { limit: 20 });
+  const presets = useQuery(api.adminThemes.listPresets, {});
 
-  if (workspace === undefined || versions === undefined) {
+  if (workspace === undefined || versions === undefined || presets === undefined) {
     return (
       <>
         <AdminPageHeading title="Appearance" description="Manage the public site's structured colour system." />
@@ -154,12 +155,14 @@ export function AppearanceManager() {
       key={workspace.draft._id}
       workspace={workspace}
       versions={versions}
+      presets={presets}
     />
   );
 }
 
 type ThemeWorkspace = FunctionReturnType<typeof api.adminThemes.getWorkspace>;
 type ThemeVersions = FunctionReturnType<typeof api.adminThemes.listVersions>;
+type ThemePresets = FunctionReturnType<typeof api.adminThemes.listPresets>;
 type ThemeWorkspaceWithDraft = ThemeWorkspace & {
   draft: NonNullable<ThemeWorkspace["draft"]>;
 };
@@ -205,9 +208,11 @@ function EmptyThemeDraft() {
 function AppearanceEditor({
   workspace,
   versions,
+  presets,
 }: {
   workspace: ThemeWorkspaceWithDraft;
   versions: ThemeVersions;
+  presets: ThemePresets;
 }) {
   const admin = useAdminSession();
   const confirm = useAdminConfirm();
@@ -219,6 +224,12 @@ function AppearanceEditor({
   const [savedName, setSavedName] = useState(workspace.draft.name);
   const [savedRecipe, setSavedRecipe] = useState<ThemeRecipe>(() =>
     copyRecipe(workspace.draft.recipe),
+  );
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(
+    workspace.draft.source === "preset" ? (workspace.draft.presetKey ?? null) : null,
+  );
+  const [savedPresetKey, setSavedPresetKey] = useState<string | null>(
+    workspace.draft.source === "preset" ? (workspace.draft.presetKey ?? null) : null,
   );
   const [draftRevision, setDraftRevision] = useState(workspace.draft.revision);
   const [publishedVersionId, setPublishedVersionId] = useState<ThemeVersions[number]["_id"] | null>(
@@ -253,7 +264,16 @@ function AppearanceEditor({
         },
       };
     });
+    setSelectedPresetKey(null);
     setMessage("");
+  }
+
+  function applyPreset(preset: ThemePresets[number]) {
+    setName(preset.name);
+    setRecipe(copyRecipe(preset.recipe));
+    setSelectedPresetKey(preset.presetKey);
+    setError("");
+    setMessage(`${preset.name} is ready as a local draft. Save it before publishing.`);
   }
 
   async function saveTheme() {
@@ -265,8 +285,8 @@ function AppearanceEditor({
         draftId: workspace.draft._id,
         expectedRevision: draftRevision,
         name,
-        source: "custom",
-        presetKey: null,
+        source: selectedPresetKey === null ? "custom" : "preset",
+        presetKey: selectedPresetKey,
         recipe,
       });
       if (!result.ok) {
@@ -279,6 +299,7 @@ function AppearanceEditor({
       setRecipe(normalizedRecipe);
       setSavedName(normalizedName);
       setSavedRecipe(normalizedRecipe);
+      setSavedPresetKey(selectedPresetKey);
       setDraftRevision(result.revision);
       setMessage(result.validation.ok
         ? `Draft revision ${result.revision} saved.`
@@ -374,6 +395,43 @@ function AppearanceEditor({
           </div>
         }
       >
+        <div className={styles.themePresetSection}>
+          <div className={styles.themePresetIntro}>
+            <div>
+              <strong>Colour schemes</strong>
+              <span>Choose a complete light and dark recipe, then fine-tune any anchor below.</span>
+            </div>
+            <AdminStatus tone="neutral">{presets.length} schemes</AdminStatus>
+          </div>
+          <div className={styles.themePresetRail} role="group" aria-label="Colour schemes">
+            {presets.map((preset) => {
+              const active = selectedPresetKey === preset.presetKey;
+              return (
+                <button
+                  key={preset.presetKey}
+                  type="button"
+                  className={styles.themePresetCard}
+                  data-active={active}
+                  aria-pressed={active}
+                  onClick={() => applyPreset(preset)}
+                >
+                  <span className={styles.themePresetSwatches} aria-hidden>
+                    <i style={colourStyle(preset.recipe.light.canvas)} />
+                    <i style={colourStyle(preset.recipe.light.identity)} />
+                    <i style={colourStyle(preset.recipe.light.response)} />
+                    <i style={colourStyle(preset.recipe.dark.canvas)} />
+                  </span>
+                  <span className={styles.themePresetCopy}>
+                    <strong>{preset.name}</strong>
+                    <small>{preset.description}</small>
+                  </span>
+                  {active ? <CheckCircleIcon aria-hidden width={20} height={20} /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className={styles.appearanceWorkspace}>
           <div className={styles.themeControls} id="theme-controls">
             <label className={styles.field}>
@@ -452,6 +510,7 @@ function AppearanceEditor({
               onClick={() => {
                 setName(savedName);
                 setRecipe(copyRecipe(savedRecipe));
+                setSelectedPresetKey(savedPresetKey);
                 setError("");
                 setMessage("Local changes discarded.");
               }}

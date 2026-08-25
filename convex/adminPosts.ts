@@ -460,19 +460,68 @@ export const archive = mutation({
     if (post === null) {
       throw new Error("Journal post was not found.");
     }
+    if (post.status === "archived") {
+      throw new Error("Journal story is already archived.");
+    }
+    const previousStatus = post.status;
+    const now = Date.now();
     await ctx.db.patch("posts", post._id, {
       status: "archived",
       updatedBy: actor._id,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
     await writeAuditEvent(ctx, {
       area: "journal",
       action: "archive",
       resourceType: "post",
       resourceId: post._id,
-      summary: `${post.title} archived`,
+      summary: `${post.title} archived from ${previousStatus}`,
       actorId: actor._id,
     });
     return null;
+  },
+});
+
+export const restore = mutation({
+  args: { postId: v.id("posts") },
+  returns: v.object({
+    status: v.union(v.literal("draft"), v.literal("published")),
+  }),
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, "journal:publish");
+    const post = await ctx.db.get("posts", args.postId);
+    if (post === null) {
+      throw new Error("Journal post was not found.");
+    }
+    if (post.status !== "archived") {
+      throw new Error("Only archived journal stories can be restored.");
+    }
+
+    const publishedRevision =
+      post.publishedRevisionId === undefined
+        ? null
+        : await ctx.db.get("postRevisions", post.publishedRevisionId);
+    const status =
+      publishedRevision !== null &&
+      publishedRevision.postId === post._id &&
+      post.publishedAt !== undefined
+        ? ("published" as const)
+        : ("draft" as const);
+    const now = Date.now();
+
+    await ctx.db.patch("posts", post._id, {
+      status,
+      updatedBy: actor._id,
+      updatedAt: now,
+    });
+    await writeAuditEvent(ctx, {
+      area: "journal",
+      action: "restore",
+      resourceType: "post",
+      resourceId: post._id,
+      summary: `${post.title} restored to ${status}`,
+      actorId: actor._id,
+    });
+    return { status };
   },
 });

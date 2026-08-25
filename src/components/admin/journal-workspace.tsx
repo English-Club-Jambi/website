@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  AdjustmentsHorizontalIcon,
   ArchiveBoxIcon,
   ArrowLeftIcon,
   CheckCircleIcon,
+  ChevronDownIcon,
   ClockIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
@@ -26,7 +28,6 @@ import {
   AdminEmpty,
   AdminError,
   AdminLoadingRows,
-  AdminPageHeading,
   AdminSection,
   AdminStatus,
   formatAdminDate,
@@ -241,116 +242,154 @@ function JournalWorkspaceEditor({
 
   return (
     <>
-      <Link className={styles.backLink} href="/admin/journal">
-        <ArrowLeftIcon aria-hidden width={18} height={18} />
-        Journal archive
-      </Link>
-      <AdminPageHeading
-        title={typedPostId === undefined ? "Write a new story" : form.title || "Edit story"}
-        description="The editor stores an allowlisted document structure. Images remain verified media references, never pasted HTML."
-        actions={
+      <header className={styles.storyWorkspaceHeader}>
+        <div>
+          <Link className={styles.backLink} href="/admin/journal">
+            <ArrowLeftIcon aria-hidden width={18} height={18} />
+            Journal archive
+          </Link>
+          <h1>{typedPostId === undefined ? "New story" : "Edit story"}</h1>
+        </div>
+        <div className={styles.storyWorkspaceState}>
           <AdminStatus tone={workspace?.post.status === "published" ? "success" : "warning"}>
             {workspace?.post.status ?? "New draft"}
           </AdminStatus>
-        }
-      />
+          <span>{editorChange.wordCount} {editorChange.wordCount === 1 ? "word" : "words"}</span>
+        </div>
+      </header>
 
-      <form onSubmit={handleSave}>
-        <AdminSection title="Story details" description="These fields shape the public journal listing and page address.">
-          <div className={styles.formGridWide}>
-            <label className={`${styles.field} ${styles.spanEight}`}>
-              <span>Title</span>
-              <input
-                value={form.title}
-                minLength={5}
-                maxLength={180}
-                required
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              />
-            </label>
-            <label className={`${styles.field} ${styles.spanFour}`}>
-              <span>URL slug</span>
-              <input
-                value={form.slug}
-                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-                minLength={3}
-                maxLength={96}
-                placeholder="a-room-made-for-trying-again"
-                required
-                onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))}
-              />
-            </label>
-            <label className={`${styles.field} ${styles.spanFull}`}>
-              <span>Excerpt</span>
-              <textarea
-                value={form.excerpt}
-                minLength={20}
-                maxLength={360}
-                required
-                onChange={(event) => setForm((current) => ({ ...current, excerpt: event.target.value }))}
-              />
-            </label>
-            <label className={`${styles.field} ${styles.spanFour}`}>
-              <span>Category</span>
-              <input
-                value={form.category}
-                minLength={2}
-                maxLength={80}
-                required
-                onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-              />
-            </label>
-            <label className={`${styles.field} ${styles.spanFour}`}>
-              <span>Author name</span>
-              <input
-                value={form.authorName}
-                minLength={2}
-                maxLength={100}
-                required
-                onChange={(event) => setForm((current) => ({ ...current, authorName: event.target.value }))}
-              />
-            </label>
-            <label className={`${styles.checkbox} ${styles.spanFour}`}>
-              <input
-                type="checkbox"
-                checked={form.featured}
-                onChange={(event) => setForm((current) => ({ ...current, featured: event.target.checked }))}
-              />
-              Feature this story in journal selections
-            </label>
-          </div>
-        </AdminSection>
-
-        <AdminSection
-          title="Story body"
-          description="Use headings, lists, quotes, links, reviewed images, and coordinate-based map notes."
-          actions={<AdminStatus>{editorChange.wordCount} words</AdminStatus>}
-        >
-          <div className={styles.editorFrame}>
-            <RichJournalEditor
-              key={loadedDraft?._id ?? workspace?.published?._id ?? "new-story"}
-              initialContent={editorInitialContent}
-              mediaUrlsById={mediaUrlsById}
-              disabled={pending !== null}
-              onChange={setEditorChange}
-              onImageUpload={async (file, metadata) => {
-                const uploaded = await uploadMedia({
-                  file,
-                  alt: metadata.alt,
-                  purpose: "journal-inline",
-                });
-                return {
-                  mediaId: uploaded.mediaId,
-                  publicUrl: uploaded.publicUrl,
-                  width: uploaded.width,
-                  height: uploaded.height,
-                };
-              }}
+      <form className={styles.storyComposer} onSubmit={handleSave}>
+        <section className={styles.storyLead} aria-label="Story introduction">
+          <label className={styles.storyTitleField}>
+            <span>Story title</span>
+            <textarea
+              rows={1}
+              value={form.title}
+              minLength={5}
+              maxLength={180}
+              placeholder="Give the story a title"
+              required
+              onChange={(event) =>
+                setForm((current) => ({ ...current, title: event.target.value }))
+              }
             />
-          </div>
-        </AdminSection>
+          </label>
+          <label className={styles.storyExcerptField}>
+            <span>Standfirst</span>
+            <textarea
+              rows={2}
+              value={form.excerpt}
+              minLength={20}
+              maxLength={360}
+              placeholder="Set up the story in one or two clear sentences."
+              required
+              onChange={(event) =>
+                setForm((current) => ({ ...current, excerpt: event.target.value }))
+              }
+            />
+          </label>
 
-        {error ? <AdminError>{error}</AdminError> : null}
+          <div className={styles.storyByline} aria-label="Current story details">
+            <span>{form.category}</span>
+            <span>{form.authorName}</span>
+          </div>
+
+          <details className={styles.storySettings}>
+            <summary>
+              <AdjustmentsHorizontalIcon aria-hidden width={20} height={20} />
+              <span>
+                <strong>Story settings</strong>
+                <small>Address, byline, category, and journal placement</small>
+              </span>
+              <ChevronDownIcon className={styles.storySettingsChevron} aria-hidden width={18} height={18} />
+            </summary>
+            <div className={styles.storySettingsGrid}>
+              <label className={styles.field}>
+                <span>URL slug</span>
+                <input
+                  value={form.slug}
+                  pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                  minLength={3}
+                  maxLength={96}
+                  placeholder="a-room-made-for-trying-again"
+                  required
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      slug: event.target.value.toLowerCase(),
+                    }))
+                  }
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Category</span>
+                <input
+                  value={form.category}
+                  minLength={2}
+                  maxLength={80}
+                  required
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, category: event.target.value }))
+                  }
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Author name</span>
+                <input
+                  value={form.authorName}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, authorName: event.target.value }))
+                  }
+                />
+              </label>
+              <label className={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={form.featured}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, featured: event.target.checked }))
+                  }
+                />
+                Feature this story in journal selections
+              </label>
+            </div>
+          </details>
+        </section>
+
+        <section className={styles.storyBodySection} aria-labelledby="story-body-heading">
+          <header className={styles.storyBodyHeader}>
+            <div>
+              <span>Story body</span>
+              <h2 id="story-body-heading">Write on the page</h2>
+            </div>
+            <p>Type <kbd>/</kbd> on an empty line, or use the handle beside a block.</p>
+          </header>
+          <RichJournalEditor
+            key={loadedDraft?._id ?? workspace?.published?._id ?? "new-story"}
+            initialContent={editorInitialContent}
+            mediaUrlsById={mediaUrlsById}
+            disabled={pending !== null}
+            onChange={setEditorChange}
+            onImageUpload={async (file, metadata) => {
+              const uploaded = await uploadMedia({
+                file,
+                alt: metadata.alt,
+                purpose: "journal-inline",
+              });
+              return {
+                mediaId: uploaded.mediaId,
+                publicUrl: uploaded.publicUrl,
+                width: uploaded.width,
+                height: uploaded.height,
+              };
+            }}
+          />
+        </section>
+
+        {error ? <div className={styles.storyComposerMessage}><AdminError>{error}</AdminError></div> : null}
         <div className={styles.editorActionBar}>
           <div>
             <ClockIcon aria-hidden width={18} height={18} />

@@ -12,6 +12,7 @@ import {
 } from "../../content/theme-contract";
 import {
   DEFAULT_PUBLIC_THEME_RECIPE,
+  PUBLIC_THEME_PRESET_CATALOG,
   getPublicThemePreset,
 } from "../../content/theme-presets";
 
@@ -33,6 +34,16 @@ describe("public theme contract", () => {
       PUBLIC_THEME_TOKEN_KEYS,
     );
   });
+
+  it.each(PUBLIC_THEME_PRESET_CATALOG)(
+    "keeps $name within the publishable theme contract",
+    ({ recipe }) => {
+      const result = validateThemeRecipe(recipe);
+
+      expect(result.ok).toBe(true);
+      expect(result.blocking).toEqual([]);
+    },
+  );
 
   it("normalizes hue and maps high-chroma anchors into the sRGB gamut", () => {
     const input = structuredClone(DEFAULT_PUBLIC_THEME_RECIPE);

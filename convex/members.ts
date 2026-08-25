@@ -15,6 +15,7 @@ import {
   memberPhotoValidator,
   memberPositionValidator,
   memberProfileStatusValidator,
+  memberRecordOriginValidator,
   memberRoleLevelValidator,
   publicMemberValidator,
 } from "./validators";
@@ -167,6 +168,8 @@ export const upsertReviewed = internalMutation({
     profileStatus: memberProfileStatusValidator,
     profileConsentStatus: memberConsentStatusValidator,
     photoConsentStatus: memberConsentStatusValidator,
+    recordOrigin: v.optional(memberRecordOriginValidator),
+    seedBatch: v.optional(v.union(v.string(), v.null())),
     sortOrder: v.number(),
   },
   returns: v.id("members"),
@@ -219,6 +222,10 @@ export const upsertReviewed = internalMutation({
         : args.joinedYear === null
           ? undefined
           : args.joinedYear;
+    const nextSeedBatch =
+      args.seedBatch === null
+        ? undefined
+        : args.seedBatch ?? existing?.seedBatch;
     const record = {
       slug,
       displayName,
@@ -247,6 +254,8 @@ export const upsertReviewed = internalMutation({
         existing === null || existing.photoConsentStatus !== args.photoConsentStatus
           ? now
           : existing.photoConsentUpdatedAt,
+      recordOrigin: args.recordOrigin ?? existing?.recordOrigin ?? "reviewed",
+      ...(nextSeedBatch === undefined ? {} : { seedBatch: nextSeedBatch }),
       sortOrder: args.sortOrder,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,

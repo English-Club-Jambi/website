@@ -74,6 +74,14 @@ const eventViewValidator = v.object({
   createdAt: v.number(),
 });
 
+const presetViewValidator = v.object({
+  presetKey: v.string(),
+  name: v.string(),
+  description: v.string(),
+  recipe: themeRecipeValidator,
+  updatedAt: v.number(),
+});
+
 function cleanLine(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -220,6 +228,30 @@ export const getWorkspace = query({
           ? null
           : toValidationView(validateThemeRecipe(draft.recipe)),
     };
+  },
+});
+
+export const listPresets = query({
+  args: {},
+  returns: v.array(presetViewValidator),
+  handler: async (ctx) => {
+    await requireAdmin(ctx, "theme:read");
+    const rows = await ctx.db
+      .query("publicThemePresets")
+      .withIndex("by_site_key_and_preset_key", (q) =>
+        q.eq("siteKey", "public"),
+      )
+      .take(13);
+    if (rows.length > 12) {
+      throw new Error("Theme preset catalogue is too large.");
+    }
+    return rows.map((row) => ({
+      presetKey: row.presetKey,
+      name: row.name,
+      description: row.description,
+      recipe: row.recipe,
+      updatedAt: row.updatedAt,
+    }));
   },
 });
 

@@ -48,20 +48,13 @@ import {
   type MemberJoinedYearSelection,
 } from "@/content/member-filters";
 import {
-  getMemberRosterMode,
-  isShowcaseMember,
-  memberShowcase,
-  memberShowcasePortraitObjectKey,
-  type ShowcaseMember,
-} from "@/content/member-showcase";
-import type {
-  MemberDirectoryResult,
-  PublicMember,
+  type MemberDirectoryResult,
+  type PublicMember,
 } from "@/lib/members";
 
 import styles from "./member-relay.module.css";
 
-type DisplayMember = PublicMember | ShowcaseMember;
+type DisplayMember = PublicMember;
 
 const roleIcons = {
   0: ChatBubbleLeftRightIcon,
@@ -80,24 +73,6 @@ const memberCardRoleLabels = {
 } as const;
 
 function MemberIdentity({ member }: { member: DisplayMember }) {
-  if (isShowcaseMember(member)) {
-    return (
-      <span
-        className={styles.showcasePortrait}
-        style={
-          {
-            "--portrait-image": `url("${resolveMediaUrl(
-              memberShowcasePortraitObjectKey,
-            )}")`,
-            "--portrait-column": member.portraitCell.column,
-            "--portrait-row": member.portraitCell.row,
-          } as CSSProperties
-        }
-        aria-hidden
-      />
-    );
-  }
-
   if (member.photo === undefined) {
     return (
       <span className={styles.memberMonogram} aria-hidden>
@@ -130,7 +105,6 @@ function MemberCard({
 }) {
   const subtype = getMemberSubtypeLabel(member);
   const RoleIcon = roleIcons[member.roleLevel];
-  const showcase = isShowcaseMember(member);
   const assignmentFallback = {
     0: copy.memberActivityFallback,
     1: copy.pioneerActivityFallback,
@@ -143,7 +117,6 @@ function MemberCard({
     <li
       className={styles.memberCard}
       style={{ "--member-index": index } as CSSProperties}
-      data-showcase={showcase}
       data-role={member.roleLevel}
     >
       <article>
@@ -187,11 +160,7 @@ export function MemberRelay({
   directory: MemberDirectoryResult;
   copy: PublicContentFor<"members">;
 }) {
-  const rosterMode = getMemberRosterMode(directory);
-  const showcaseMode = rosterMode === "showcase";
-  const rosterMembers: ReadonlyArray<DisplayMember> = showcaseMode
-    ? memberShowcase
-    : directory.members;
+  const rosterMembers: ReadonlyArray<DisplayMember> = directory.members;
   const memberRoleFilterOptions: ReadonlyArray<SelectFieldOption> = [
     { value: "all", label: copy.allRoles },
     ...memberRoleDefinitions.map((role) => ({
@@ -555,7 +524,7 @@ export function MemberRelay({
               className={styles.memberGrid}
               key={`${filters.role}-${filters.assignment}-${filters.joinedYear}`}
               data-member-roster
-              data-roster-source={showcaseMode ? "showcase" : "convex"}
+              data-roster-source="convex"
             >
               {filteredMembers.map((member, index) => (
                 <MemberCard

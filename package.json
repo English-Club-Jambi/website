@@ -23,6 +23,7 @@
     "r2:check": "convex run r2:checkConnection '{}'",
     "r2:upload-reviewed": "node scripts/r2-upload-reviewed.mjs",
     "practice:seed": "node --experimental-strip-types --env-file=.env.local scripts/seed-ibt-practice.ts",
+    "data:seed:dev": "npm run practice:seed && node --experimental-strip-types --env-file=.env.local scripts/seed-development-data.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
@@ -33,6 +34,8 @@
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-select": "^2.3.7",
     "@tiptap/core": "^3.30.3",
+    "@tiptap/extension-drag-handle": "^3.30.3",
+    "@tiptap/extension-drag-handle-react": "^3.30.3",
     "@tiptap/extension-image": "^3.30.3",
     "@tiptap/extension-link": "^3.30.3",
     "@tiptap/extension-placeholder": "^3.30.3",

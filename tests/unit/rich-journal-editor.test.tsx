@@ -1,9 +1,17 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FormEvent } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { RichJournalEditor } from "@/components/admin/editor/rich-journal-editor";
+import { validateEditorDocument } from "../../convex/lib/editorDocument";
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -50,6 +58,13 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe("RichJournalEditor", () => {
+  async function openBlockMenu(user: ReturnType<typeof userEvent.setup>) {
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+    await user.type(editor, "/");
+    return await screen.findByRole("menu", { name: "Add a block" });
+  }
+
   it("exposes a labelled editor and reports structured changes", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -69,13 +84,38 @@ describe("RichJournalEditor", () => {
     );
   });
 
+  it("normalizes empty Tiptap text blocks for the Convex document contract", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RichJournalEditor onChange={onChange} />);
+
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+    await user.type(editor, "x");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      const document = onChange.mock.calls.at(-1)?.[0]?.document;
+      expect(document?.content?.at(-1)).toEqual({ type: "paragraph", content: [] });
+      expect(() => validateEditorDocument(JSON.stringify(document))).not.toThrow();
+    });
+    expect(() =>
+      validateEditorDocument(
+        JSON.stringify({
+          type: "doc",
+          content: [{ type: "heading", attrs: { level: 2 } }],
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   it("inserts a bounded map node without accepting embed HTML", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<RichJournalEditor onChange={onChange} />);
-    await screen.findByRole("textbox", { name: "Journal body" });
+    await openBlockMenu(user);
 
-    await user.click(screen.getByRole("button", { name: "Add map" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Map/ }));
     await user.type(screen.getByRole("textbox", { name: "Place name" }), "UPA Language Room");
     await user.type(screen.getByRole("spinbutton", { name: "Latitude" }), "-6.20000");
     await user.type(screen.getByRole("spinbutton", { name: "Longitude" }), "106.81667");
@@ -105,9 +145,9 @@ describe("RichJournalEditor", () => {
       publicUrl: "https://r2.mukhtada.my.id/journal/2026/room-listening-v1.webp",
     });
     render(<RichJournalEditor onChange={onChange} onImageUpload={onImageUpload} />);
-    await screen.findByRole("textbox", { name: "Journal body" });
+    await openBlockMenu(user);
 
-    await user.click(screen.getByRole("button", { name: "Add image" }));
+    await user.click(screen.getByRole("menuitem", { name: /^Image/ }));
     const file = new File([new Uint8Array([1, 2, 3])], "room.webp", {
       type: "image/webp",
     });
@@ -164,8 +204,8 @@ describe("RichJournalEditor", () => {
     });
 
     render(<RichJournalEditor onImageUpload={onImageUpload} />);
-    await screen.findByRole("textbox", { name: "Journal body" });
-    await user.click(screen.getByRole("button", { name: "Add image" }));
+    await openBlockMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: /^Image/ }));
     await user.upload(
       screen.getByLabelText("Image file"),
       new File([new Uint8Array([1, 2, 3])], "touch-gate.webp", {
@@ -188,18 +228,122 @@ describe("RichJournalEditor", () => {
     ).toBeVisible();
   });
 
+  it("does not insert an upload that finishes after the editor becomes disabled", async () => {
+    const user = userEvent.setup();
+    let releaseUpload: (() => void) | undefined;
+    const uploadGate = new Promise<void>((resolve) => {
+      releaseUpload = resolve;
+    });
+    const onImageUpload = vi.fn(async () => {
+      await uploadGate;
+      return {
+        mediaId: "media_after_save_gate",
+        publicUrl: "https://r2.mukhtada.my.id/journal/2026/after-save.webp",
+      };
+    });
+    const view = render(<RichJournalEditor onImageUpload={onImageUpload} />);
+    await openBlockMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: /^Image/ }));
+    await user.upload(
+      screen.getByLabelText("Image file"),
+      new File([new Uint8Array([1, 2, 3])], "after-save.webp", {
+        type: "image/webp",
+      }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Alternative text" }),
+      "Members sharing one discussion table",
+    );
+    await user.click(screen.getByRole("button", { name: "Upload and insert" }));
+    await waitFor(() => expect(onImageUpload).toHaveBeenCalledTimes(1));
+
+    view.rerender(
+      <RichJournalEditor onImageUpload={onImageUpload} disabled />,
+    );
+    releaseUpload?.();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByAltText("Members sharing one discussion table"),
+      ).toBeNull(),
+    );
+    expect(screen.queryByRole("group", { name: "Add an image" })).toBeNull();
+  });
+
   it("rejects insecure editorial links", async () => {
     const user = userEvent.setup();
     render(<RichJournalEditor />);
-    await screen.findByRole("textbox", { name: "Journal body" });
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+    await user.type(editor, "Editorial link");
+    await user.keyboard("{Control>}a{/Control}");
 
-    await user.click(screen.getByRole("button", { name: "Link" }));
+    await user.click(
+      within(
+        screen.getByRole("toolbar", { name: "Current block controls" }),
+      ).getByRole("button", { name: "Link" }),
+    );
     await user.type(screen.getByRole("textbox", { name: "Destination" }), "http://example.com");
     await user.click(screen.getByRole("button", { name: "Apply link" }));
 
     expect(
       screen.getByText("Use an HTTPS address or an email link.")
     ).toHaveAttribute("role", "alert");
+  });
+
+  it("does not create a future link mark from a collapsed caret", async () => {
+    const user = userEvent.setup();
+    render(<RichJournalEditor />);
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+
+    expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
+  });
+
+  it("drops remote pasted images and unsafe pasted link marks", async () => {
+    const user = userEvent.setup();
+    render(<RichJournalEditor />);
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+
+    fireEvent.paste(editor, {
+      clipboardData: {
+        types: ["text/html", "text/plain"],
+        getData: (type: string) =>
+          type === "text/html"
+            ? '<p><img src="https://tracker.example/pixel.gif" alt="tracker"><a href="http://example.com">unsafe</a></p>'
+            : "unsafe",
+      },
+    });
+
+    await waitFor(() => expect(editor).toHaveTextContent("unsafe"));
+    expect(editor.querySelector("img")).toBeNull();
+    expect(editor.querySelector("a")).toBeNull();
+    expect(document.body.innerHTML).not.toContain("tracker.example");
+  });
+
+  it("never renders an unapproved image source from initial JSON", async () => {
+    render(
+      <RichJournalEditor
+        initialContent={{
+          type: "doc",
+          content: [
+            {
+              type: "image",
+              attrs: {
+                mediaId: "media_remote_tracker",
+                alt: "Remote tracking image",
+                src: "https://tracker.example/pixel.gif",
+              },
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(await screen.findByRole("img", { name: "Remote tracking image" })).toBeVisible();
+    expect(document.querySelector("img")).toBeNull();
+    expect(document.body.innerHTML).not.toContain("tracker.example");
   });
 
   it("keeps insertion panels valid inside the story form and contains Enter", async () => {
@@ -213,9 +357,16 @@ describe("RichJournalEditor", () => {
         <RichJournalEditor />
       </form>,
     );
-    await screen.findByRole("textbox", { name: "Journal body" });
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+    await user.type(editor, "Editorial link");
+    await user.keyboard("{Control>}a{/Control}");
 
-    await user.click(screen.getByRole("button", { name: "Link" }));
+    await user.click(
+      within(
+        screen.getByRole("toolbar", { name: "Current block controls" }),
+      ).getByRole("button", { name: "Link" }),
+    );
     const panel = screen.getByRole("group", { name: "Add a link" });
     expect(panel.tagName).toBe("DIV");
     expect(panel.querySelector("form")).toBeNull();
@@ -234,13 +385,89 @@ describe("RichJournalEditor", () => {
   });
 
   it("offers only the heading levels accepted by the journal backend", async () => {
+    const user = userEvent.setup();
     render(<RichJournalEditor />);
-    await screen.findByRole("textbox", { name: "Journal body" });
+    await openBlockMenu(user);
 
-    expect(screen.getByRole("button", { name: "Heading 2" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Heading 3" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "Heading 1" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Code block" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Divider" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: /^Heading 2/ })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: /^Heading 3/ })).toBeEnabled();
+    expect(screen.queryByRole("menuitem", { name: /^Heading 1/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /^Code block/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /^Divider/ })).toBeNull();
+  });
+
+  it("opens block tools with slash without inserting a literal slash", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RichJournalEditor onChange={onChange} />);
+
+    const menu = await openBlockMenu(user);
+    expect(menu).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Journal body" })).not.toHaveTextContent("/");
+
+    const firstCommand = screen.getByRole("menuitem", { name: /^Paragraph/ });
+    expect(firstCommand).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: /^Heading 2/ })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu", { name: "Add a block" })).toBeNull();
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Journal body" })).toHaveFocus(),
+    );
+    expect(onChange).not.toHaveBeenCalledWith(
+      expect.objectContaining({ plainText: "/" }),
+    );
+  });
+
+  it("keeps the block menu open while its own command list scrolls", async () => {
+    const user = userEvent.setup();
+    const menu = await (async () => {
+      render(<RichJournalEditor />);
+      return await openBlockMenu(user);
+    })();
+
+    fireEvent.scroll(menu);
+    expect(screen.getByRole("menu", { name: "Add a block" })).toBeVisible();
+  });
+
+  it("ignores slash input while an IME composition is active", async () => {
+    const user = userEvent.setup();
+    render(<RichJournalEditor />);
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+
+    fireEvent.keyDown(editor, { key: "/", isComposing: true });
+    expect(screen.queryByRole("menu", { name: "Add a block" })).toBeNull();
+  });
+
+  it("returns focus to the page after closing an inspector", async () => {
+    const user = userEvent.setup();
+    render(<RichJournalEditor />);
+    const editor = await screen.findByRole("textbox", { name: "Journal body" });
+    await user.click(editor);
+    await user.type(editor, "A linked phrase");
+    await user.keyboard("{Control>}a{/Control}");
+    await user.click(
+      within(
+        screen.getByRole("toolbar", { name: "Current block controls" }),
+      ).getByRole("button", { name: "Link" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Close link panel" }));
+
+    await waitFor(() => expect(editor).toHaveFocus());
+  });
+
+  it("requires explicit map coordinates instead of treating blank fields as zero", async () => {
+    const user = userEvent.setup();
+    render(<RichJournalEditor />);
+    await openBlockMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: /^Map/ }));
+    await user.type(screen.getByRole("textbox", { name: "Place name" }), "Language Room");
+    await user.click(screen.getByRole("button", { name: "Insert map" }));
+
+    expect(
+      screen.getByText("Add a place name, valid coordinates, and a zoom level from 1 to 20."),
+    ).toHaveAttribute("role", "alert");
+    expect(document.querySelector("[data-map-embed]")).toBeNull();
   });
 });

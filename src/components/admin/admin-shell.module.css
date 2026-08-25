@@ -1277,6 +1277,272 @@
   gap: 0.55rem;
 }
 
+.storyWorkspaceHeader {
+  width: min(100%, 62rem);
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 0 auto;
+  border-bottom: 2px solid var(--admin-line);
+  padding-bottom: 1rem;
+}
+
+.storyWorkspaceHeader > div:first-child {
+  min-width: 0;
+}
+
+.storyWorkspaceHeader h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 790;
+  letter-spacing: -0.015em;
+}
+
+.storyWorkspaceHeader .backLink {
+  margin-bottom: 0.35rem;
+}
+
+.storyWorkspaceState {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.storyWorkspaceState > span:last-child {
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.storyComposer {
+  min-width: 0;
+}
+
+.storyLead {
+  width: min(100%, 50rem);
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(2.75rem, 7vw, 6rem) 1.25rem clamp(2.5rem, 5vw, 4rem);
+}
+
+.storyTitleField,
+.storyExcerptField {
+  min-width: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.storyTitleField > span,
+.storyExcerptField > span {
+  color: var(--admin-cobalt-dark);
+  font-size: 0.7rem;
+  font-weight: 790;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.storyTitleField textarea,
+.storyExcerptField textarea {
+  width: 100%;
+  min-width: 0;
+  field-sizing: content;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--admin-ink);
+  font: inherit;
+  resize: none;
+}
+
+.storyTitleField textarea {
+  min-height: 1.9em;
+  font-size: clamp(2.8rem, 6vw, 5.7rem);
+  font-weight: 790;
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  text-wrap: pretty;
+}
+
+.storyExcerptField {
+  margin-top: 1.65rem;
+}
+
+.storyExcerptField textarea {
+  min-height: 3.1em;
+  color: var(--admin-muted);
+  font-size: clamp(1.05rem, 1.8vw, 1.32rem);
+  line-height: 1.55;
+}
+
+.storyTitleField textarea::placeholder,
+.storyExcerptField textarea::placeholder {
+  color: color-mix(in oklch, var(--admin-muted) 62%, transparent);
+  opacity: 1;
+}
+
+.storyTitleField textarea:focus-visible,
+.storyExcerptField textarea:focus-visible {
+  outline: 0;
+  box-shadow: 0 3px 0 -1px var(--admin-cobalt);
+}
+
+.storyByline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+}
+
+.storyByline span + span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.storyByline span + span::before {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--admin-orange);
+  content: "";
+}
+
+.storySettings {
+  margin-top: 2rem;
+  border-block: 1px solid var(--admin-soft-line);
+}
+
+.storySettings summary {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--admin-ink);
+  cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+}
+
+.storySettings summary::-webkit-details-marker {
+  display: none;
+}
+
+.storySettings summary > svg:first-child {
+  color: var(--admin-cobalt-dark);
+}
+
+.storySettings summary > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.storySettings summary strong {
+  font-size: 0.82rem;
+}
+
+.storySettings summary small {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  font-weight: 520;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storySettingsChevron {
+  transition: transform 180ms var(--admin-ease);
+}
+
+.storySettings[open] .storySettingsChevron {
+  transform: rotate(180deg);
+}
+
+.storySettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  border-top: 1px solid var(--admin-soft-line);
+  padding: 1.25rem 0;
+}
+
+.storySettingsGrid .checkbox {
+  align-self: end;
+}
+
+.storyBodySection {
+  min-width: 0;
+  border-top: 2px solid var(--admin-line);
+  background: var(--admin-paper);
+}
+
+.storyBodyHeader {
+  width: min(100%, 50rem);
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-inline: auto;
+  padding: 2rem 1.25rem 1rem;
+}
+
+.storyBodyHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.storyBodyHeader span {
+  color: var(--admin-cobalt-dark);
+  font-size: 0.68rem;
+  font-weight: 790;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.storyBodyHeader h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  font-weight: 780;
+  letter-spacing: -0.035em;
+}
+
+.storyBodyHeader p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.storyBodyHeader kbd {
+  min-width: 1.35rem;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--admin-soft-line);
+  border-radius: 5px;
+  padding-inline: 0.25rem;
+  background: var(--admin-cobalt-wash);
+  color: var(--admin-ink);
+  font: inherit;
+  font-weight: 760;
+}
+
+.storyComposerMessage {
+  width: min(100%, 62rem);
+  margin: 1rem auto 0;
+}
+
 .backLink {
   width: fit-content;
   min-height: 44px;
@@ -1299,11 +1565,12 @@
   position: sticky;
   z-index: 20;
   bottom: 0;
+  width: min(100%, 62rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin: 0 0 2rem;
+  margin: 1rem auto 2rem;
   border: 2px solid var(--admin-line);
   border-radius: var(--admin-radius);
   padding: 0.75rem;
@@ -1576,6 +1843,123 @@
 .segmentedControl button[data-active="true"] {
   background: var(--admin-cobalt);
   color: oklch(0.99 0.004 268);
+}
+
+.themePresetSection {
+  min-width: 0;
+  display: grid;
+  gap: 0.8rem;
+  border-bottom: 2px solid var(--admin-line);
+  padding: 1rem 1.15rem 1.15rem;
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 52%, var(--admin-paper));
+}
+
+.themePresetIntro {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.themePresetIntro > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.themePresetIntro strong {
+  font-size: 0.9rem;
+}
+
+.themePresetIntro span {
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.themePresetRail {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-small);
+  background: var(--admin-paper);
+  box-shadow: 3px 3px 0 var(--admin-line);
+  overflow: hidden;
+}
+
+.themePresetCard {
+  min-width: 0;
+  min-height: 9.5rem;
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  border: 0;
+  border-right: 1px solid var(--admin-soft-line);
+  padding: 0.85rem;
+  background: var(--admin-paper);
+  color: var(--admin-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--admin-ease),
+    box-shadow 160ms var(--admin-ease);
+}
+
+.themePresetCard:last-child {
+  border-right: 0;
+}
+
+.themePresetCard:hover,
+.themePresetCard[data-active="true"] {
+  background: var(--admin-cobalt-wash);
+}
+
+.themePresetCard[data-active="true"] {
+  box-shadow: inset 0 -4px 0 var(--admin-cobalt);
+}
+
+.themePresetCard > svg {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  border-radius: 999px;
+  background: var(--admin-paper);
+  color: var(--admin-cobalt-dark);
+}
+
+.themePresetSwatches {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 0.7fr;
+  height: 3.2rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.themePresetSwatches i {
+  display: block;
+}
+
+.themePresetCopy {
+  min-width: 0;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.themePresetCopy strong {
+  padding-right: 1.5rem;
+  font-size: 0.82rem;
+}
+
+.themePresetCopy small {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
 }
 
 .appearanceWorkspace {
@@ -1984,6 +2368,18 @@
 }
 
 @media (max-width: 1180px) {
+  .themePresetRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .themePresetCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .themePresetCard:nth-child(n + 3) {
+    border-top: 1px solid var(--admin-soft-line);
+  }
+
   .appearanceWorkspace {
     grid-template-columns: 1fr;
   }
@@ -1995,6 +2391,10 @@
 }
 
 @media (max-width: 720px) {
+  .themePresetIntro {
+    align-items: start;
+  }
+
   .contentEditorHead {
     display: grid;
     align-items: start;
@@ -2224,6 +2624,58 @@
     grid-column: 1;
   }
 
+  .storyWorkspaceHeader {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .storyWorkspaceHeader .backLink {
+    min-height: 40px;
+    margin-bottom: 0.1rem;
+  }
+
+  .storyWorkspaceState {
+    display: grid;
+    justify-items: end;
+    gap: 0.3rem;
+  }
+
+  .storyLead {
+    padding: 2.5rem 0 2.75rem;
+  }
+
+  .storyTitleField textarea {
+    min-height: 2.35em;
+    font-size: clamp(2.55rem, 14vw, 4rem);
+  }
+
+  .storyExcerptField textarea {
+    font-size: 1.05rem;
+  }
+
+  .storySettings summary small {
+    white-space: normal;
+  }
+
+  .storySettingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .storyBodySection {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+
+  .storyBodyHeader {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1.5rem 0 0.85rem;
+  }
+
+  .storyBodyHeader p {
+    text-align: left;
+  }
+
   .editorFrame {
     padding: 0.6rem;
   }
@@ -2290,6 +2742,11 @@
     padding-inline: 0.75rem;
   }
 
+  .storyBodySection {
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+  }
+
   .adminSection,
   .accessPanel,
   .configurationNotice {
@@ -2303,8 +2760,22 @@
 
   .themeControls,
   .themePreviewColumn,
+  .themePresetSection,
   .publishStrip {
     padding-inline: 0.75rem;
+  }
+
+  .themePresetRail {
+    grid-template-columns: 1fr;
+  }
+
+  .themePresetCard,
+  .themePresetCard:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .themePresetCard:nth-child(n + 2) {
+    border-top: 1px solid var(--admin-soft-line);
   }
 
   .channelGrid {

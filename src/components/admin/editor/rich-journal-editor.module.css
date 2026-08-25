@@ -1,132 +1,427 @@
-.editorShell {
-  --admin-editor-page: var(--admin-page, oklch(0.965 0.012 265));
-  --admin-editor-surface: var(--admin-surface, oklch(1 0 0));
-  --admin-editor-quiet: var(--admin-surface-quiet, oklch(0.93 0.018 265));
+.editorShell,
+.dragHandlePortal,
+.inlineToolbar,
+.blockMenu,
+.insertPanel,
+.mobileBlockBar {
+  --admin-editor-page: var(--admin-canvas, oklch(0.965 0.012 268));
+  --admin-editor-surface: var(--admin-paper, oklch(0.995 0.004 268));
+  --admin-editor-quiet: var(--admin-cobalt-wash, oklch(0.91 0.055 272));
   --admin-editor-ink: var(--admin-ink, oklch(0.18 0.025 265));
-  --admin-editor-muted: var(--admin-muted, oklch(0.42 0.025 265));
-  --admin-editor-line: var(--admin-line, oklch(0.25 0.03 265));
-  --admin-editor-action: var(--admin-action, oklch(0.58 0.2 272));
-  --admin-editor-on-action: var(--admin-on-action, oklch(0.99 0.004 95));
-  --admin-editor-danger: var(--admin-danger, oklch(0.58 0.19 28));
+  --admin-editor-muted: var(--admin-muted, oklch(0.43 0.03 265));
+  --admin-editor-line: var(--admin-line, oklch(0.25 0.035 265));
+  --admin-editor-soft-line: var(--admin-soft-line, oklch(0.78 0.025 265));
+  --admin-editor-action: var(--admin-cobalt, oklch(0.48 0.205 272));
+  --admin-editor-action-dark: var(--admin-cobalt-dark, oklch(0.38 0.19 272));
+  --admin-editor-on-action: oklch(0.99 0.004 268);
+  --admin-editor-danger: var(--admin-red, oklch(0.52 0.19 28));
+  --admin-editor-ease: var(--admin-ease, cubic-bezier(0.22, 1, 0.36, 1));
   color: var(--admin-editor-ink);
+  font-family: var(--font-bricolage), Arial, sans-serif;
 }
 
-.editorHeading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
+.editorShell {
+  position: relative;
+  min-width: 0;
 }
 
-.editorHeading p,
-.editorHeading h2 {
-  margin: 0;
+.editorCanvas {
+  position: relative;
+  min-width: 0;
+  border-top: 1px solid var(--admin-editor-soft-line);
+  background: transparent;
+  transition: border-color 160ms var(--admin-editor-ease);
 }
 
-.editorHeading > div > p {
-  margin-bottom: 0.25rem;
-  color: var(--admin-editor-action);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+.editorCanvas:focus-within {
+  border-color: var(--admin-editor-action);
 }
 
-.editorHeading h2 {
-  font-size: clamp(1.45rem, 2.4vw, 2.1rem);
-  line-height: 1;
-  letter-spacing: -0.025em;
+.editorCanvas[data-disabled="true"] {
+  opacity: 0.62;
 }
 
-.editorHeading > p {
-  color: var(--admin-editor-muted);
-  font-size: 0.8rem;
+.editorContent {
+  width: min(100%, 50rem);
+  min-height: 44rem;
+  margin-inline: auto;
+  padding: 3rem 1.25rem 18rem;
+  color: var(--admin-editor-ink);
+  caret-color: var(--admin-editor-action);
+  font-size: 1.08rem;
+  line-height: 1.72;
+  text-rendering: optimizeLegibility;
 }
 
-.toolbar {
-  position: sticky;
-  z-index: 5;
-  top: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem;
-  border: 2px solid var(--admin-editor-line);
-  border-radius: 12px 12px 0 0;
-  padding: 0.7rem;
-  background: var(--admin-editor-quiet);
-  box-shadow: 3px 3px 0 var(--admin-editor-line);
+.editorContent:focus,
+.editorContent:focus-visible {
+  outline: none;
 }
 
-.toolbarGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding-right: 0.65rem;
-  border-right: 1px solid color-mix(in oklch, var(--admin-editor-line) 40%, transparent);
+.editorContent > :first-child {
+  margin-top: 0;
 }
 
-.toolbarGroup:last-child {
-  padding-right: 0;
-  border-right: 0;
+.editorContent > :last-child {
+  margin-bottom: 0;
 }
 
+.editorContent > * {
+  position: relative;
+  transition:
+    background-color 160ms var(--admin-editor-ease),
+    box-shadow 160ms var(--admin-editor-ease);
+}
+
+.editorContent h2,
+.editorContent h3 {
+  color: var(--admin-editor-ink);
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.editorContent h2 {
+  margin: 2.8rem 0 1rem;
+  font-size: 2.35rem;
+  line-height: 1.03;
+}
+
+.editorContent h3 {
+  margin: 2.2rem 0 0.8rem;
+  font-size: 1.55rem;
+  line-height: 1.12;
+}
+
+.editorContent p,
+.editorContent ul,
+.editorContent ol,
+.editorContent blockquote {
+  margin-block: 1.15rem;
+}
+
+.editorContent p {
+  min-height: 1.72em;
+}
+
+.editorContent ul,
+.editorContent ol {
+  padding-left: 1.5rem;
+}
+
+.editorContent li + li {
+  margin-top: 0.5rem;
+}
+
+.editorContent blockquote {
+  margin-inline: -1rem 0;
+  border-left: 4px solid var(--admin-editor-action);
+  padding: 0.55rem 0 0.55rem 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 620;
+  line-height: 1.55;
+}
+
+.editorContent a {
+  color: var(--admin-editor-action-dark);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.19em;
+}
+
+.editorContent :global(.is-empty)::before {
+  float: left;
+  height: 0;
+  color: color-mix(in oklch, var(--admin-editor-muted) 72%, transparent);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.editorContent :global(.ProseMirror-selectednode) {
+  outline: 2px solid var(--admin-editor-action);
+  outline-offset: 5px;
+}
+
+.dragHandlePortal {
+  z-index: 52;
+  padding-right: 0.5rem;
+}
+
+.blockGutter {
+  display: grid;
+  grid-template-columns: repeat(2, 44px);
+  overflow: hidden;
+  border: 1px solid var(--admin-editor-soft-line);
+  border-radius: 10px;
+  background: var(--admin-editor-surface);
+  box-shadow: 2px 2px 0 var(--admin-editor-line);
+  opacity: 0;
+  transform: translateX(4px);
+  transition:
+    opacity 160ms var(--admin-editor-ease),
+    transform 160ms var(--admin-editor-ease);
+}
+
+.dragHandlePortal:hover .blockGutter,
+.dragHandlePortal:focus-within .blockGutter,
+.dragHandlePortal[data-dragging="true"] .blockGutter {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.blockGutter button,
+.blockMenu button,
 .toolbarButton,
 .insertPanelHeading button,
 .mapNode button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--admin-editor-ink);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.blockMenu button {
+  min-height: 45px;
+}
+
+.blockGutter button {
+  width: 44px;
+  height: 44px;
+}
+
+.blockGutter button + button {
+  border-left: 1px solid var(--admin-editor-soft-line);
+  cursor: grab;
+}
+
+.blockGutter button:hover:not(:disabled),
+.blockGutter button:focus-visible {
+  background: var(--admin-editor-quiet);
+  color: var(--admin-editor-action-dark);
+}
+
+.blockGutter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.blockMenu {
+  position: fixed;
+  z-index: 90;
+  width: min(21rem, calc(100vw - 1.5rem));
+  max-height: min(34rem, calc(100dvh - 1.5rem));
+  display: grid;
+  overflow-y: auto;
+  border: 2px solid var(--admin-editor-line);
+  border-radius: 12px;
+  background: var(--admin-editor-surface);
+  box-shadow: 3px 3px 0 var(--admin-editor-line);
+  animation: menu-enter 180ms var(--admin-editor-ease) both;
+}
+
+.blockMenu > header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-editor-soft-line);
+  padding: 0.85rem;
+  background: var(--admin-editor-surface);
+}
+
+.blockMenu > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.blockMenu > header strong {
+  font-size: 0.95rem;
+}
+
+.blockMenu > header span,
+.atomBlockNote {
+  color: var(--admin-editor-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.blockMenu > header > button,
+.insertPanelHeading button {
   width: 44px;
   min-width: 44px;
   height: 44px;
-  display: inline-grid;
-  place-items: center;
-  border: 2px solid var(--admin-editor-line);
+  border: 1px solid var(--admin-editor-soft-line);
   border-radius: 9px;
-  padding: 0;
+}
+
+.blockMenu > header > button:hover,
+.blockMenu > header > button:focus-visible,
+.insertPanelHeading button:hover,
+.insertPanelHeading button:focus-visible {
+  background: var(--admin-editor-quiet);
+}
+
+.blockCommandGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.65rem;
+}
+
+.blockCommandGrid > button {
+  min-width: 0;
+  min-height: 62px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  justify-content: stretch;
+  gap: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 0.55rem;
+  text-align: left;
+}
+
+.blockCommandGrid > button:hover,
+.blockCommandGrid > button:focus-visible,
+.blockCommandGrid > button[data-active="true"] {
+  border-color: var(--admin-editor-soft-line);
+  background: color-mix(in oklch, var(--admin-editor-quiet) 70%, var(--admin-editor-surface));
+}
+
+.blockCommandGrid > button[data-active="true"] {
+  color: var(--admin-editor-action-dark);
+}
+
+.blockCommandGrid > button > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+}
+
+.blockCommandGrid strong,
+.blockCommandGrid small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockCommandGrid strong {
+  font-size: 0.78rem;
+}
+
+.blockCommandGrid small {
+  color: var(--admin-editor-muted);
+  font-size: 0.67rem;
+}
+
+.atomBlockNote {
+  margin: 0;
+  padding: 1rem;
+}
+
+.blockMenu > footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--admin-editor-soft-line);
+  padding: 0.45rem;
+}
+
+.blockMenu > footer > button {
+  min-width: 0;
+  min-height: 44px;
+  grid-template-columns: 18px auto;
+  gap: 0.35rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 720;
+}
+
+.blockMenu > footer > button:hover:not(:disabled),
+.blockMenu > footer > button:focus-visible {
+  background: var(--admin-editor-quiet);
+}
+
+.blockMenu > footer > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.blockMenu > footer > .deleteBlockButton {
+  color: var(--admin-editor-danger);
+}
+
+.inlineToolbar {
+  z-index: 85;
+  border: 2px solid var(--admin-editor-line);
+  border-radius: 10px;
+  padding: 0.3rem;
   background: var(--admin-editor-surface);
-  color: var(--admin-editor-ink);
-  box-shadow: 2px 2px 0 var(--admin-editor-line);
-  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--admin-editor-line);
+  animation: menu-enter 160ms var(--admin-editor-ease) both;
+}
+
+.inlineToolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.toolbarButton {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   transition:
-    transform 160ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 160ms cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 160ms cubic-bezier(0.4, 0, 0.2, 1),
-    color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+    color 160ms var(--admin-editor-ease),
+    background-color 160ms var(--admin-editor-ease),
+    transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbarButton:hover:not(:disabled),
-.insertPanelHeading button:hover,
-.mapNode button:hover {
-  background: color-mix(in oklch, var(--admin-editor-action) 12%, var(--admin-editor-surface));
+.toolbarButton:focus-visible {
+  border-color: var(--admin-editor-soft-line);
+  background: var(--admin-editor-quiet);
 }
 
-.toolbarButton:active:not(:disabled),
-.insertPanelHeading button:active,
-.mapNode button:active,
-.toolbarButton[data-active="true"] {
-  box-shadow: none;
-  transform: translate(2px, 2px);
+.toolbarButton:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .toolbarButton[data-active="true"] {
+  border-color: var(--admin-editor-action-dark);
   background: var(--admin-editor-action);
   color: var(--admin-editor-on-action);
 }
 
 .toolbarButton:disabled {
   cursor: not-allowed;
-  opacity: 0.42;
-  box-shadow: none;
+  opacity: 0.38;
 }
 
 .insertPanel {
+  position: fixed;
+  z-index: 92;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: min(28rem, calc(100vw - 2.5rem));
+  max-height: calc(100dvh - 2.5rem);
   display: grid;
   gap: 1rem;
+  overflow-y: auto;
   border: 2px solid var(--admin-editor-line);
-  border-top: 0;
+  border-radius: 12px;
   padding: 1rem;
   background: var(--admin-editor-surface);
   box-shadow: 3px 3px 0 var(--admin-editor-line);
+  animation: inspector-enter 200ms var(--admin-editor-ease) both;
 }
 
 .insertPanelHeading {
@@ -134,9 +429,12 @@
   align-items: start;
   justify-content: space-between;
   gap: 1rem;
+  border-bottom: 1px solid var(--admin-editor-soft-line);
+  padding-bottom: 0.8rem;
 }
 
 .insertPanelHeading > div {
+  min-width: 0;
   display: grid;
   gap: 0.2rem;
 }
@@ -170,7 +468,7 @@
   padding: 0.7rem 0.8rem;
   background: var(--admin-editor-surface);
   color: var(--admin-editor-ink);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
@@ -181,14 +479,14 @@
 }
 
 .insertPanel input::file-selector-button {
-  min-height: 34px;
+  min-height: 36px;
   margin-right: 0.75rem;
   border: 1px solid var(--admin-editor-line);
-  border-radius: 6px;
+  border-radius: 7px;
   padding-inline: 0.7rem;
   background: var(--admin-editor-quiet);
   color: var(--admin-editor-ink);
-  font-weight: 700;
+  font-weight: 720;
   cursor: pointer;
 }
 
@@ -196,7 +494,7 @@
 .mapFieldGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .mapFieldGrid {
@@ -206,7 +504,7 @@
 .panelActions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.7rem;
+  gap: 0.65rem;
 }
 
 .panelActions button {
@@ -217,6 +515,8 @@
   background: var(--admin-editor-action);
   color: var(--admin-editor-on-action);
   box-shadow: 2px 2px 0 var(--admin-editor-line);
+  font: inherit;
+  font-size: 0.82rem;
   font-weight: 760;
   cursor: pointer;
 }
@@ -249,112 +549,41 @@
 }
 
 .formStatus {
+  min-height: 1.2em;
   color: var(--admin-editor-muted);
 }
 
-.editorCanvas {
-  border: 2px solid var(--admin-editor-line);
-  border-top: 0;
-  border-radius: 0 0 14px 14px;
-  background: var(--admin-editor-surface);
-  box-shadow: 3px 3px 0 var(--admin-editor-line);
+.imageNode {
+  margin-block: 2rem;
 }
 
-.editorCanvas[data-disabled="true"] {
-  background: var(--admin-editor-quiet);
-}
-
-.editorContent {
-  min-height: 38rem;
-  max-width: 52rem;
-  margin-inline: auto;
-  padding: clamp(1.5rem, 5vw, 4rem);
-  color: var(--admin-editor-ink);
-  font-size: 1.08rem;
-  line-height: 1.72;
-}
-
-.editorContent:focus {
-  outline: 3px solid var(--admin-editor-action);
-  outline-offset: -5px;
-}
-
-.editorContent > :first-child {
-  margin-top: 0;
-}
-
-.editorContent > :last-child {
-  margin-bottom: 0;
-}
-
-.editorContent h1,
-.editorContent h2 {
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-}
-
-.editorContent h1 {
-  margin: 2.4rem 0 1rem;
-  font-size: clamp(2.25rem, 5vw, 4.5rem);
-}
-
-.editorContent h2 {
-  margin: 2rem 0 0.8rem;
-  font-size: clamp(1.7rem, 3vw, 2.7rem);
-}
-
-.editorContent p,
-.editorContent ul,
-.editorContent ol,
-.editorContent blockquote,
-.editorContent pre {
-  margin-block: 1rem;
-}
-
-.editorContent blockquote {
-  margin-inline: 0;
-  border-left: 5px solid var(--admin-editor-action);
-  padding: 0.8rem 0 0.8rem 1.2rem;
-  font-size: 1.22em;
-  font-weight: 630;
-}
-
-.editorContent pre {
-  overflow-x: auto;
-  border: 2px solid var(--admin-editor-line);
-  border-radius: 10px;
-  padding: 1rem;
-  background: var(--admin-editor-ink);
-  color: var(--admin-editor-surface);
-  font-size: 0.9rem;
-}
-
-.editorContent hr {
-  margin-block: 2.5rem;
-  border: 0;
-  border-top: 2px solid var(--admin-editor-line);
-}
-
-.editorContent a {
-  color: var(--admin-editor-action);
-  text-decoration-thickness: 0.11em;
-  text-underline-offset: 0.2em;
-}
-
-.editorContent img {
+.imageNode img {
   width: 100%;
   height: auto;
-  margin-block: 1.5rem 0.6rem;
-  border: 2px solid var(--admin-editor-line);
+  display: block;
   border-radius: 12px;
 }
 
-.editorContent p.is-editor-empty:first-child::before {
-  float: left;
-  height: 0;
+.imageNode > p {
+  min-height: 0;
+  margin: 0.6rem 0 0;
   color: var(--admin-editor-muted);
-  content: attr(data-placeholder);
-  pointer-events: none;
+  font-size: 0.84rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.imagePreviewUnavailable {
+  min-height: 14rem;
+  display: grid;
+  place-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--admin-editor-soft-line);
+  border-radius: 12px;
+  padding: 1rem;
+  background: color-mix(in oklch, var(--admin-editor-quiet) 45%, transparent);
+  color: var(--admin-editor-muted);
+  text-align: center;
 }
 
 .mapNode {
@@ -362,12 +591,10 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.9rem;
-  margin-block: 1.5rem;
-  border: 2px solid var(--admin-editor-line);
-  border-radius: 12px;
-  padding: 0.9rem;
-  background: var(--admin-editor-quiet);
-  box-shadow: 3px 3px 0 var(--admin-editor-line);
+  margin-block: 2rem;
+  border-block: 1px solid var(--admin-editor-soft-line);
+  padding: 1rem 0;
+  background: transparent;
 }
 
 .mapNodeIcon {
@@ -375,10 +602,9 @@
   height: 44px;
   display: grid;
   place-items: center;
-  border: 2px solid var(--admin-editor-line);
   border-radius: 50%;
-  background: var(--admin-editor-action);
-  color: var(--admin-editor-on-action);
+  background: var(--admin-editor-quiet);
+  color: var(--admin-editor-action-dark);
 }
 
 .mapNodeCopy {
@@ -396,55 +622,152 @@
   font-size: 0.78rem;
 }
 
+.mapNode button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--admin-editor-soft-line);
+  border-radius: 9px;
+  color: var(--admin-editor-danger);
+}
+
+.mapNode button:hover,
+.mapNode button:focus-visible {
+  background: color-mix(in oklch, var(--admin-editor-danger) 10%, transparent);
+}
+
 .editorLoading {
-  min-height: 38rem;
+  min-height: 44rem;
   display: grid;
   place-items: center;
   margin: 0;
   color: var(--admin-editor-muted);
 }
 
-@media (max-width: 760px) {
-  .toolbar {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+.mobileBlockBar {
+  display: none;
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes inspector-enter {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .dragHandlePortal {
+    display: none;
   }
 
-  .toolbarGroup {
-    display: contents;
+  .mobileBlockBar {
+    position: sticky;
+    z-index: 70;
+    top: calc(66px + 0.6rem);
+    width: fit-content;
+    max-width: calc(100% - 1.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+    margin: 0.75rem auto;
+    border: 2px solid var(--admin-editor-line);
+    border-radius: 11px;
+    padding: 0.35rem;
+    background: var(--admin-editor-surface);
+    box-shadow: 3px 3px 0 var(--admin-editor-line);
   }
 
-  .toolbarButton {
-    width: 100%;
+  .blockMenu {
+    inset: auto 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(76dvh, 38rem);
+    top: auto !important;
+    left: 0.75rem !important;
+  }
+
+  .inlineToolbar {
+    display: none;
+  }
+
+  .insertPanel {
+    inset: auto 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 78dvh;
+    animation-name: menu-enter;
+  }
+}
+
+@media (max-width: 560px) {
+  .editorContent {
+    min-height: 38rem;
+    padding: 2rem 0.15rem 14rem;
+    font-size: 1rem;
+    line-height: 1.68;
+  }
+
+  .editorContent h2 {
+    font-size: 1.9rem;
+  }
+
+  .editorContent h3 {
+    font-size: 1.35rem;
+  }
+
+  .editorContent blockquote {
+    margin-left: 0;
+    padding-left: 1rem;
+    font-size: 1.12rem;
+  }
+
+  .blockCommandGrid {
+    gap: 0.25rem;
+    padding: 0.5rem;
+  }
+
+  .blockCommandGrid > button {
+    min-height: 58px;
+    padding: 0.45rem;
+  }
+
+  .blockMenu > footer {
+    grid-template-columns: 1fr;
+  }
+
+  .blockMenu > footer > button {
+    justify-content: start;
+    padding-inline: 0.75rem;
   }
 
   .panelFieldGrid,
   .mapFieldGrid {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 480px) {
-  .editorHeading {
-    align-items: start;
-    flex-direction: column;
-    gap: 0.45rem;
-  }
-
-  .toolbar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
 
   .insertPanel {
-    padding: 0.8rem;
+    padding: 0.85rem;
   }
 
-  .editorContent {
-    min-height: 32rem;
-    padding: 1.25rem;
-    font-size: 1rem;
+  .mobileBlockBar {
+    width: min(13.5rem, calc(100% - 1.5rem));
+  }
+
+  .imagePreviewUnavailable {
+    min-height: 10rem;
   }
 
   .mapNode {
@@ -458,18 +781,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toolbarButton,
-  .insertPanelHeading button,
-  .mapNode button,
-  .panelActions button {
+  .editorCanvas,
+  .editorContent > *,
+  .blockGutter,
+  .toolbarButton {
     transition-duration: 0.01ms;
   }
 
-  .toolbarButton:active:not(:disabled),
-  .insertPanelHeading button:active,
-  .mapNode button:active,
-  .toolbarButton[data-active="true"],
-  .panelActions button:active:not(:disabled) {
+  .blockMenu,
+  .inlineToolbar,
+  .insertPanel {
+    animation-duration: 0.01ms;
+  }
+
+  .toolbarButton:active:not(:disabled) {
     transform: none;
   }
 }

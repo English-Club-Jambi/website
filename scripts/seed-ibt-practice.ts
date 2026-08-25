@@ -47,6 +47,24 @@ function required(name: string) {
   return value;
 }
 
+function r2Endpoint() {
+  const accountId = required("R2_ACCOUNT_ID");
+  if (!/^[a-f0-9]{32}$/.test(accountId)) {
+    throw new Error("R2_ACCOUNT_ID is invalid.");
+  }
+  const endpoint = new URL(
+    process.env.R2_API?.trim() ||
+      `https://${accountId}.r2.cloudflarestorage.com`,
+  );
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.hostname !== `${accountId}.r2.cloudflarestorage.com`
+  ) {
+    throw new Error("R2_API must use the configured Cloudflare R2 account.");
+  }
+  return endpoint.origin;
+}
+
 function convexRun<T>(functionName: string, args: unknown): T {
   const result = spawnSync(
     "npx",
@@ -122,10 +140,7 @@ async function mapLimit<T, R>(
 }
 
 async function main() {
-  const endpoint = new URL(
-    process.env.R2_API?.trim() ||
-      `https://${required("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com`,
-  ).origin;
+  const endpoint = r2Endpoint();
   const bucket = required("R2_BUCKET_NAME");
   const client = new S3Client({
     region: "auto",
@@ -213,6 +228,16 @@ async function main() {
     }
     console.log(`Attached ${attached} audio records; ${skipped} already matched.`);
 
+    const questionBank = convexRun<{
+      inserted: number;
+      existing: number;
+      eligible: number;
+      randomSections: number;
+    }>("assessmentSeed:seedQuestionBank", { confirm });
+    console.log(
+      `Question bank: ${questionBank.inserted} inserted, ${questionBank.existing} existing, ${questionBank.eligible} full-form candidates, ${questionBank.randomSections} random sections.`,
+    );
+
     const verification = convexRun<{
       definitions: Array<{
         slug: string;
@@ -237,6 +262,24 @@ async function main() {
         `${entry.slug}: ${entry.items} items; audio ${entry.audioReady}/${entry.audioTotal}; ${sections}`,
       );
     }
+    const bankVerification = convexRun<{
+      total: number;
+      ready: number;
+      eligible: number;
+      randomSections: number;
+      bySkill: Array<{ skill: string; ready: number; eligible: number }>;
+    }>("assessmentSeed:verifyQuestionBank", { confirm });
+    if (
+      bankVerification.total !== 145 ||
+      bankVerification.ready !== 145 ||
+      bankVerification.eligible !== 120 ||
+      bankVerification.randomSections !== 4
+    ) {
+      throw new Error("Question-bank verification failed.");
+    }
+    console.log(
+      `Verified ${bankVerification.total} bank records; ${bankVerification.eligible} eligible for the randomized full form.`,
+    );
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }

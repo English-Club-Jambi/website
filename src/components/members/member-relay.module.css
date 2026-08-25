@@ -701,8 +701,7 @@
 }
 
 .memberPhoto,
-.memberMonogram,
-.showcasePortrait {
+.memberMonogram {
   position: absolute;
   inset: 0;
   display: block;
@@ -710,8 +709,7 @@
 }
 
 .memberCard article:hover .memberPhoto,
-.memberCard article:hover .memberMonogram,
-.memberCard article:hover .showcasePortrait {
+.memberCard article:hover .memberMonogram {
   transform: scale(1.025);
 }
 
@@ -732,16 +730,6 @@
   font-size: clamp(2rem, 5vw, 4rem);
   font-weight: 760;
   letter-spacing: -0.035em;
-}
-
-.showcasePortrait {
-  background-image: var(--portrait-image);
-  background-repeat: no-repeat;
-  background-size: 500% 400%;
-  background-position:
-    calc(3.125% + var(--portrait-column) * 31.25%)
-    calc(var(--portrait-row) * 33.333333%);
-  filter: var(--image-filter);
 }
 
 .memberCardBody {
@@ -1292,7 +1280,6 @@
   .memberCardBody,
   .memberPhoto,
   .memberMonogram,
-  .showcasePortrait,
   .filterPanel,
   .filterChevron,
   .filterClose,

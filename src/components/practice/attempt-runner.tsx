@@ -770,7 +770,7 @@ function ConnectedAttemptRunner({ attemptId }: { attemptId: Id<"assessmentAttemp
   }
   return (
     <QuestionWorkspace
-      key={`${player.item.id}-${player.responseRevision}`}
+      key={player.item.id}
       player={player}
       attemptId={attemptId}
     />

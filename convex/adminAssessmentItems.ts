@@ -22,6 +22,12 @@ import {
   publicItemFromDoc,
 } from "./lib/assessmentModel";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
+import {
+  difficultyForPosition,
+  normalizeBankPrompt,
+  questionContentFingerprint,
+  taskFamilyForItemOrSkill,
+} from "./lib/assessmentQuestionBank";
 
 const itemWorkspaceValidator = v.object({
   item: publicAssessmentItemValidator,
@@ -352,6 +358,44 @@ export const saveSingleChoice = mutation({
     } else {
       await ctx.db.replace("assessmentAnswerKeys", existingKey._id, answerValues);
     }
+    if (definition.profile === "ec-ibt-style-2026-v1") {
+      const bankEntry = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_source_item_id", (q) => q.eq("sourceItemId", itemId))
+        .unique();
+      const taskFamily = taskFamilyForItemOrSkill(itemKey, section.skill);
+      const bankValues = {
+        bankKey: `admin/${definition._id}/${version._id}/${itemId}`,
+        sourceDefinitionId: definition._id,
+        sourceVersionId: version._id,
+        sourceSectionId: section._id,
+        sourceItemId: itemId,
+        skill: section.skill,
+        taskFamily,
+        difficulty:
+          bankEntry?.difficulty ??
+          difficultyForPosition(order, Math.max(section.itemCount + (existing === null ? 1 : 0), 1)),
+        status: bankEntry?.status ?? ("paused" as const),
+        profile: definition.profile,
+        fullPracticeEligible: bankEntry?.fullPracticeEligible ?? false,
+        contentFingerprint: questionContentFingerprint(
+          section.skill,
+          itemValues.prompt,
+          options.map((option) => option.label),
+        ),
+        promptSearch: normalizeBankPrompt(itemValues.prompt),
+        tags: bankEntry?.tags ?? [section.skill, taskFamily],
+        createdBy: bankEntry?.createdBy ?? actor._id,
+        updatedBy: actor._id,
+        createdAt: bankEntry?.createdAt ?? now,
+        updatedAt: now,
+      };
+      if (bankEntry === null) {
+        await ctx.db.insert("assessmentQuestionBank", bankValues);
+      } else {
+        await ctx.db.replace("assessmentQuestionBank", bankEntry._id, bankValues);
+      }
+    }
     if (existing === null) {
       await ctx.db.patch("assessmentSections", section._id, {
         itemCount: section.itemCount + 1,
@@ -412,6 +456,24 @@ export const deleteItem = mutation({
     const section = await ctx.db.get("assessmentSections", item.sectionId);
     if (section === null || section.versionId !== version._id) {
       throw new ConvexError({ code: "ITEM_RELATIONSHIP_INVALID" as const });
+    }
+    const bankEntry = await ctx.db
+      .query("assessmentQuestionBank")
+      .withIndex("by_source_item_id", (q) => q.eq("sourceItemId", item._id))
+      .unique();
+    if (bankEntry !== null) {
+      const [usage] = await ctx.db
+        .query("assessmentAttemptItems")
+        .withIndex("by_bank_question_id_and_selected_at", (q) =>
+          q.eq("bankQuestionId", bankEntry._id),
+        )
+        .take(1);
+      if (bankEntry.status === "ready" || usage !== undefined) {
+        throw new ConvexError({
+          code: "QUESTION_BANK_SOURCE_IN_USE" as const,
+        });
+      }
+      await ctx.db.delete("assessmentQuestionBank", bankEntry._id);
     }
     const key = await ctx.db
       .query("assessmentAnswerKeys")

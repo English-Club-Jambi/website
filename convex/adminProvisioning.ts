@@ -1,4 +1,9 @@
-import { createAccount } from "@convex-dev/auth/server";
+import {
+  createAccount,
+  invalidateSessions,
+  modifyAccountCredentials,
+  retrieveAccount,
+} from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 import { internal } from "./_generated/api";
@@ -25,6 +30,7 @@ export const provisionPasswordAdmin = internalAction({
     password: v.string(),
     role: adminRoleValidator,
     replaceSoleLegacyTokenIdentifier: v.optional(v.string()),
+    recoverExistingAccount: v.optional(v.boolean()),
   },
   returns: provisionedAdminValidator,
   handler: async (ctx, args) => {
@@ -32,13 +38,22 @@ export const provisionPasswordAdmin = internalAction({
     const email = normalizePasswordEmail(args.email);
     assertPasswordRequirements(args.password);
 
-    const { user } = await createAccount(ctx, {
-      provider: "password",
-      account: { id: email, secret: args.password },
-      profile: { name: displayName, email },
-      shouldLinkViaEmail: false,
-      shouldLinkViaPhone: false,
-    });
+    const user = args.recoverExistingAccount
+      ? (
+          await retrieveAccount(ctx, {
+            provider: "password",
+            account: { id: email },
+          })
+        ).user
+      : (
+          await createAccount(ctx, {
+            provider: "password",
+            account: { id: email, secret: args.password },
+            profile: { name: displayName, email },
+            shouldLinkViaEmail: false,
+            shouldLinkViaPhone: false,
+          })
+        ).user;
 
     const adminUserId: Id<"adminUsers"> = await ctx.runMutation(
       internal.adminUsers.bindProvisionedPasswordAccount,
@@ -56,6 +71,14 @@ export const provisionPasswordAdmin = internalAction({
             }),
       },
     );
+
+    if (args.recoverExistingAccount) {
+      await modifyAccountCredentials(ctx, {
+        provider: "password",
+        account: { id: email, secret: args.password },
+      });
+      await invalidateSessions(ctx, { userId: user._id });
+    }
 
     return {
       adminUserId,

@@ -177,10 +177,14 @@ export function validateEditorDocument(editorJson: string) {
       };
     }
 
-    if (!Array.isArray(value.content) || value.content.length > 1_000) {
+    const rawContent =
+      value.content === undefined && (type === "paragraph" || type === "heading")
+        ? []
+        : value.content;
+    if (!Array.isArray(rawContent) || rawContent.length > 1_000) {
       throw new Error("Editor node content is invalid.");
     }
-    const content = value.content.map((child) =>
+    const content = rawContent.map((child) =>
       normalizeNode(child, depth + 1),
     );
     if (type === "doc" && depth !== 0) {

@@ -250,7 +250,7 @@ function ResultReport({
         <p>{result.disclaimer}</p>
       </header>
 
-      <main className={`page-container ${styles.resultBody}`}>
+      <div className={`page-container ${styles.resultBody}`}>
         <section className={styles.rawResult} aria-label={result.label}>
           <div className={styles.rawResultLead}>
             <strong>{estimatedBand ?? result.objective.correct}</strong>
@@ -329,7 +329,7 @@ function ResultReport({
             />
           </section>
         ) : null}
-      </main>
+      </div>
     </div>
   );
 }

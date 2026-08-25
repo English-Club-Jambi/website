@@ -14,6 +14,7 @@ import {
   memberPhotoValidator,
   memberPositionValidator,
   memberProfileStatusValidator,
+  memberRecordOriginValidator,
   memberRoleLevelValidator,
 } from "./validators";
 
@@ -30,6 +31,8 @@ const memberAdminViewValidator = v.object({
   profileStatus: memberProfileStatusValidator,
   profileConsentStatus: memberConsentStatusValidator,
   photoConsentStatus: memberConsentStatusValidator,
+  recordOrigin: memberRecordOriginValidator,
+  seedBatch: v.optional(v.string()),
   sortOrder: v.number(),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -51,6 +54,8 @@ function toAdminView(member: Doc<"members">) {
     profileStatus: member.profileStatus,
     profileConsentStatus: member.profileConsentStatus,
     photoConsentStatus: member.photoConsentStatus,
+    recordOrigin: member.recordOrigin ?? "reviewed",
+    ...(member.seedBatch === undefined ? {} : { seedBatch: member.seedBatch }),
     sortOrder: member.sortOrder,
     createdAt: member.createdAt,
     updatedAt: member.updatedAt,

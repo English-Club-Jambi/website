@@ -36,6 +36,38 @@ export const assessmentSkillValidator = v.union(
   v.literal("speaking"),
 );
 
+export const assessmentTaskFamilyValidator = v.union(
+  v.literal("complete-words"),
+  v.literal("read-daily-life"),
+  v.literal("read-academic-passage"),
+  v.literal("listen-choose-response"),
+  v.literal("listen-conversation"),
+  v.literal("listen-announcement"),
+  v.literal("listen-academic-talk"),
+  v.literal("build-sentence"),
+  v.literal("write-email"),
+  v.literal("academic-discussion"),
+  v.literal("listen-repeat"),
+  v.literal("take-interview"),
+);
+
+export const assessmentQuestionDifficultyValidator = v.union(
+  v.literal("foundational"),
+  v.literal("developing"),
+  v.literal("advanced"),
+);
+
+export const assessmentQuestionBankStatusValidator = v.union(
+  v.literal("ready"),
+  v.literal("paused"),
+  v.literal("archived"),
+);
+
+export const assessmentDeliveryModeValidator = v.union(
+  v.literal("fixed"),
+  v.literal("random-bank"),
+);
+
 export const timePolicyValidator = v.union(
   v.literal("untimed"),
   v.literal("whole-assessment"),

@@ -114,9 +114,11 @@ The `/admin` route has no sign-up state. Announce the deployment, then run:
 npm run admin:provision
 ```
 
-The terminal prompts for the profile and hides password input. Automation may use `--generate-password`; the generated password is shown once after success and must go directly into a password manager. The script invokes only `internal.adminProvisioning.provisionPasswordAdmin`, which creates or verifies the Password account and binds the corresponding Auth user to an active `adminUsers` row. The first administrator must be an owner.
+The terminal prompts for the profile and hides password input. Automation may use `--generate-password`; the generated password is shown once after success and must go directly into a password manager. The script invokes only `internal.adminProvisioning.provisionPasswordAdmin`, which creates or explicitly recovers the Password account and binds the corresponding Auth user to an active `adminUsers` row. The first administrator must be an owner.
 
 The narrow `--repair-placeholder <exact-value>` option can rebind a sole active legacy owner only when its token identifier exactly matches, it has no Auth user binding, and the requested role remains owner. It cannot replace an arbitrary or multi-admin deployment.
+
+`--recover-existing` is only for an interrupted operator flow that already created the named Password account. It must be combined with the exact guarded placeholder repair in that migration case. Recovery binds the verified Auth user first, rotates the password second, and invalidates existing sessions last; normal provisioning must not set this flag.
 
 ## API contract
 
