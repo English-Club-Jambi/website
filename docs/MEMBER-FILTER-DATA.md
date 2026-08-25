@@ -24,10 +24,10 @@ The joined year is a new product field. No current repository source supplies re
 | `convex/members.ts:152-244` | `upsertReviewed` replaces a full record. An optional joined year needs explicit preserve and clear semantics. |
 | `src/lib/members.ts:19-29` | `PublicMember` has no joined year. |
 | `src/components/members/member-relay.tsx:43-190` | The roster has one role selection and filters the bounded result in the browser. |
-| `src/content/member-showcase.ts:17-194` | The current source fixture contains 15 fictional profiles. None has a joined year. |
+| `content/member-development-seed.ts` | The guarded development seed contains 15 fictional profiles with explicit joined years. |
 | `tests/unit/members.test.ts:63-109` | Tests already enforce 15 unique profiles, five role codes, and valid assignments. |
 
-The older `docs/MEMBER-FICTIONAL-DATASET.md` still describes 14 profiles and omits Galih Pradipta. The running source and unit contract use 15. This recommendation follows the current source list and treats the older count as stale documentation.
+The older `docs/MEMBER-FICTIONAL-DATASET.md` described 14 profiles and omitted Galih Pradipta. The implemented development seed and test contract use 15.
 
 ## 3. Field semantics
 
@@ -44,17 +44,9 @@ joinedYear?: number;
 - For a returning member, use the earliest verified year of English Club association. If the club later needs return periods, add a separate history model.
 - For a Board profile, record the first verified year of association with this English Club in that public capacity. Do not use the person's UPA employment year.
 
-### Fictional source fixture
+### Guarded development seed
 
-All 15 showcase profiles should have a valid `joinedYear`. The field is required in `ShowcaseMember` so the demo always exercises the filter. These years remain fictional presentation data and never enter Convex.
-
-```ts
-export type ShowcaseMember = PublicMember & {
-  joinedYear: number;
-  showcase: true;
-  // existing portraitCell remains unchanged
-};
-```
+All 15 development profiles have a valid `joinedYear`, so the real Convex query and filter path is exercised. The target-locked seeder writes them only to `perfect-greyhound-270` with a synthetic batch marker. These values are development data and must not be promoted, copied, or interpreted as production membership history.
 
 ## 4. Recommended fictional distribution
 
@@ -299,21 +291,21 @@ Never derive `joinedYear` from:
 - role level, role start, or `sortOrder`;
 - the fictional distribution in this document.
 
-The source fixture must keep its existing synthetic provenance. Do not seed its years into Convex or include them in organisation history, structured data, analytics claims, member totals, or About-page copy.
+The development batch must keep its synthetic provenance and production-target guard. Do not copy its years into production Convex records or include them in organisation history, structured data, analytics claims, member totals, or About-page copy.
 
 ## 11. Verification matrix
 
 | Test | Expected result |
 | --- | --- |
-| Fixture completeness | All 15 showcase profiles have an integer joined year |
-| Fixture years | Distinct set is exactly `2022, 2023, 2024, 2025, 2026` |
-| Fixture counts | `2, 3, 4, 4, 2` for 2022 through 2026 |
+| Seed completeness | All 15 development profiles have an integer joined year |
+| Seed years | Distinct set is exactly `2022, 2023, 2024, 2025, 2026` |
+| Seed counts | `2, 3, 4, 4, 2` for 2022 through 2026 |
 | Current-year bound | `2026` passes and `2027` fails with reference year 2026 |
 | Lower bound | `1900` passes and `1899` fails |
 | Type checks | `2024.5`, `"2024"`, `NaN`, and infinities fail |
 | Optional real row | Missing year remains public under `All years` |
 | Unknown filter | Missing-year row appears only under `Year not listed` and `All years` |
-| Combined filter | Coordinator plus 2025 returns exactly three showcase profiles |
+| Combined filter | Coordinator plus 2025 returns exactly three seeded development profiles |
 | Intentional empty | Board plus 2026 renders the filter empty state |
 | Upsert omitted | Existing joined year is preserved |
 | Upsert null | Existing joined year is removed |
@@ -326,7 +318,7 @@ The source fixture must keep its existing synthetic provenance. Do not seed its 
 1. Add the shared year validator with an explicit reference-year argument.
 2. Add optional `joinedYear` to the Convex table, public validator, public mapper, and `PublicMember`.
 3. Add the tri-state reviewed-upsert semantics.
-4. Add the recommended years to all 15 source-only profiles.
+4. Add the recommended years to all 15 guarded development-seed profiles.
 5. Derive stable year options from the full roster and combine them with the role filter.
 6. Add unit, Convex, and browser tests from the verification matrix.
 7. Update `DATABASE.md`, `PRD.md`, `BLUEPRINT.md`, `DESIGN.md`, `DESIGN-SYSTEM.md`, `SETUP.md`, and the two fictional-data ledgers.

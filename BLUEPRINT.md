@@ -6,7 +6,7 @@ Primary stack: Next.js App Router, TypeScript, Convex, Cloudflare R2 Standard, p
 
 ## 1. System shape
 
-The product combines a server-rendered organisation profile, scoped reactive Practice and administration applications, and small public interactive islands. Next.js owns routes, metadata, image optimization, server HTML, and the visitor's light/dark preference. Convex owns published content, contact submissions, member consent records, administrator authorization, immutable theme and journal versions, Assessment definitions/attempts/results, and the metadata that points to R2 objects. Cloudflare R2 Standard owns media bytes. A separate 15-profile Member showcase appears only after a successful empty member query and remains outside Convex.
+The product combines a server-rendered organisation profile, scoped reactive Practice and administration applications, and small public interactive islands. Next.js owns routes, metadata, image optimization, server HTML, and the visitor's light/dark preference. Convex owns published content, contact submissions, member consent records, administrator authorization, immutable theme and journal versions, Assessment definitions/attempts/results, and the metadata that points to R2 objects. Cloudflare R2 Standard owns media bytes. The named development deployment contains a target-locked 15-profile fictional Member seed; production has no local roster fallback and may expose only consent-cleared Convex records.
 
 ```mermaid
 flowchart TB

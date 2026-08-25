@@ -1,7 +1,10 @@
 # Member Page — Code Integration Audit
 
+Status: historical pre-implementation audit; superseded by the integrated Member administration and guarded development seed
 Date: 25 August 2026
 Scope: read-only audit of the current Next.js + Convex codebase for a new public `/members` route. No application source was changed by this audit.
+
+> The route, dynamic divisions, filters, consent gates, and target-locked development roster are now implemented. Retain the no-fictitious-data rule for production; current contracts live in `BLUEPRINT.md`, `DATABASE.md`, and `MEMBER-SHOWCASE-DECISION.md`.
 
 ## Executive finding
 

@@ -1,8 +1,10 @@
 # Member Page Evidence Audit
 
-Status: implementation input
+Status: historical evidence input; superseded for development presentation by the guarded Convex seed
 Date: 25 August 2026
 Scope: current user brief, repository documentation, application and Convex source, supplied media, generated placeholders, and design references
+
+> This audit records the evidence boundary before the user authorised fictional development identities. Its no-seed recommendation remains the production rule; the named development deployment now uses a target-locked synthetic batch documented in `MEMBER-SHOWCASE-DECISION.md`.
 
 ## 1. Decision summary
 

@@ -33,7 +33,7 @@ The user also explicitly authorised temporary fictional identities and generated
 | `3` | Core Member | 4 | Secretary, Treasury, Vice President, President |
 | `4` | Board | 2 | Pembina / Mentor, Kepala UPA / Head of UPA |
 
-Total: 15 fictional showcase profiles. This total describes the temporary source fixture, not the club's actual membership.
+Total: 15 fictional development profiles. This total describes the guarded seed, not the club's actual membership.
 
 ## Public presentation
 
@@ -71,17 +71,18 @@ The browser uses the WebP sheet because CSS backgrounds do not receive Next Imag
 
 ## Source authority
 
-- `src/content/member-showcase.ts`: fictional public copy, role assignments, portrait cells, and roster mode.
+- `content/member-development-seed.ts`: fictional development profiles, role assignments, joined years, and portrait cells.
+- `convex/developmentSeed.ts`: target lock, idempotent batch write, and verification.
 - `src/components/members/member-relay.tsx`: semantic rendering, filtering, and public states.
 - `src/components/members/member-relay.module.css`: contact-sheet grid, portrait cropping, responsive behavior, and motion.
-- `convex/members.ts`: authoritative public query for reviewed real records.
+- `convex/members.ts`: authoritative public query for every environment.
 - `content/member-roles.ts`: role and subtype taxonomy.
 
 ## Verification contract
 
 - Unit tests assert 15 unique slugs, names, and portrait cells.
 - Unit tests assert all five role codes and every required Coordinator, Core, and Board assignment.
-- Server HTML contains the showcase roster while Convex returns a successful empty array.
+- On `perfect-greyhound-270`, server HTML contains the seeded roster returned by Convex. A successful empty production query renders the honest empty state.
 - Browser tests assert 5 columns on desktop and 2 columns on phone and 320 px projects.
 - Browser tests assert the public main content does not contain QA disclosure language.
 - Role filtering must return five Coordinator profiles and preserve keyboard-native radio behavior.
@@ -93,5 +94,5 @@ The browser uses the WebP sheet because CSS backgrounds do not receive Next Imag
 2. If a portrait is used, record separate photo consent, rights, alt text, dimensions, focal point, and an immutable R2 object key.
 3. Upsert through the reviewed internal Convex mutation.
 4. Confirm `members:listPublished` returns only approved public fields.
-5. Once any reviewed profile publishes, the route switches from the complete showcase fixture to the Convex result.
-6. Before production launch, decide whether partial real rosters should publish immediately or wait for an explicit release flag. The current implementation switches on the first valid public record.
+5. Remove or archive the development seed batch before any production import; the production route has no fixture switch or fallback.
+6. Decide whether a partial consent-cleared roster should publish immediately or wait for an explicit organisation release policy.

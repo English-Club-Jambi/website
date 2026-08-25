@@ -77,7 +77,7 @@ Stimulus selectors use `adminMedia.listAssessmentPage` with the exact assessment
 - Destructive changes use a labelled modal confirmation, Escape/cancel handling, pending lock, and focus return.
 - Layout contracts cover 1120, 760, and 360 px breakpoints plus reduced motion.
 - Fixed-format UI result: 3 files, 10 tests passed.
-- Integrated unit result: 45 files, 162 tests passed.
+- Integrated unit result: 45 files, 163 tests passed.
 - Integrated backend result: 8 files, 63 tests passed.
 - Next route generation and full TypeScript check passed.
 - Fixed-format visual harness: desktop, Pixel 7, and 320 px; no horizontal overflow; controls are at least 44 px; Axe returned zero violations; reduced motion enabled.

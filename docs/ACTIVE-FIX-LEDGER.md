@@ -79,9 +79,9 @@ Implementation commit: `9846874 fix: load legacy journal posts in editor`.
 
 ## Release discipline
 
-- [ ] Do not stop or kill port 3987.
-- [ ] Do not write seed data to production.
-- [ ] Preserve unrelated working-tree changes.
-- [ ] Run Convex tests, unit tests, lint, typecheck, production build, and focused browser tests.
-- [ ] Inspect final screenshots.
-- [ ] Commit only after the integrated gates are green.
+- [x] Do not stop or kill port 3987.
+- [x] Do not write seed data to production.
+- [x] Preserve unrelated working-tree changes.
+- [x] Run Convex tests, unit tests, lint, typecheck, production build, and focused browser tests.
+- [x] Inspect final screenshots.
+- [x] Commit only after the integrated gates are green.

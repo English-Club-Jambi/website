@@ -197,3 +197,14 @@ No public production deployment was performed.
 - Browser verification exercised Add Question at desktop, Pixel 7, and 320 px, then waited for the illustrated question to appear through the random public bank draw at the same widths.
 - A narrow rapid-navigation run exposed a stale attempt-revision race. The client now carries the revision returned by each move mutation instead of waiting only for the reactive query, and a focused regression test covers two immediate Next actions.
 - One duplicate media ledger row created during a failed idempotency test was archived. The selected R2 object remains ready and attached; the public attempt continued to resolve it.
+
+## 26 August 2026 — Final integrated development release
+
+- Closed the reported legacy Journal edit failure: published Markdown records now open with their title, standfirst, body, and existing cover, while the first explicit save creates revision 1.
+- Replaced the boxed Journal body form with a page-like block editor, per-block toolbox, explicit featured-image control, reviewed inline image/map blocks, and reversible Archive/Restore lifecycle.
+- Reproduced the Journal image failure as a Cloudflare R2 CORS 403. The current upload path uses a constrained same-origin streaming relay, preserves Convex HEAD verification, reloads the custom-domain image after save, and leaves no active QA media.
+- Added independent Page Copy rail/editor scrolling, a touch-friendly field picker, managed Member divisions, coordinator assignment, reusable filters, and the guarded 15-profile development seed.
+- Froze the human owner credential and moved automation to a separate ignored QA owner. Normal login, session refresh, and deployment do not rotate Password credentials.
+- The final integrated gate passes TypeScript, ESLint, 226 Vitest tests, and an effective 173 Playwright cases with 55 intentional project-specific skips. The full browser run's only miss was a Contact server-action response crossing its former five-second wait; the bounded 20-second repair passed at all three viewports. Two isolated builds generate all current routes.
+- The Playwright development worker count is bounded at three because eight fully parallel workers saturated one reused `next dev` process; no application behavior changed.
+- Port 3987 remained available throughout the final run. No public production deployment was performed.

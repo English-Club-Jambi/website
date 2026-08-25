@@ -104,9 +104,9 @@ The interface labels this accurately: a flag is a revisit signal, not proof that
 - The catalogue and its compatibility route expose no Create Practice Format action. The server rejects `adminAssessments.create` unless an operator deliberately enables the undocumented internal maintenance mode.
 - The selected development deployment remains `perfect-greyhound-270`. It exposes one full format and four skill sprints; the Question Bank verification reports 146 ready records and eight random-bank sections.
 - Backend regression: 8 files, 63 tests passed.
-- Unit regression: 45 files, 162 tests passed.
+- Unit regression: 45 files, 163 tests passed.
 - Responsive Practice Builder harness: desktop, Pixel 7, and 320 px passed with no overflow, minimum 44 px controls, reduced motion, and zero Axe violations.
-- Integrated browser regression: 152 cases passed on the first run; three stale roster-source assertions were corrected to the already-migrated Convex source and passed on all three viewports. Effective result: 155 passed, 73 intentional project/credential skips, zero unresolved failures.
+- Final credential-enabled browser regression: 172 cases passed directly and 55 project-specific cases skipped. One Contact server-action expectation exceeded its former five-second wait under the shared cloud load; after a bounded 20-second wait, that case passed on desktop, Pixel 7, and 320 px. Effective result: 173 passed, 55 intentional skips, zero unresolved failures.
 - Full ESLint, TypeScript, diff checks, and an isolated Next 16 production build passed. Port 3987 remained live throughout.
 
 ## Rejected approaches

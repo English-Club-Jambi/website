@@ -227,11 +227,14 @@ No data backfill is required before the first deployment. Do not make the option
 
 Completed without starting, stopping, or restarting port 3987:
 
-- `npm run typecheck` — backend checkpoint passed before the admin UI lane landed; the current integrated command exits on typed-route errors in generated Next validation plus `src/components/admin/admin-overview.tsx` and `src/components/admin/admin-session.tsx`. No Convex error is present in that output, but the root workflow must rerun the command after the UI route types are repaired.
-- Focused ESLint for the Convex cover/media contract and backend test passes. The current integrated `npm run lint` is gated by a synchronous effect-state update in `src/components/admin/content-manager.tsx`; this backend lane did not modify that UI file.
-- `npm run test:backend` — 23 tests passed across public and admin backend suites.
-- `npm test` — 62 assertions passed across 11 files, but the integrated command remains a gate because `tests/unit/journal-archive.test.tsx` leaves two React scheduler callbacks after jsdom teardown (`window is not defined`). The journal-archive test owner must clear those unhandled errors before the full suite is considered green.
-- `npm audit --audit-level=high` — 0 vulnerabilities.
+- `npm run typecheck` and `npm run lint` pass across the integrated repository.
+- `npm test` passes 226 tests across 53 files.
+- `npm run test:backend` passes 63 tests across eight files.
+- The final full E2E run passed 172 cases and intentionally skipped 55 project-specific cases. Its only miss was a Contact server-action response exceeding the former five-second expectation under shared-cloud load; the bounded 20-second repair passed on desktop, Pixel 7, and 320 px, bringing the effective verified set to 173 with no unresolved failure.
+- Two consecutive isolated default Turbopack production builds compile, type-check, and generate all 26 static routes; `/admin` and `/admin/activity` remain dynamic routes as intended.
+- `npx convex codegen --dry-run --typecheck=enable` passes against the selected development deployment.
+- The real Journal relay flow returns HTTP 204, saves a revision, reloads the verified `r2.mukhtada.my.id` image, and archives all matching QA media.
+- `npm audit --omit=dev` reports 0 vulnerabilities.
 - Convex authz deterministic scan — no public actor/user ID authorization arguments; every public ID-based admin operation has a server-side admin permission check.
 
 Backend tests prove:
@@ -256,17 +259,15 @@ Backend tests prove:
 
 ## Remaining operator gates
 
-The backend is deliberately not deployed or bootstrapped by this lane. Before calling the CMS production-ready, the integration owner must still:
+The complete schema/functions bundle, owner provisioning flow, public R2 integration, and same-origin Journal upload relay are active on development deployment `perfect-greyhound-270`. Production still requires:
 
-1. set Convex Auth and R2 variables on the intended cloud deployment;
-2. push the functions/schema to the announced non-production target first;
-3. repeat the proven development owner flow on the explicitly approved production deployment;
-4. verify editor/publisher negative permissions with real cloud identities;
-5. run an actual presigned PUT with the returned required headers, then HEAD verification and custom-domain GET;
-6. render the published Tiptap JSON through an allowlisted React renderer—never `dangerouslySetInnerHTML`;
-7. protect the Next admin layout for navigation and noindex UX while retaining Convex as the real authorization boundary;
-8. add production origins to R2 CORS and use separate production auth keys;
-9. run the integrated E2E, Axe, screenshot, and deployment checks in the root workflow.
+1. an explicitly approved production Convex target with separate Auth/R2 credentials and exact `SITE_URL`;
+2. real editor and publisher identities for cloud negative-permission and audit checks;
+3. the separate private Assessment bucket, scoped credentials, exact origins, checksum verification, short preview, and reviewed public derivative flow;
+4. reviewed production Member, Journal, page-copy, and Assessment content plus consent and retention decisions;
+5. post-deployment E2E, Axe, responsive, cache, metadata, restore, and incident-response smoke checks.
+
+The current public R2 bucket has no direct-browser PUT CORS policy. Journal uploads therefore use the constrained same-origin relay and retain Convex HEAD verification. Direct browser PUT may replace the relay only after an exact-origin Cloudflare CORS policy is configured and reverified.
 
 Convex Auth is currently a beta library. Public Password sign-up is disabled; account creation is a deployment-operator operation. Before production, the club should still decide whether to retain internal Password provisioning or move to a verified institutional identity provider.
 

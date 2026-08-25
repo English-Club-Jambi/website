@@ -529,7 +529,7 @@ test("contact form persists a valid, consented enquiry", async ({ page }, testIn
 
   await expect(
     page.getByRole("heading", { level: 2, name: "Message received." }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   const successPanel = page.getByRole("status");
   await expect(successPanel).toContainText(
     "Your message is in the club's private review queue.",

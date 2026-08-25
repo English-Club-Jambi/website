@@ -18,7 +18,7 @@ The filter can stay client-side for the current directory contract. The page alr
 | `joinedYear: null` | Explicit removal | Omit the field |
 | `joinedYear: 2024` | Set or update | Store `2024` |
 
-Do not make the field required and do not backfill an invented year into existing Convex records. Fictional showcase years may be added for the temporary organization-profile roster, but must remain source-only and must never be seeded into Convex.
+The implementation keeps the field optional and never infers a year for production records. Fictional years exist only in the target-locked development seed; that batch must never be promoted to production.
 
 ## Current implementation, with evidence
 
@@ -30,7 +30,7 @@ Do not make the field required and do not backfill an invented year into existin
 - `convex/members.ts:152-165` defines the reviewed upsert arguments without a year.
 - `convex/members.ts:205-241` builds a complete replacement record and calls `db.replace`. Adding an optional argument without explicit preservation would silently delete a previously stored year when an older caller updates a member.
 - `src/lib/members.ts:19-29` mirrors the public response as `PublicMember`; it has no year.
-- `src/content/member-showcase.ts:17-194` supplies 15 source-only fictional profiles when the reviewed roster is empty. None has a joined year.
+- Historical state: `src/content/member-showcase.ts` supplied a local fallback. The final route reads the guarded Convex development seed and has no source-only fallback.
 
 ### Query shape
 
@@ -183,7 +183,7 @@ Extract pure option-building and filtering code into `src/lib/member-filters.ts`
 - Position/Division options come from `coordinatorDivisions`, `coreMemberPositions`, and `boardMemberPositions`.
 - When a role is active, show only assignments compatible with that role; Roles 0 and 1 have no assignment choices beyond `All`.
 - Joined-year options come from valid known member years, deduplicated and sorted descending. Never derive a year from timestamps.
-- The source-only showcase should contain a believable spread of explicitly fictional years so the control has useful default states. The exact years are product content, not database truth.
+- The guarded development seed contains an explicitly fictional year spread so the real query and filter path has useful default states. These years are test data, not production evidence.
 
 ### Interaction
 
@@ -213,7 +213,7 @@ Extract pure option-building and filtering code into `src/lib/member-filters.ts`
 | `convex/members.ts:152-165` | Add optional number-or-null mutation arg. | Supports preserve, set, and clear. |
 | `convex/members.ts:200-241` | Resolve the year after the indexed slug lookup and include it in the replacement record. | Omitted legacy updates preserve a stored year. |
 | `src/lib/members.ts:19-29` | Add `joinedYear?: number` to `PublicMember`; keep the existing bounded fetch API. | No query/index expansion. |
-| `src/content/member-showcase.ts:17-194` | Add explicit source-only fictional joined years with useful distribution. | Unit-test integer range and multiple available years; never seed these entries. |
+| Guarded development seed | Add explicit fictional joined years with useful distribution. | Unit-test integer range and multiple available years; reject production targets. |
 | `src/lib/member-filters.ts` (new) | Build assignment/year options and implement the pure AND predicate. | Unit tests cover legacy unknown years and all combinations. |
 | `src/components/members/member-relay.tsx:21-44` | Import canonical taxonomy/types and define separate preview/filter state. | No duplicated string taxonomy. |
 | `src/components/members/member-relay.tsx:110-149` | Render joined year when known. | Legacy cards remain valid without the line. |

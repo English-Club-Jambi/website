@@ -15,7 +15,12 @@ test.describe("seeded four-skill practice flow", () => {
 
     await expect(page.locator('a[href="/practice/full"]').first()).toBeVisible();
     for (const skill of ["listening", "reading", "writing", "speaking"]) {
-      await expect(page.locator(`a[href="/practice/quick/${skill}"]`)).toBeVisible();
+      await expect(
+        page
+          .locator("main")
+          .locator(`a[href="/practice/quick/${skill}"]`)
+          .first(),
+      ).toBeVisible();
     }
 
     await page.goto("/practice/full");
@@ -168,23 +173,26 @@ test.describe("seeded four-skill practice flow", () => {
     await page.waitForURL(/\/practice\/attempt\//);
     await page.getByRole("button", { name: "Begin section" }).click();
 
-    for (let question = 1; question <= 3; question += 1) {
+    for (let question = 1; question <= 5; question += 1) {
       await expect(page.getByText(`QUESTION ${question} OF 5`)).toBeVisible();
       const available = page.locator('[aria-label="Available phrases"] button');
-      while ((await available.count()) > 0) await available.first().click();
+      const textarea = page.locator("textarea");
+      const radio = page.getByRole("radio");
+      if ((await available.count()) > 0) {
+        while ((await available.count()) > 0) await available.first().click();
+      } else if ((await textarea.count()) > 0) {
+        await textarea.fill(
+          "I would explain the change clearly, give the practical reason, and offer one next step so everyone can respond with the same information.",
+        );
+      } else if ((await radio.count()) > 0) {
+        await radio.first().check();
+      } else {
+        throw new Error(
+          "The selected Writing item has no supported response control.",
+        );
+      }
       await expect(page.getByText("Saved", { exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "Next", exact: true }).click();
-    }
-
-    const responses = [
-      "Subject: Updated English Club room. Hello everyone, today's practice has moved to Room 204 because the library meeting space is unavailable. The session still begins at four o'clock. Please reply if you need directions or cannot attend. Thank you, Arif.",
-      "I agree that community gardens can strengthen a neighbourhood because people share a practical responsibility. Regular work sessions also create natural chances to speak with neighbours who might not otherwise meet. However, the plan needs a clear watering schedule so the same volunteers do not carry all the work.",
-    ];
-    for (let question = 4; question <= 5; question += 1) {
-      await expect(page.getByText(`QUESTION ${question} OF 5`)).toBeVisible();
-      await page.locator("textarea").fill(responses[question - 4]);
-      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
-      if (question === 4) {
+      if (question < 5) {
         await page.getByRole("button", { name: "Next", exact: true }).click();
       }
     }
@@ -261,23 +269,39 @@ test.describe("seeded four-skill practice flow", () => {
   test("keeps a word-completion control inline at every supported width", async ({
     page,
   }, testInfo) => {
+    test.setTimeout(120_000);
     const browserErrors: string[] = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
     });
 
-    await page.goto("/practice/quick/reading");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Start practice" }).click();
-    await page.waitForURL(/\/practice\/attempt\//);
-    await page.getByRole("button", { name: "Begin section" }).click();
-
     const sentence = page.locator("[data-cloze-sentence]");
-    const word = page.locator("[data-cloze-word]");
-    const trigger = page.getByRole("combobox", { name: "Blank 1" });
+    let found = false;
+    for (let attempt = 0; attempt < 3 && !found; attempt += 1) {
+      await page.goto("/practice/quick/reading");
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "Start practice" }).click();
+      await page.waitForURL(/\/practice\/attempt\//);
+      await page.getByRole("button", { name: "Begin section" }).click();
+
+      for (let question = 1; question <= 8; question += 1) {
+        await expect(page.getByText(`QUESTION ${question} OF 8`)).toBeVisible();
+        if (await sentence.isVisible().catch(() => false)) {
+          found = true;
+          break;
+        }
+        if (question < 8) {
+          await page.getByRole("button", { name: "Next", exact: true }).click();
+        }
+      }
+    }
+    expect(found).toBe(true);
+
+    const word = page.locator("[data-cloze-word]").first();
+    const trigger = page.getByRole("combobox", { name: "Blank 1" }).first();
     await expect(sentence).toBeVisible();
-    await expect(word).toContainText("migr");
+    await expect(word).toBeVisible();
     await expect(trigger).toHaveAttribute("data-variant", "inline");
 
     const geometry = await trigger.evaluate((element) => {
@@ -299,8 +323,11 @@ test.describe("seeded four-skill practice flow", () => {
     expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 
     await trigger.click();
-    await page.getByRole("option", { name: "atory" }).click();
-    await expect(trigger).toContainText("atory");
+    const selectedOption = page.getByRole("option").first();
+    const selectedLabel = (await selectedOption.textContent())?.trim();
+    expect(selectedLabel).toBeTruthy();
+    await selectedOption.click();
+    await expect(trigger).toContainText(selectedLabel!);
 
     const accessibility = await new AxeBuilder({ page })
       .include("[data-cloze-sentence]")

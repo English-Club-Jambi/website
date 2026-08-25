@@ -544,8 +544,8 @@ function QuestionBankCreateForm({
       {error ? <AdminError>{error}</AdminError> : null}
       <footer className={styles.questionCreateFooter}>
         <p>
-          Saving creates a real Convex item and private answer key. Use the
-          selection settings afterward to review and activate it.
+          Saving keeps the question and its private answer key together. Use
+          the selection settings afterward to review and activate it.
         </p>
         <div className={adminStyles.buttonRow}>
           <button
@@ -681,7 +681,7 @@ function QuestionBankEditor({
         <p role="status">
           {message ||
             (row.origin === "bank-authored"
-              ? "Question text and answer key are stored in the internal authoring ledger."
+              ? "Question text and its private answer key remain available for later review."
               : "Question text and answer key remain in the source assessment.")}
         </p>
         <button className={adminStyles.primaryButton} type="button" disabled={!canEdit || pending} onClick={() => void save()}>

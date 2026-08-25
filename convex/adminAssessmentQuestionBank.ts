@@ -120,7 +120,10 @@ async function projectBankRow(
     sourceDefinitionId: definition._id,
     sourceSectionId: row.sourceSectionId,
     sourceItemId: item._id,
-    sourceTitle: definition.adminTitle,
+    sourceTitle:
+      row.origin === "bank-authored"
+        ? "Question Bank original"
+        : definition.adminTitle,
     sourceVisibility: definition.visibility,
     usageCount: Math.min(100, usages.length),
     usageCountCapped: usages.length > 100,

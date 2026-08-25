@@ -21,8 +21,8 @@ Therefore:
 
 - the role atlas is code-owned and may ship now;
 - the roster reads only `published` and `cleared` Convex records;
-- a successful empty query may show the user-requested fictional roster showcase recorded in `docs/MEMBER-SHOWCASE-DECISION.md`;
-- the showcase never appears for an unavailable query and disappears when any real public profile exists;
+- the named development deployment may show the guarded fictional Convex seed recorded in `docs/MEMBER-SHOWCASE-DECISION.md`;
+- production has no local showcase fallback and may show only consent-cleared Convex profiles;
 - supplied documentary photos remain activity evidence and cannot become named portraits;
 - the generated hero scene is decorative atmosphere, not evidence of real membership;
 - `UPA` remains an acronym because no authoritative expansion was supplied;
@@ -80,7 +80,7 @@ The existing Bricolage, cobalt, signal orange, 8 px control radius, 14 px media 
 - Profiles use a shared-rule responsive contact sheet, not detached floating cards.
 - A profile may show display name, role, verified division or position, optional approved bio, and optional approved portrait.
 - A missing portrait uses a text monogram derived from the verified display name.
-- A successful empty result shows 15 source-only fictional profiles with unique generated portrait cells.
+- The named development seed shows 15 fictional profiles with generated portrait cells through the real Convex path.
 - Public copy reads as an organisation profile; provenance and replacement rules remain in project documentation and source.
 - Showcase, real published roster, and backend-unavailable states remain behaviorally distinct.
 
@@ -185,7 +185,7 @@ type MemberRecord = {
 - No pyramid, org-chart connector web, orbiting faces, or prestige hierarchy.
 - No three-equal-card member wall.
 - No generic `Meet the amazing minds` copy.
-- Fictional names, portraits, and short biographies remain limited to the documented source-only showcase. No member count, quote, achievement, term, or contact detail is invented.
+- Fictional names, portraits, and short biographies remain limited to the documented development seed. No member count, quote, achievement, term, or contact detail is invented for production.
 - No glass panels, neon glow, gradient text, decorative status dots, custom cursor, marquee, or scroll cue.
 - No search, grid/list switch, campus, year, or extra division filters until a maintained roster makes them useful.
 
