@@ -54,6 +54,7 @@ const workspaceValidator = v.object({
   post: postSummaryValidator,
   draft: v.union(v.null(), revisionViewValidator),
   published: v.union(v.null(), revisionViewValidator),
+  legacyBody: v.union(v.null(), v.string()),
 });
 
 function cleanLine(value: string) {
@@ -200,6 +201,8 @@ export const getWorkspace = query({
       post: toSummary(post),
       draft: draftView,
       published: publishedView,
+      legacyBody:
+        draftView === null && publishedView === null ? post.body : null,
     };
   },
 });

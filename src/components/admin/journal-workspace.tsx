@@ -37,6 +37,7 @@ import { useAdminConfirm } from "./admin-confirm-dialog";
 import { canPublish, useAdminSession } from "./admin-session";
 import styles from "./admin-shell.module.css";
 import { useAdminMediaUpload } from "./use-admin-media-upload";
+import { legacyMarkdownToEditorDocument } from "@/lib/legacy-journal";
 
 const emptyDocument: JSONContent = {
   type: "doc",
@@ -129,34 +130,45 @@ function JournalWorkspaceEditor({
   const publish = useMutation(api.adminPosts.publish);
   const archive = useMutation(api.adminPosts.archive);
   const uploadMedia = useAdminMediaUpload();
-  const source = workspace?.draft ?? workspace?.published;
+  const source = workspace?.draft ?? workspace?.published ?? undefined;
   const loadedDraft = workspace?.draft ?? null;
+  const legacyDocument = useMemo(
+    () => legacyMarkdownToEditorDocument(workspace?.legacyBody ?? ""),
+    [workspace?.legacyBody],
+  );
+  const metadataSource = source ?? workspace?.post;
   const [form, setForm] = useState<JournalFormState>(() =>
-    source
+    metadataSource
       ? {
-          slug: source.slug,
-          title: source.title,
-          excerpt: source.excerpt,
-          category: source.category,
-          authorName: source.authorName,
-          featured: source.featured,
+          slug: metadataSource.slug,
+          title: metadataSource.title,
+          excerpt: metadataSource.excerpt,
+          category: metadataSource.category,
+          authorName: metadataSource.authorName,
+          featured: metadataSource.featured,
         }
       : { ...newStoryState },
   );
   const [revision, setRevision] = useState(workspace?.draft?.revision ?? 0);
   const [editorChange, setEditorChange] = useState<JournalEditorChange>(() => ({
-    document: parseEditorDocument(source?.editorJson),
-    plainText: source?.plainText ?? "",
+    document:
+      source === undefined
+        ? legacyDocument.document
+        : parseEditorDocument(source.editorJson),
+    plainText: source?.plainText ?? legacyDocument.plainText,
     wordCount: source?.plainText.trim()
       ? source.plainText.trim().split(/\s+/u).length
-      : 0,
+      : legacyDocument.wordCount,
   }));
   const [pending, setPending] = useState<"save" | "publish" | "archive" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const editorInitialContent = useMemo(
-    () => parseEditorDocument(source?.editorJson),
-    [source?.editorJson],
+    () =>
+      source === undefined
+        ? legacyDocument.document
+        : parseEditorDocument(source.editorJson),
+    [legacyDocument.document, source],
   );
   const mediaUrlsById = useMemo(
     () =>
@@ -368,7 +380,13 @@ function JournalWorkspaceEditor({
             <p>Type <kbd>/</kbd> on an empty line, or use the handle beside a block.</p>
           </header>
           <RichJournalEditor
-            key={loadedDraft?._id ?? workspace?.published?._id ?? "new-story"}
+            key={
+              loadedDraft?._id ??
+              workspace?.published?._id ??
+              (workspace?.legacyBody === null
+                ? "new-story"
+                : `legacy-${typedPostId ?? "new-story"}`)
+            }
             initialContent={editorInitialContent}
             mediaUrlsById={mediaUrlsById}
             disabled={pending !== null}

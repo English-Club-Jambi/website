@@ -442,6 +442,71 @@ describe("admin journal revisions", () => {
     });
   });
 
+  it("opens a legacy published post and establishes its first editable revision", async () => {
+    const { t, editor } = await bootstrap();
+    const legacyBody = [
+      "The archive records **Leeds the Way** while members listen together.",
+      "",
+      "## Listening is part of speaking",
+      "",
+      "A useful exchange gives every speaker enough room to answer.",
+    ].join("\n");
+    const now = Date.UTC(2026, 7, 25);
+    const postId = await t.run(async (ctx) =>
+      ctx.db.insert("posts", {
+        slug: "legacy-listening-story",
+        title: "Legacy listening story",
+        excerpt:
+          "An existing published story that predates structured journal revisions.",
+        body: legacyBody,
+        category: "Exchange",
+        authorName: "English Club",
+        status: "published",
+        featured: false,
+        publishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+
+    const workspace = await editor.query(api.adminPosts.getWorkspace, { postId });
+    expect(workspace).toMatchObject({
+      post: {
+        title: "Legacy listening story",
+        excerpt:
+          "An existing published story that predates structured journal revisions.",
+        status: "published",
+      },
+      draft: null,
+      published: null,
+      legacyBody,
+    });
+
+    const saved = await editor.mutation(api.adminPosts.saveDraft, {
+      postId,
+      expectedRevision: 0,
+      slug: "legacy-listening-story",
+      title: "Legacy listening story",
+      excerpt:
+        "An existing published story that predates structured journal revisions.",
+      category: "Exchange",
+      authorName: "English Club",
+      featured: false,
+      editorJson,
+    });
+    expect(saved).toMatchObject({ ok: true, postId, revision: 1 });
+
+    const revisedWorkspace = await editor.query(api.adminPosts.getWorkspace, {
+      postId,
+    });
+    expect(revisedWorkspace?.legacyBody).toBeNull();
+    expect(revisedWorkspace?.draft).toMatchObject({
+      revision: 1,
+      title: "Legacy listening story",
+    });
+    expect(revisedWorkspace?.published).toBeNull();
+  });
+
   it("rejects raw HTML, script-shaped links, and malformed map nodes", async () => {
     const { editor } = await bootstrap();
     for (const editorJson of [
