@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">English Club mark</title>
+  <desc id="desc">An angular EC monogram passing an orange response point through its centre.</desc>
+  <path fill="#4937E8" d="M5 7h25l9 9-8 8H18v5h12l8 8-9 8H18v12H5V7Z"/>
+  <path fill="#4937E8" fill-rule="evenodd" d="M41 7h18v12H46l-8 8v10l8 8h13v12H41L26 42V22L41 7Zm4 13-7 7v10l7 7h2V20h-2Z"/>
+  <circle cx="34" cy="32" r="4.5" fill="#F27A26"/>
+</svg>

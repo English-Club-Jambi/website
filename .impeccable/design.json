@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-25T18:30:00+07:00",
+  "title": "Design System: English Club",
+  "extensions": {
+    "colorMeta": {
+      "relay-cobalt": {
+        "role": "primary",
+        "displayName": "Relay Cobalt",
+        "canonical": "oklch(0.49 0.22 272)",
+        "tonalRamp": [
+          "oklch(0.18 0.08 272)",
+          "oklch(0.29 0.14 272)",
+          "oklch(0.40 0.21 272)",
+          "oklch(0.49 0.22 272)",
+          "oklch(0.60 0.19 272)",
+          "oklch(0.72 0.16 272)",
+          "oklch(0.84 0.09 272)",
+          "oklch(0.94 0.035 272)"
+        ]
+      },
+      "relay-cobalt-strong": {
+        "role": "primary",
+        "displayName": "Relay Cobalt Strong",
+        "canonical": "oklch(0.40 0.21 272)"
+      },
+      "signal-orange": {
+        "role": "secondary",
+        "displayName": "Signal Orange",
+        "canonical": "oklch(0.67 0.19 45)",
+        "tonalRamp": [
+          "oklch(0.20 0.07 45)",
+          "oklch(0.34 0.12 45)",
+          "oklch(0.50 0.17 45)",
+          "oklch(0.67 0.19 45)",
+          "oklch(0.76 0.15 55)",
+          "oklch(0.86 0.09 62)",
+          "oklch(0.94 0.045 70)"
+        ]
+      },
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "oklch(0.985 0.006 95)"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "oklch(1 0 0)"
+      },
+      "carbon": {
+        "role": "neutral",
+        "displayName": "Carbon",
+        "canonical": "oklch(0.18 0.025 265)"
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "oklch(0.47 0.025 265)"
+      },
+      "pencil": {
+        "role": "neutral",
+        "displayName": "Pencil",
+        "canonical": "oklch(0.86 0.018 265)"
+      },
+      "cobalt-wash": {
+        "role": "primary",
+        "displayName": "Cobalt Wash",
+        "canonical": "oklch(0.94 0.035 272)"
+      },
+      "dark-room": {
+        "role": "neutral",
+        "displayName": "Dark Room",
+        "canonical": "oklch(0.15 0.018 265)"
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "Dark Paper",
+        "canonical": "oklch(0.20 0.022 265)"
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Ink",
+        "canonical": "oklch(0.96 0.008 95)"
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Muted",
+        "canonical": "oklch(0.73 0.02 265)"
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Dark Line",
+        "canonical": "oklch(0.34 0.025 265)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Hero Display",
+        "purpose": "Homepage sentence stage only; maximum two lines."
+      },
+      "route": {
+        "displayName": "Route Display",
+        "purpose": "Distinct route opening; maximum two lines outside articles."
+      },
+      "headline": {
+        "displayName": "Section Headline",
+        "purpose": "One short chapter idea."
+      },
+      "title": {
+        "displayName": "Content Title",
+        "purpose": "Activities, journal stories, and interactive companion headings."
+      },
+      "body": {
+        "displayName": "Reading Body",
+        "purpose": "Plain copy within 65ch."
+      },
+      "label": {
+        "displayName": "Control Label",
+        "purpose": "Sentence-case controls and metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog-lift",
+        "value": "0 18px 48px oklch(0.10 0.02 265 / 0.18)",
+        "purpose": "Separates the open mobile navigation dialog only."
+      },
+      {
+        "name": "control-edge",
+        "value": "0 2px 0 oklch(0.18 0.025 265 / 0.28)",
+        "purpose": "Compact physical rest state for the primary action."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "160ms",
+        "purpose": "Press, underline, and colour response."
+      },
+      {
+        "name": "duration-state",
+        "value": "300ms",
+        "purpose": "Sentence, prompt, activity, and preview replacement."
+      },
+      {
+        "name": "duration-scene",
+        "value": "520ms",
+        "purpose": "One chapter handoff."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Selected content arrival."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Control response."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "compact",
+        "value": "880px"
+      },
+      {
+        "name": "wide",
+        "value": "1120px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single Join or submit action in one decision area.",
+      "html": "<button class=\"ds-primary\">Join the club</button>",
+      "css": ".ds-primary { min-height: 48px; border: 1px solid oklch(0.18 0.025 265); border-radius: 8px; padding: 14px 20px; background: oklch(0.67 0.19 45); color: oklch(0.18 0.025 265); font: 650 14px/1.2 Arial, sans-serif; box-shadow: 0 2px 0 oklch(0.18 0.025 265 / 0.28); } .ds-primary:active { transform: translateY(2px); box-shadow: none; } .ds-primary:focus-visible { outline: 3px solid oklch(0.49 0.22 272); outline-offset: 3px; }"
+    },
+    {
+      "name": "State Control",
+      "kind": "button",
+      "refersTo": "state-control",
+      "description": "A bounded sentence or activity choice with an explicit selected state.",
+      "html": "<button class=\"ds-state\" aria-pressed=\"true\">Speak</button>",
+      "css": ".ds-state { min-height: 46px; border: 1px solid oklch(0.86 0.018 265); border-radius: 999px; padding: 12px 18px; background: oklch(0.94 0.035 272); color: oklch(0.18 0.025 265); font: 650 14px/1.2 Arial, sans-serif; } .ds-state[aria-pressed=\"true\"] { border-color: oklch(0.49 0.22 272); background: oklch(0.49 0.22 272); color: white; } .ds-state:focus-visible { outline: 3px solid oklch(0.49 0.22 272); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labelled contact field with a persistent visible label.",
+      "html": "<label class=\"ds-field\"><span>Email address</span><input type=\"email\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: oklch(0.18 0.025 265); font-family: Arial, sans-serif; } .ds-field input { min-height: 48px; border: 1px solid oklch(0.86 0.018 265); border-radius: 8px; padding: 13px 14px; background: white; color: oklch(0.18 0.025 265); font-size: 16px; } .ds-field input:focus-visible { outline: 3px solid oklch(0.49 0.22 272); outline-offset: 2px; }"
+    },
+    {
+      "name": "Journal Link",
+      "kind": "custom",
+      "description": "A title-led editorial row that remains useful without its companion preview.",
+      "html": "<article class=\"ds-story\"><p>Club story · 25 August 2026</p><h3><a href=\"#\">A room made for trying again</a></h3></article>",
+      "css": ".ds-story { padding-block: 24px; border-top: 1px solid oklch(0.86 0.018 265); } .ds-story h3 { margin: 8px 0 0; font: 650 clamp(26px, 4vw, 52px)/1 Arial, sans-serif; letter-spacing: -0.035em; } .ds-story a { color: oklch(0.18 0.025 265); text-decoration: none; } .ds-story a:hover { color: oklch(0.49 0.22 272); } .ds-story a:focus-visible { outline: 3px solid oklch(0.49 0.22 272); outline-offset: 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Conversation Relay",
+    "overview": "Language moves from a sentence-led hero into a prompt, from a prompt into an activity, from an activity into a story, and from a story into a real contact intent. The default surface is clean and bright. One generated room scene fades behind the hero; documentary photography supplies selective proof after the interface has established the idea.",
+    "keyCharacteristics": [
+      "Language-led identity with complete server-rendered content.",
+      "One committed cobalt and one response orange.",
+      "Asymmetrical whitespace instead of repeated cards.",
+      "User-controlled state choreography with reduced-motion parity.",
+      "One replaceable generated hero atmosphere, sparse documentary media, and one persistent site-wide theme choice."
+    ],
+    "rules": [
+      {
+        "name": "Words Are the Instrument",
+        "body": "A route must remain visually finished when optional photography is removed.",
+        "section": "composition"
+      },
+      {
+        "name": "The One Room Rule",
+        "body": "A page uses one complete theme. Sections do not create unrelated local dark modes.",
+        "section": "colors"
+      },
+      {
+        "name": "The Response Rule",
+        "body": "Signal Orange marks the Join action, a selected response, or successful completion.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Family Rule",
+        "body": "Bricolage Grotesque supplies every public type role; contrast comes from scale and composition.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-at-Rest Rule",
+        "body": "Do not combine a border, large radius, and wide shadow to simulate a generic card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do make the subject interactive through real sentences and prompts.",
+      "Do preserve complete server HTML, keyboard access, touch access, and reduced-motion behavior.",
+      "Do let one selected state recompose an entire companion field.",
+      "Do keep photographs sparse, consent-gated, and factually captioned.",
+      "Do use Heroicons SVG components for functional symbols instead of Unicode or ASCII glyphs.",
+      "Do treat light and dark as complete semantic token mappings."
+    ],
+    "donts": [
+      "Do not build three equal feature cards, generic bento boxes, or icon-above-title grids.",
+      "Do not use gradient text, decorative gradients, blobs, glass, glow, particles, 3D letters, or a custom cursor; one functional hero media fade is allowed.",
+      "Do not add fake data, scores, progress, metrics, schedules, testimonials, or partner marks.",
+      "Do not auto-rotate content, hijack scroll, or put a photograph on every fold.",
+      "Do not add microphone, camera, speech recognition, or account requirements."
+    ]
+  }
+}

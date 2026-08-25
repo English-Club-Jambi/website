@@ -1,0 +1,1304 @@
+.memberHero {
+  position: relative;
+  min-height: calc(100svh - var(--header-height));
+  display: grid;
+  overflow: clip;
+  border-bottom: 1px solid var(--line);
+  background: var(--page);
+}
+
+.heroBackdrop {
+  position: absolute;
+  inset: 0 0 0 24%;
+  opacity: 0.88;
+  pointer-events: none;
+  animation: hero-image-enter var(--duration-scene) var(--ease-out) both;
+}
+
+.heroBackdrop img {
+  object-fit: cover;
+  object-position: 68% 48%;
+  filter: var(--image-filter);
+}
+
+.heroBackdrop::after {
+  position: absolute;
+  content: "";
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      var(--page) 0%,
+      color-mix(in oklch, var(--page) 96%, transparent) 20%,
+      color-mix(in oklch, var(--page) 62%, transparent) 45%,
+      transparent 72%
+    ),
+    linear-gradient(
+      0deg,
+      var(--page) 0%,
+      color-mix(in oklch, var(--page) 78%, transparent) 16%,
+      transparent 42%
+    );
+}
+
+:global(html[data-theme="dark"]) .heroBackdrop {
+  opacity: 0.64;
+}
+
+.heroFrame {
+  position: relative;
+  z-index: 1;
+  min-height: calc(100svh - var(--header-height));
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--grid-gap);
+  padding-block: clamp(2.5rem, 6vw, 5.5rem);
+}
+
+.heroCopy {
+  grid-column: 1 / span 10;
+}
+
+.heroCopy > p:first-child {
+  margin-bottom: clamp(2rem, 6vw, 5rem);
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.heroCopy h1 {
+  max-width: 10ch;
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(3.7rem, 7.8vw, 6rem);
+  font-weight: 760;
+  line-height: 0.87;
+  letter-spacing: -0.04em;
+}
+
+.heroCopy h1 span {
+  display: block;
+  white-space: nowrap;
+}
+
+.heroSupport {
+  grid-column: 9 / -1;
+  align-self: end;
+  max-width: 29ch;
+  margin: 0 0 0.5rem;
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
+  font-weight: 540;
+  line-height: 1.4;
+}
+
+.roleSection {
+  padding-block: clamp(6rem, 11vw, 10rem);
+  background: var(--surface);
+}
+
+.roleHeader {
+  margin-bottom: clamp(4rem, 8vw, 7rem);
+}
+
+.roleHeader h2 {
+  max-width: 10ch;
+  margin: 0;
+  font-size: clamp(2.8rem, 5.4vw, 5.5rem);
+  font-weight: 710;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.roleHeader > p:last-child {
+  max-width: 50ch;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+}
+
+.roleInstrument {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--grid-gap);
+}
+
+.roleSelector {
+  grid-column: 1 / span 8;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.roleInput {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.allRolesChoice {
+  position: relative;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding-inline: 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 680;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.allRolesChoice:hover {
+  color: var(--ink);
+  transform: translateY(-2px);
+}
+
+.allRolesChoice[data-active="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.allRolesChoice:has(input:focus-visible),
+.roleChoice:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.roleChannels {
+  display: grid;
+  grid-auto-rows: 1fr;
+  border-top: 1px solid var(--line);
+}
+
+.roleChoice {
+  position: relative;
+  min-height: 9.5rem;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(9rem, 1.15fr) minmax(13rem, 1.45fr) minmax(11rem, 1.2fr) 1.5rem;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 1.2rem 0.9rem;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  isolation: isolate;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.roleChoice::before {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--signal);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform var(--duration-state) var(--ease-out);
+}
+
+.roleChoice > span,
+.roleChevron {
+  transition:
+    transform var(--duration-state) var(--ease-out),
+    color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+.roleChoice:hover > span,
+.roleChoice:hover .roleChevron {
+  transform: translate3d(5px, 0, 0);
+}
+
+.roleChoice[data-active="true"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.roleChoice[data-active="true"]::before {
+  transform: scaleY(1);
+}
+
+.roleChoice[data-active="true"] > span,
+.roleChoice[data-active="true"] .roleChevron {
+  transform: translate3d(7px, 0, 0);
+}
+
+.roleCode {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.07em;
+}
+
+.roleChoice[data-active="true"] .roleCode,
+.roleChoice[data-active="true"] .roleScope,
+.roleChoice[data-active="true"] .roleSubtypes {
+  color: color-mix(in oklch, var(--on-primary) 82%, transparent);
+}
+
+.roleIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.roleIdentity svg {
+  flex: 0 0 auto;
+}
+
+.roleIdentity strong {
+  font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.roleScope,
+.roleSubtypes {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.roleScope {
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.42;
+}
+
+.roleSubtypes {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.roleChevron {
+  color: var(--muted);
+}
+
+.roleChoice[data-active="true"] .roleChevron {
+  color: var(--signal);
+}
+
+.roleCompanion {
+  position: sticky;
+  top: calc(var(--header-height) + 2rem);
+  grid-column: 9 / -1;
+  min-height: 34rem;
+  overflow: hidden;
+  border-top: 3px solid var(--primary);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--primary-wash);
+}
+
+.companionInner {
+  position: relative;
+  min-height: 29rem;
+  display: flex;
+  flex-direction: column;
+  animation: companion-enter var(--duration-state) var(--ease-out) both;
+}
+
+.companionCode {
+  position: absolute;
+  z-index: 0;
+  top: -0.18em;
+  right: -0.05em;
+  color: transparent;
+  font-size: clamp(7rem, 13vw, 12rem);
+  font-weight: 780;
+  line-height: 0.8;
+  letter-spacing: -0.08em;
+  opacity: 0.16;
+  -webkit-text-stroke: 1px var(--primary);
+  pointer-events: none;
+}
+
+.companionIcon {
+  position: relative;
+  z-index: 1;
+  margin-bottom: auto;
+  color: var(--signal);
+}
+
+.companionLabel {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0.8rem;
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.companionInner h3 {
+  position: relative;
+  z-index: 1;
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(2.2rem, 3.5vw, 3.6rem);
+  font-weight: 720;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+}
+
+.companionInner > p:not(.companionLabel, .companionNote) {
+  position: relative;
+  z-index: 1;
+  max-width: 39ch;
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+}
+
+.companionNote {
+  position: relative;
+  z-index: 1;
+  margin: 1.5rem 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.companionList {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.companionList li {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  border-top: 1px solid var(--line);
+  padding-block: 0.55rem;
+  font-size: 0.86rem;
+}
+
+.companionList svg {
+  color: var(--primary-strong);
+}
+
+.directorySection {
+  padding-block: clamp(6rem, 11vw, 10rem);
+  border-top: 1px solid var(--line);
+  background: var(--primary-wash);
+}
+
+.directoryHeader {
+  margin-bottom: clamp(2.75rem, 5vw, 4.5rem);
+}
+
+.directoryHeader h2 {
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(2.8rem, 5.5vw, 5.7rem);
+  font-weight: 710;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.directoryHeader > p {
+  max-width: 52ch;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+}
+
+.directoryToolbar {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.directoryToolbar p {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 690;
+}
+
+.filterToggle {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-inline: 1px solid var(--line);
+  padding-inline: 0.9rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.filterToggle:hover:not(:disabled),
+.filterToggle[aria-expanded="true"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.filterToggle:focus-visible,
+.filterClose:focus-visible,
+.filterFooter button:focus-visible,
+.directoryEmpty button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.filterToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.filterCount {
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  padding-inline: 0.3rem;
+  background: var(--signal);
+  color: var(--signal-ink);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.filterChevron {
+  transition: transform var(--duration-state) var(--ease-out);
+}
+
+.filterChevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.filterPanel {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  animation: filter-panel-enter var(--duration-state) var(--ease-out) both;
+}
+
+.filterHeader {
+  min-height: 5.75rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 1rem clamp(0.9rem, 2vw, 1.4rem);
+}
+
+.filterHeader > svg {
+  color: var(--signal-ink);
+}
+
+.filterHeader h3,
+.filterHeader p,
+.filterFooter p {
+  margin: 0;
+}
+
+.filterHeader h3 {
+  font-size: 1rem;
+  font-weight: 740;
+}
+
+.filterHeader p {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.filterClose {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.filterClose:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+  transform: rotate(5deg);
+}
+
+.filterFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.filterFields > * {
+  min-width: 0;
+  padding: 1.1rem clamp(0.9rem, 2vw, 1.4rem) 1.25rem;
+  background: var(--surface);
+}
+
+.filterFooter {
+  min-height: 4.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem clamp(0.9rem, 2vw, 1.4rem);
+}
+
+.filterFooter p {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.filterFooter button,
+.directoryEmpty button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding-inline: 0.95rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.filterFooter button:hover:not(:disabled),
+.directoryEmpty button:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+  transform: translate3d(0, -2px, 0);
+}
+
+.filterFooter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.directoryEmpty {
+  min-height: clamp(24rem, 43vw, 38rem);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--grid-gap);
+  padding-block: clamp(3rem, 7vw, 6rem);
+}
+
+.directoryEmpty > svg {
+  grid-column: 1 / span 2;
+  align-self: start;
+  color: var(--primary-strong);
+}
+
+.directoryEmpty > div {
+  grid-column: 5 / span 7;
+}
+
+.directoryEmpty h3 {
+  max-width: 13ch;
+  margin: 0;
+  font-size: clamp(2.5rem, 5vw, 5.1rem);
+  font-weight: 710;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.directoryEmpty p {
+  max-width: 50ch;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+
+.directoryEmpty button {
+  margin-top: 1.5rem;
+}
+
+.memberGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: 1.5rem 0 0;
+  border: 1px solid var(--line);
+  padding: 0;
+  background: var(--line);
+  list-style: none;
+  animation: roster-enter var(--duration-state) var(--ease-out) both;
+}
+
+.memberCard {
+  min-width: 0;
+  background: var(--surface);
+  animation: roster-card-enter var(--duration-state) var(--ease-out) both;
+  animation-delay: calc(var(--member-index, 0) * 28ms);
+}
+
+.memberCard article {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+}
+
+.memberVisual {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: color-mix(in oklch, var(--primary-wash) 72%, var(--surface));
+}
+
+.memberPhoto,
+.memberMonogram,
+.showcasePortrait {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transition: transform var(--duration-state) var(--ease-out);
+}
+
+.memberCard article:hover .memberPhoto,
+.memberCard article:hover .memberMonogram,
+.memberCard article:hover .showcasePortrait {
+  transform: scale(1.025);
+}
+
+.memberPhoto {
+  background: var(--surface);
+}
+
+.memberPhoto img {
+  object-fit: cover;
+  filter: var(--image-filter);
+}
+
+.memberMonogram {
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 760;
+  letter-spacing: -0.035em;
+}
+
+.showcasePortrait {
+  background-image: var(--portrait-image);
+  background-repeat: no-repeat;
+  background-size: 500% 400%;
+  background-position:
+    calc(3.125% + var(--portrait-column) * 31.25%)
+    calc(var(--portrait-row) * 33.333333%);
+  filter: var(--image-filter);
+}
+
+.memberCardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 15.5rem;
+  padding: clamp(0.9rem, 1.5vw, 1.25rem);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.memberCard article:hover .memberCardBody {
+  transform: translate3d(0, -2px, 0);
+}
+
+.memberRoleLine {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.memberRoleCode {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.memberCardBody h3 {
+  min-height: 2.1em;
+  margin: 1.2rem 0 0;
+  font-size: clamp(1.2rem, 1.55vw, 1.7rem);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.memberAssignment {
+  min-height: 2.75em;
+  margin: 0.75rem 0 0;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.memberJoinedYear {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 660;
+}
+
+.memberJoinedYear svg {
+  flex: 0 0 auto;
+  color: var(--primary-strong);
+}
+
+.memberBio {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.memberBio {
+  margin: auto 0 0;
+  padding-top: 1.2rem;
+}
+
+.memberCard[data-role="1"] .memberRoleLine,
+.memberCard[data-role="3"] .memberRoleLine {
+  color: var(--signal-ink);
+}
+
+.memberCard[data-role="4"] .memberRoleLine {
+  color: var(--ink);
+}
+
+.memberClose {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.memberCloseFrame {
+  min-height: clamp(30rem, 58svh, 46rem);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-content: center;
+  gap: var(--grid-gap);
+  padding-block: clamp(5rem, 10vw, 9rem);
+}
+
+.memberCloseFrame > svg {
+  grid-column: 1 / span 2;
+  align-self: start;
+  color: var(--signal);
+}
+
+.memberCloseFrame h2 {
+  grid-column: 3 / span 7;
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(3rem, 6.2vw, 6rem);
+  font-weight: 710;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+}
+
+.memberCloseFrame > p {
+  grid-column: 10 / -1;
+  align-self: end;
+  margin: 0;
+  color: color-mix(in oklch, var(--on-primary) 78%, transparent);
+}
+
+.memberCloseFrame > a {
+  grid-column: 10 / -1;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: start;
+  border-bottom: 1px solid currentColor;
+  color: var(--on-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.memberCloseFrame > a svg {
+  transition: transform var(--duration-state) var(--ease-out);
+}
+
+.memberCloseFrame > a:hover svg {
+  transform: translate3d(5px, -5px, 0);
+}
+
+@keyframes hero-image-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(10px, 0, 0) scale(1.015);
+  }
+}
+
+@keyframes companion-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes roster-enter {
+  from {
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes roster-card-enter {
+  from {
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes filter-panel-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@media (max-width: 1279px) {
+  .memberGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1119px) {
+  .heroCopy {
+    grid-column: 1 / span 9;
+  }
+
+  .heroSupport {
+    grid-column: 9 / -1;
+  }
+
+  .roleSelector {
+    grid-column: 1 / span 7;
+  }
+
+  .roleCompanion {
+    grid-column: 8 / -1;
+  }
+
+  .roleChoice {
+    grid-template-columns: 2rem minmax(9rem, 1fr) minmax(12rem, 1.4fr) 1.5rem;
+  }
+
+  .roleSubtypes {
+    grid-column: 2 / -2;
+    margin-top: -0.2rem;
+  }
+}
+
+@media (max-width: 959px) {
+  .memberGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 879px) {
+  .heroBackdrop {
+    inset: 0 0 0 8%;
+    opacity: 0.68;
+  }
+
+  .heroFrame {
+    grid-template-columns: 1fr;
+    align-content: end;
+    gap: 2rem;
+  }
+
+  .heroCopy,
+  .heroSupport {
+    grid-column: 1;
+  }
+
+  .heroSupport {
+    max-width: 38ch;
+  }
+
+  .roleInstrument {
+    grid-template-columns: 1fr;
+  }
+
+  .roleSelector,
+  .roleCompanion {
+    grid-column: 1;
+  }
+
+  .roleHeader h2 {
+    max-width: 10ch;
+  }
+
+  .roleHeader > p:last-child {
+    max-width: 44ch;
+  }
+
+  .roleInstrument {
+    gap: 3rem;
+  }
+
+  .roleCompanion {
+    position: static;
+    min-height: 27rem;
+  }
+
+  .companionInner {
+    min-height: 22rem;
+  }
+
+  .directoryHeader > p {
+    max-width: 44ch;
+  }
+
+  .directoryEmpty > div {
+    grid-column: 4 / -1;
+  }
+
+  .memberCloseFrame > svg {
+    grid-column: 1 / span 1;
+  }
+
+  .memberCloseFrame h2 {
+    grid-column: 2 / span 8;
+  }
+
+  .memberCloseFrame > p,
+  .memberCloseFrame > a {
+    grid-column: 10 / -1;
+  }
+}
+
+@media (max-width: 679px) {
+  .memberGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memberCardBody {
+    min-height: 14.5rem;
+    padding: 0.85rem;
+  }
+
+  .memberRoleLine {
+    font-size: 0.68rem;
+  }
+
+  .memberRoleCode {
+    display: none;
+  }
+
+  .memberCardBody h3 {
+    margin-top: 0.9rem;
+    font-size: clamp(1.02rem, 5.2vw, 1.25rem);
+  }
+
+  .memberAssignment {
+    min-height: 3.6em;
+    font-size: 0.74rem;
+  }
+
+  .memberBio {
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 639px) {
+  .memberHero,
+  .heroFrame {
+    min-height: calc(100svh - var(--header-height));
+  }
+
+  .heroBackdrop {
+    inset: 0 0 20% 0;
+    opacity: 0.58;
+  }
+
+  .heroBackdrop::after {
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--page) 82%, transparent) 0%,
+        color-mix(in oklch, var(--page) 30%, transparent) 70%,
+        transparent 100%
+      ),
+      linear-gradient(
+        0deg,
+        var(--page) 0%,
+        color-mix(in oklch, var(--page) 92%, transparent) 23%,
+        color-mix(in oklch, var(--page) 26%, transparent) 62%,
+        transparent 100%
+      );
+  }
+
+  .heroFrame {
+    padding-block: 2.5rem 2rem;
+  }
+
+  .heroCopy > p:first-child {
+    margin-bottom: 2rem;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(2rem, 10.2vw, 3.8rem);
+    line-height: 0.9;
+    letter-spacing: -0.035em;
+  }
+
+  .heroSupport {
+    font-size: 1rem;
+  }
+
+  .roleSection,
+  .directorySection {
+    padding-block: 5.5rem;
+  }
+
+  .roleHeader h2,
+  .directoryHeader h2 {
+    font-size: clamp(2.7rem, 12vw, 4rem);
+  }
+
+  .roleChannels {
+    grid-auto-rows: auto;
+  }
+
+  .roleChoice {
+    min-height: 0;
+    grid-template-columns: 1.5rem 2rem 1fr 1.5rem;
+    gap: 0.75rem;
+    padding: 1.25rem 0.55rem;
+  }
+
+  .roleCode {
+    grid-column: 1;
+  }
+
+  .roleIdentity {
+    grid-column: 2 / span 2;
+  }
+
+  .roleIdentity strong {
+    font-size: 1.15rem;
+  }
+
+  .roleScope,
+  .roleSubtypes {
+    grid-column: 2 / -1;
+  }
+
+  .roleChevron {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .roleCompanion {
+    min-height: 25rem;
+    padding: 1.5rem;
+  }
+
+  .companionInner {
+    min-height: 21rem;
+  }
+
+  .companionCode {
+    font-size: 7rem;
+  }
+
+  .directoryToolbar {
+    min-height: 64px;
+  }
+
+  .filterToggle {
+    align-self: stretch;
+    border-right: 0;
+  }
+
+  .filterFields {
+    grid-template-columns: 1fr;
+  }
+
+  .filterFooter {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: 1rem;
+  }
+
+  .filterFooter button {
+    width: 100%;
+  }
+
+  .directoryEmpty {
+    min-height: 30rem;
+    grid-template-columns: 1fr;
+    align-content: space-between;
+    gap: 3rem;
+  }
+
+  .directoryEmpty > svg,
+  .directoryEmpty > div {
+    grid-column: 1;
+  }
+
+  .directoryEmpty h3 {
+    font-size: clamp(2.6rem, 12vw, 4rem);
+  }
+
+  .memberCloseFrame {
+    min-height: 38rem;
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 2rem;
+  }
+
+  .memberCloseFrame > svg,
+  .memberCloseFrame h2,
+  .memberCloseFrame > p,
+  .memberCloseFrame > a {
+    grid-column: 1;
+  }
+
+  .memberCloseFrame h2 {
+    font-size: clamp(3rem, 14vw, 4.8rem);
+  }
+}
+
+@media (max-width: 479px) {
+  .memberGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .memberCard article {
+    display: grid;
+    grid-template-columns: minmax(6.8rem, 40%) minmax(0, 1fr);
+  }
+
+  .memberVisual {
+    align-self: start;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    aspect-ratio: 4 / 5;
+  }
+
+  .memberCardBody {
+    min-height: 0;
+    padding: 0.75rem;
+  }
+
+  .memberRoleLine {
+    gap: 0.3rem;
+  }
+
+  .memberCardBody h3 {
+    min-height: 0;
+    margin-top: 0.75rem;
+    font-size: clamp(1.05rem, 5.8vw, 1.3rem);
+  }
+
+  .memberAssignment {
+    min-height: 0;
+    margin-top: 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .memberJoinedYear {
+    margin-top: 0.65rem;
+    font-size: 0.7rem;
+  }
+
+  .memberBio {
+    display: none;
+  }
+
+  .filterHeader {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .filterHeader p {
+    max-width: 24ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroBackdrop,
+  .companionInner,
+  .memberGrid,
+  .memberCard,
+  .memberCardBody,
+  .memberPhoto,
+  .memberMonogram,
+  .showcasePortrait,
+  .filterPanel,
+  .filterChevron,
+  .filterClose,
+  .filterFooter button,
+  .directoryEmpty button {
+    transform: none !important;
+    animation-delay: 0ms !important;
+  }
+}

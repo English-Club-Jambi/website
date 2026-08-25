@@ -1,0 +1,262 @@
+import {
+  isValidMemberAssignment,
+  isValidMemberJoinedYear,
+  type MemberDivision,
+  type MemberPosition,
+  type MemberRoleLevel,
+} from "../content/member-roles";
+import type { Doc } from "./_generated/dataModel";
+import { internalMutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+import {
+  memberConsentStatusValidator,
+  memberDivisionValidator,
+  memberPhotoValidator,
+  memberPositionValidator,
+  memberProfileStatusValidator,
+  memberRoleLevelValidator,
+  publicMemberValidator,
+} from "./validators";
+
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const memberPhotoKeyPattern =
+  /^members\/(?:[a-z0-9][a-z0-9_-]*\/)+[a-z0-9][a-z0-9_-]*\.(?:avif|webp)$/;
+const focalPointPattern = /^(?:100|[0-9]{1,2})% (?:100|[0-9]{1,2})%$/;
+
+function cleanLine(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function boundedLimit(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) {
+    return 120;
+  }
+
+  return Math.min(120, Math.max(1, Math.floor(value)));
+}
+
+function isValidPhoto(
+  photo: Doc<"members">["photo"],
+): photo is NonNullable<Doc<"members">["photo"]> {
+  return (
+    photo !== undefined &&
+    memberPhotoKeyPattern.test(photo.objectKey) &&
+    Number.isInteger(photo.width) &&
+    photo.width > 0 &&
+    photo.width <= 10_000 &&
+    Number.isInteger(photo.height) &&
+    photo.height > 0 &&
+    photo.height <= 10_000 &&
+    cleanLine(photo.alt).length >= 4 &&
+    cleanLine(photo.alt).length <= 240 &&
+    focalPointPattern.test(photo.focalPoint)
+  );
+}
+
+function toPublicMember(row: Doc<"members">) {
+  const displayName = cleanLine(row.displayName);
+  const shortBio = row.shortBio?.trim();
+  const assignment = {
+    roleLevel: row.roleLevel as MemberRoleLevel,
+    ...(row.division === undefined
+      ? {}
+      : { division: row.division as MemberDivision }),
+    ...(row.position === undefined
+      ? {}
+      : { position: row.position as MemberPosition }),
+  };
+
+  if (
+    row.profileStatus !== "published" ||
+    row.profileConsentStatus !== "cleared" ||
+    row.slug !== row.slug.trim().toLowerCase() ||
+    row.slug.length < 3 ||
+    row.slug.length > 96 ||
+    !slugPattern.test(row.slug) ||
+    displayName !== row.displayName ||
+    displayName.length < 2 ||
+    displayName.length > 100 ||
+    (shortBio !== undefined &&
+      (shortBio.length < 12 || shortBio.length > 280)) ||
+    !isValidMemberAssignment(assignment)
+  ) {
+    return null;
+  }
+
+  const photo = row.photo;
+  const approvedPhoto =
+    row.photoConsentStatus === "cleared" && isValidPhoto(photo)
+      ? {
+          objectKey: photo.objectKey,
+          width: photo.width,
+          height: photo.height,
+          alt: cleanLine(photo.alt),
+          focalPoint: photo.focalPoint,
+        }
+      : undefined;
+  const joinedYear = isValidMemberJoinedYear(row.joinedYear)
+    ? row.joinedYear
+    : undefined;
+
+  return {
+    slug: row.slug,
+    displayName,
+    roleLevel: row.roleLevel,
+    ...(row.division === undefined ? {} : { division: row.division }),
+    ...(row.position === undefined ? {} : { position: row.position }),
+    ...(joinedYear === undefined ? {} : { joinedYear }),
+    ...(shortBio === undefined ? {} : { shortBio }),
+    ...(approvedPhoto === undefined ? {} : { photo: approvedPhoto }),
+    sortOrder: row.sortOrder,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export const listPublished = query({
+  args: {
+    roleLevel: v.optional(memberRoleLevelValidator),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(publicMemberValidator),
+  handler: async (ctx, args) => {
+    const limit = boundedLimit(args.limit);
+    const rows =
+      args.roleLevel === undefined
+        ? await ctx.db
+            .query("members")
+            .withIndex(
+              "by_public_sort",
+              (q) =>
+                q
+                  .eq("profileStatus", "published")
+                  .eq("profileConsentStatus", "cleared"),
+            )
+            .order("asc")
+            .take(limit)
+        : await ctx.db
+            .query("members")
+            .withIndex(
+              "by_public_role_sort",
+              (q) =>
+                q
+                  .eq("profileStatus", "published")
+                  .eq("profileConsentStatus", "cleared")
+                  .eq("roleLevel", args.roleLevel as MemberRoleLevel),
+            )
+            .order("asc")
+            .take(limit);
+
+    return rows.flatMap((row) => {
+      const member = toPublicMember(row);
+      return member === null ? [] : [member];
+    });
+  },
+});
+
+export const upsertReviewed = internalMutation({
+  args: {
+    slug: v.string(),
+    displayName: v.string(),
+    roleLevel: memberRoleLevelValidator,
+    division: v.optional(memberDivisionValidator),
+    position: v.optional(memberPositionValidator),
+    joinedYear: v.optional(v.union(v.number(), v.null())),
+    shortBio: v.optional(v.string()),
+    photo: v.optional(memberPhotoValidator),
+    profileStatus: memberProfileStatusValidator,
+    profileConsentStatus: memberConsentStatusValidator,
+    photoConsentStatus: memberConsentStatusValidator,
+    sortOrder: v.number(),
+  },
+  returns: v.id("members"),
+  handler: async (ctx, args) => {
+    const slug = args.slug.trim().toLowerCase();
+    const displayName = cleanLine(args.displayName);
+    const shortBio = args.shortBio?.trim();
+    const assignment = {
+      roleLevel: args.roleLevel,
+      ...(args.division === undefined ? {} : { division: args.division }),
+      ...(args.position === undefined ? {} : { position: args.position }),
+    };
+
+    if (
+      slug.length < 3 ||
+      slug.length > 96 ||
+      !slugPattern.test(slug) ||
+      displayName.length < 2 ||
+      displayName.length > 100 ||
+      (shortBio !== undefined &&
+        (shortBio.length < 12 || shortBio.length > 280)) ||
+      !Number.isInteger(args.sortOrder) ||
+      args.sortOrder < 0 ||
+      args.sortOrder > 100_000 ||
+      (args.joinedYear !== undefined &&
+        args.joinedYear !== null &&
+        !isValidMemberJoinedYear(args.joinedYear)) ||
+      !isValidMemberAssignment(assignment)
+    ) {
+      throw new Error("Member profile input is invalid.");
+    }
+
+    if (
+      (args.photo !== undefined && !isValidPhoto(args.photo)) ||
+      (args.photoConsentStatus === "cleared" && args.photo === undefined)
+    ) {
+      throw new Error("Member photo input is invalid.");
+    }
+
+    const existing = await ctx.db
+      .query("members")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    const now = Date.now();
+    const nextJoinedYear =
+      args.joinedYear === undefined
+        ? isValidMemberJoinedYear(existing?.joinedYear)
+          ? existing.joinedYear
+          : undefined
+        : args.joinedYear === null
+          ? undefined
+          : args.joinedYear;
+    const record = {
+      slug,
+      displayName,
+      roleLevel: args.roleLevel,
+      ...(args.division === undefined ? {} : { division: args.division }),
+      ...(args.position === undefined ? {} : { position: args.position }),
+      ...(nextJoinedYear === undefined ? {} : { joinedYear: nextJoinedYear }),
+      ...(shortBio === undefined ? {} : { shortBio }),
+      ...(args.photo === undefined
+        ? {}
+        : {
+            photo: {
+              ...args.photo,
+              alt: cleanLine(args.photo.alt),
+            },
+          }),
+      profileStatus: args.profileStatus,
+      profileConsentStatus: args.profileConsentStatus,
+      profileConsentUpdatedAt:
+        existing === null ||
+        existing.profileConsentStatus !== args.profileConsentStatus
+          ? now
+          : existing.profileConsentUpdatedAt,
+      photoConsentStatus: args.photoConsentStatus,
+      photoConsentUpdatedAt:
+        existing === null || existing.photoConsentStatus !== args.photoConsentStatus
+          ? now
+          : existing.photoConsentUpdatedAt,
+      sortOrder: args.sortOrder,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    if (existing === null) {
+      return await ctx.db.insert("members", record);
+    }
+
+    await ctx.db.replace(existing._id, record);
+    return existing._id;
+  },
+});

@@ -1,0 +1,375 @@
+# English Club Setup
+
+Status: Convex Cloud development workflow; production release gates remain
+Verified: 26 August 2026
+Frontend: Next.js 16.3 line
+Backend: Convex Cloud
+Storage: Cloudflare R2 Standard
+
+This project does not require a local Convex backend. Next.js runs locally on port 3987 while data, Auth, functions, and deployment environment variables live in the selected Convex Cloud development deployment.
+
+## 1. Responsibility map
+
+| System | Responsibility |
+| --- | --- |
+| Next.js | Public and admin routes, server rendering, metadata, responsive interaction, theme boot, and controlled Convex provider boundaries |
+| Convex Auth | Password identities for administrators; Anonymous identities created only after persisted Practice starts |
+| Convex database/functions | Journal, CMS copy, Members, contact submissions, administrator access, themes, Assessment authoring/attempts/results, audit, and reviewed media metadata |
+| Public R2 bucket | Reviewed public AVIF/WebP/SVG and published Assessment derivatives read through `https://r2.mukhtada.my.id` |
+| Private Assessment R2 bucket | Confidential source audio/images, server verification, and short-lived admin preview; not public and not currently configured |
+| Repository | Source, schemas, manifests, deterministic fixtures, reviewed derivatives needed for QA, tests, and documentation |
+| Local consent vault | Raw participant/photo/audio masters awaiting rights and consent review; intentionally not tracked in Git |
+
+R2 stores bytes, not publication or consent state. Convex stores an immutable object key and the state needed to decide whether that key may cross a browser boundary.
+
+## 2. Prerequisites
+
+- Node.js 20.9 or newer.
+- npm and the lockfile in this repository.
+- Access to the correct Convex team/project and its cloud development deployment.
+- A Cloudflare account with the existing public R2 bucket.
+- For confidential Assessment media, a separate private R2 bucket and bucket-scoped credentials. These are still missing; do not substitute the public bucket.
+- Written rights/consent before any real-person media becomes public.
+
+Install pinned dependencies:
+
+```bash
+npm install
+```
+
+All runtime scripts use port 3987. Do not terminate an existing server on that port unless the operator explicitly asks.
+
+## 3. Select Convex Cloud
+
+Configure the existing cloud development deployment:
+
+```bash
+npx convex dev --configure existing --dev-deployment cloud --once
+```
+
+The CLI writes the selected deployment values to `.env.local`:
+
+```dotenv
+CONVEX_DEPLOYMENT=dev:your-cloud-deployment
+CONVEX_URL=https://your-cloud-deployment.convex.cloud
+CONVEX_SITE_URL=https://your-cloud-deployment.convex.site
+```
+
+`CONVEX_URL` is the server-side query/mutation endpoint. The Next.js server passes that resolved value to the browser provider where needed. A duplicate `NEXT_PUBLIC_CONVEX_URL` is not required. `CONVEX_SITE_URL` is the separate Convex Auth HTTP origin.
+
+Before every command that changes deployment state—`convex env set`, `convex dev --once`, `convex deploy`, or a data mutation—identify the target deployment. Production changes require explicit approval.
+
+Push or watch only when authorized:
+
+```bash
+npm run convex:push
+npm run convex:dev
+```
+
+Do not add `--local`.
+
+## 4. Next.js environment
+
+Start from `.env.example` and keep real values in `.env.local`:
+
+```dotenv
+CONVEX_DEPLOYMENT=
+CONVEX_URL=
+CONVEX_SITE_URL=
+
+NEXT_PUBLIC_SITE_URL=http://localhost:3987
+NEXT_PUBLIC_MEDIA_BASE_URL=https://r2.mukhtada.my.id
+
+ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0
+
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_API=
+
+R2_ASSESSMENT_BUCKET_NAME=
+R2_ASSESSMENT_ACCESS_KEY_ID=
+R2_ASSESSMENT_SECRET_ACCESS_KEY=
+
+R2_PUBLIC_DEV=
+R2_AUTH_TOKEN=
+```
+
+Rules:
+
+- `CONVEX_URL` is sufficient for Next.js/Convex integration.
+- `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_MEDIA_BASE_URL` are intentionally public origins.
+- Account IDs, API endpoints, bucket names, access keys, secrets, auth tokens, JWT keys, and presigned URLs are not public client variables.
+- `R2_AUTH_TOKEN` is an optional Cloudflare management token for operators. Application upload functions use S3 credentials and do not read it.
+- `R2_PUBLIC_DEV` is a development fallback only. Production public reads use the custom domain.
+- Never copy `.env.local`, `convex env list` output, or generated Auth key material into issues, screenshots, commits, or chat.
+
+## 5. Configure Convex Auth
+
+The deployment needs three Convex environment variables:
+
+- `JWT_PRIVATE_KEY`
+- `JWKS`
+- `SITE_URL`
+
+Generate one matching RS256 key pair using the current `jose` dependency. Write it to a temporary file outside source control, set the deployment variables through a non-logging path, and delete the file immediately. `SITE_URL` must be the exact browser origin:
+
+```text
+development: http://localhost:3987
+production:  https://YOUR-EXACT-PRODUCTION-ORIGIN
+```
+
+Development and production use different key pairs. Do not reuse a development signing key in production. Do not run a wizard that overwrites unrelated deployment configuration.
+
+Convex Auth providers in this project:
+
+- Password: administrator identity.
+- Anonymous: owned Practice attempts, created only after Start.
+
+Password account creation normalizes/validates email and requires 12–128 characters with upper-case, lower-case, and numeric characters. Identity creation is not authorization.
+
+## 6. Secure first-owner bootstrap
+
+The initial owner flow has two independent steps: create an Auth identity, then grant that exact identity an administrator record.
+
+1. Confirm the target is the intended non-production cloud deployment.
+2. Open `/admin` and create the first Password identity. Outside production, the setup control is available for this purpose. In production it appears only while the Next.js server has `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=1`.
+3. The identity-only screen shows the complete `tokenIdentifier` from `adminUsers.whoAmI`. Copy that value; do not substitute an email or JWT `sub` value.
+4. Run the one-time internal mutation against the same deployment:
+
+```bash
+npx convex run adminUsers:bootstrapOwner '{"tokenIdentifier":"<complete tokenIdentifier>","displayName":"<reviewed real name>","email":"<reviewed email>"}'
+```
+
+5. Refresh `/admin` and confirm the active owner workspace appears.
+6. Confirm a second bootstrap call fails because the table is no longer empty.
+7. In production, restore `ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0` and restart/redeploy only through the approved release process.
+
+Creating an account while bootstrap is open still grants no CMS permission. Every protected Convex function looks up an active `adminUsers` row from `identity.tokenIdentifier`. Later editors, publishers, and owners are granted by an existing owner. The last active owner cannot be demoted or disabled.
+
+The client must not call `adminUsers:bootstrapState`; that deployment-era public function is not part of the current UI contract.
+
+## 7. Configure the public R2 bucket
+
+Set these variables in the selected Convex deployment:
+
+```text
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_API
+```
+
+Use bucket-scoped S3 credentials. `R2_API` is the S3 API endpoint; browser reads use the custom domain instead. After configuration and an authorized function push, check connectivity:
+
+```bash
+npm run r2:check
+```
+
+A healthy connection returns `{ "ok": true }`. The existing public bucket and `https://r2.mukhtada.my.id` custom domain have already passed public-object checks; re-run the target-specific check for production.
+
+Public browser CMS uploads require an exact-origin CORS policy because the browser PUTs directly to the S3 endpoint. The general media upload signs `Content-Type` and `Cache-Control`; see `R2-SETUP.md` for the complete policy and verification flow.
+
+## 8. Configure the private Assessment bucket
+
+Confidential source audio/images require three additional deployment variables:
+
+```text
+R2_ASSESSMENT_BUCKET_NAME
+R2_ASSESSMENT_ACCESS_KEY_ID
+R2_ASSESSMENT_SECRET_ACCESS_KEY
+```
+
+They must refer to a separate private bucket. They must not reuse the public bucket name or its public-domain access path. `R2_ACCOUNT_ID` and the S3 `R2_API` origin are shared only when both buckets belong to the same Cloudflare account.
+
+The private bucket is **not configured in the current environment**. Until it exists and passes the exact CORS, checksum, PUT, `HeadObject`, preview, and public-derivative smoke path:
+
+- `privateDraftReady` must remain false;
+- `confidentialUploadsBlocked` must remain true;
+- no operator may describe private Assessment uploads as working;
+- no public-bucket fallback is allowed.
+
+See `R2-SETUP.md` for the required checksum and metadata headers.
+
+## 9. Run the application
+
+Start Next.js with the repository script:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3987`.
+
+Public routes:
+
+- `/`
+- `/about`
+- `/activities`
+- `/members`
+- `/practice`
+- `/practice/full`
+- `/practice/quick/listening`
+- `/practice/quick/structure`
+- `/practice/quick/reading`
+- `/practice/attempt/[attemptId]`
+- `/practice/result/[attemptId]`
+- `/journal`
+- `/journal/[slug]`
+- `/contact`
+
+Protected administration:
+
+- `/admin`
+- `/admin/pages`
+- `/admin/journal`
+- `/admin/assessments`
+- `/admin/members`
+- `/admin/media`
+- `/admin/appearance`
+- `/admin/activity`
+
+The five public navigation links are About, Activities, Members, Practice, and Journal. Attempt/result routes are owner-only and disallowed by robots. Admin is noindex/nofollow and absent from public navigation.
+
+## 10. Initial content and data
+
+Journal seed remains idempotent:
+
+```bash
+npx convex run seed:run '{}'
+npx convex run posts:listPublished '{"limit":3}'
+```
+
+The Member public query may be empty until consent-cleared records publish:
+
+```bash
+npx convex run members:listPublished '{}'
+```
+
+When it returns `[]`, the route uses the 15-profile fictional source showcase. Those records are not members, are never written to Convex, and disappear when the first reviewed profile publishes.
+
+Assessment does not use a local question fallback. Until original authored content passes validation/provenance checks and the four academic, rights, accessibility, and bias approvals, `/practice` shows the honest unavailable state for that mode.
+
+The page-copy CMS supports at most 200 entries for one page/locale. The current Practice manifest fits within that contract. A manifest change that would create entry 201 must be split or redesigned before deployment.
+
+## 11. Media workflow
+
+### General public media
+
+The admin media workspace performs:
+
+1. reserve a reviewed immutable object key;
+2. request a short-lived presigned PUT;
+3. upload directly from the browser to the R2 S3 endpoint with exact signed headers;
+4. verify object MIME and byte size with `HeadObject`;
+5. mark reviewed status before the asset becomes selectable;
+6. publish only through the public custom-domain key.
+
+The operator CLI helper remains available for reviewed, immutable public derivatives:
+
+```bash
+npm run r2:upload-reviewed -- \
+  <reviewed-local-file> \
+  images/<versioned-object-name>.webp \
+  image/webp
+```
+
+### Journal
+
+The structured editor stores Tiptap JSON and plain text. It accepts reviewed cover/inline media references, an optional structured map, and no arbitrary HTML. A revision may reference no more than 40 unique inline media assets.
+
+### Assessment
+
+The confidential path is reserve → private presigned PUT → exact-header upload → verification → short-lived private preview → reviewed immutable public derivative → stimulus reference. A stimulus never points at the private source media ID.
+
+Raw masters in `/assets/` are local consent-gated inputs and are intentionally excluded from Git. Do not assume a fresh clone contains them. Public reviewed derivatives and their evidence records are separate deliverables.
+
+## 12. Verification
+
+Static and isolated gates:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:backend
+npm run build
+```
+
+Aggregate gate:
+
+```bash
+npm run check
+```
+
+Browser gate:
+
+```bash
+npm run test:e2e
+```
+
+The integrated evidence must cover:
+
+- public routes at 320, 375, 768, 1024, 1440, and 1920 CSS pixels;
+- touch and keyboard navigation, reusable custom selects/dialogs, reduced motion, and Axe;
+- Journal six-row cursor pages and noindex cursor variants;
+- Password sign-in, identity-only denial, owner/editor/publisher permissions, and audit writes;
+- 200-entry CMS ceiling and publication freshness;
+- theme save/publish/rollback and safe root serialization;
+- Anonymous identity created only after Practice Start;
+- malformed/missing/cross-owner attempt parity, answer-key privacy, final-section submit, raw-result reproduction, 20-item review, and owned deletion;
+- public R2 upload/read and separate private Assessment upload/checksum/derivative flows.
+
+Do not claim a final green integrated run from an earlier pre-Admin/pre-Assessment snapshot. Current evidence and open gates are recorded in `docs/WORKLOG.md` and `docs/INTEGRATION-REVIEW.md`.
+
+## 13. Production environment
+
+Next.js host:
+
+```dotenv
+CONVEX_URL=https://your-production-deployment.convex.cloud
+CONVEX_SITE_URL=https://your-production-deployment.convex.site
+NEXT_PUBLIC_SITE_URL=https://YOUR-EXACT-PRODUCTION-ORIGIN
+NEXT_PUBLIC_MEDIA_BASE_URL=https://r2.mukhtada.my.id
+ADMIN_BOOTSTRAP_ACCOUNT_CREATION=0
+```
+
+Convex production deployment:
+
+```text
+JWT_PRIVATE_KEY
+JWKS
+SITE_URL=https://YOUR-EXACT-PRODUCTION-ORIGIN
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_API
+R2_ASSESSMENT_BUCKET_NAME
+R2_ASSESSMENT_ACCESS_KEY_ID
+R2_ASSESSMENT_SECRET_ACCESS_KEY
+```
+
+Use a production-only Auth key pair, exact HTTPS origin, least-privilege bucket credentials, and independently configured public/private R2 policies.
+
+## 14. Release checklist
+
+- [ ] Target production Convex deployment is named, approved, and has the intended functions/schema.
+- [ ] Production Auth keys are separate from development; `SITE_URL` is the exact HTTPS origin.
+- [ ] One real owner provisioning round trip, role-negative checks, and last-owner guard pass.
+- [ ] `ADMIN_BOOTSTRAP_ACCOUNT_CREATION` is back to `0` after any supervised bootstrap window.
+- [ ] Public R2 bucket connection, browser CMS upload, `HeadObject`, immutable key, and custom-domain read pass.
+- [ ] Separate private Assessment bucket and least-privilege credentials are configured.
+- [ ] Private bucket exact dev/prod CORS, SHA-256 metadata, PUT, verification, preview, and derivative release path pass.
+- [ ] Original Assessment content passes validation/provenance checks plus the four academic, rights, accessibility, and bias approvals.
+- [ ] Result wording shows raw counts only and no official/predicted claim.
+- [ ] Journal content, map, linked media, Member profiles, joined years, role assignments, and separate profile/photo consent are reviewed.
+- [ ] Raw masters remain outside Git and no held media is served.
+- [ ] Contact, Assessment, media, and audit retention policies are approved.
+- [ ] `npm run check` and integrated browser/accessibility suites pass from the release commit.
+- [ ] Sitemap includes `/practice`; private attempt/result routes and `/admin` remain non-indexable.
+- [ ] No secret appears in a client bundle, repository, screenshot, shell history, or log.
+
+The public R2 custom domain is active. The private Assessment bucket is not configured, and production release remains blocked on the unchecked items above.

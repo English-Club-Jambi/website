@@ -1,0 +1,31 @@
+node_modules/
+.next/
+.convex/
+.vercel/
+out/
+
+# Local environment and credentials. Keep the redacted template tracked.
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+.auth-keys.json
+
+# Local tool state and generated security/test artifacts.
+.claude-flow/
+.claude/proven-config.json
+.claude/.proven-config-version
+.claude/security-scans/
+/docs/evidence/mobile-touch-traces/
+
+# Supplied media masters contain private metadata and consent-gated subjects.
+# Runtime-safe derivatives live in public/ or the reviewed R2 bucket.
+/assets/
+
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+.DS_Store

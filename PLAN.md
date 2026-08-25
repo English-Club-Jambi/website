@@ -1,0 +1,306 @@
+# Delivery Plan
+
+Last updated: 26 August 2026
+Current phase: Admin CMS and Assessment Lab integration; final cloud and release verification
+
+## Outcome
+
+Deliver a production-ready English Club organisation profile, landing page, journal, Member directory, Assessment Lab, and protected administration workspace in Next.js. The public experience is clean and bright by default, supports a persistent dark theme, and uses language-led interaction rather than image-led templates.
+
+Convex remains the application database and authorization boundary. Cloudflare R2 Standard stores reviewed public derivatives; confidential Assessment source media requires a separate private R2 bucket. The private Assessment bucket is not configured, so confidential upload and public Assessment release remain blocked. The implementation must retain factual restraint, privacy controls, accessibility, and test evidence.
+
+## Current design decision
+
+- North star: **The Conversation Relay**.
+- Homepage interaction: **Sentence Playground**.
+- Core rule: words are the instrument; photographs are receipts.
+- Redesign mode: visual overhaul with route, SEO, backend, form, and media contracts preserved.
+- Design dials: variance 8, motion 6, density 4.
+- Member extension: **The Member Relay**, a five-channel role atlas plus a consent-gated public roster.
+- Assessment extension: **The Answer Line**, a calm ruled practice surface with explicit timing, save, transcript, section, and result states.
+- Administration: rounded operational neobrutalism with compact hard edges, short shadows, restrained motion, and no decorative dashboard-card grid.
+- Theme publishing: administrators edit seven structured colour anchors for both public modes; Convex derives, validates, versions, publishes, and rolls back the complete semantic palette.
+
+## Deliverables
+
+### Research and specification
+
+- [x] Inventory all 19 reference PNG files and identify the exact duplicate.
+- [x] Inventory all supplied photos and video, including consent and metadata risks.
+- [x] Audit the existing route, component, Convex, R2, SEO, and test contracts.
+- [x] Research current primary creative, editorial, cultural, and learning websites.
+- [x] Store file-level reference evidence in `docs/REDESIGN-REFERENCE-AUDIT.md`.
+- [x] Store live-site research in `docs/CREATIVE-WEB-RESEARCH.md`.
+- [x] Store implementation findings in `docs/REDESIGN-CODE-AUDIT.md`.
+- [x] Store the consolidated decision in `docs/REDESIGN-DIRECTION.md`.
+- [x] Update `DESIGN.md` and `DESIGN-SYSTEM.md`.
+- [x] Synchronise `PRD.md`, `BLUEPRINT.md`, `DATABASE.md`, and setup guides.
+- [x] Update `docs/WORKLOG.md` and `docs/QA-REPORT.md` with the redesign result.
+
+### Application
+
+- [x] Add pre-paint persistent light or dark theme selection.
+- [x] Rebuild the global header, mobile navigation, and footer.
+- [x] Replace the photo-split home hero with Sentence Playground.
+- [x] Add the bounded Prompt Mixer.
+- [x] Replace repeated activity rows with Activity Relay.
+- [x] Recompose About around principles and one optional proof image.
+- [x] Recompose Activities around selectable prompts and one active image.
+- [x] Recompose Journal around typographic story selection and companion preview.
+- [x] Restyle Journal detail while preserving Markdown and metadata.
+- [x] Restyle Contact while preserving field order, validation, focus, and Convex persistence.
+- [x] Retire obsolete image-gallery, repeated masthead, card-like, and route-close selectors.
+- [x] Keep fixed brand/documentary images on the typed source manifest and dynamic Journal, Member, CMS, and Assessment media on reviewed Convex projections; both paths resolve only approved local-QA or R2 objects.
+
+### Verification
+
+- [x] ESLint passes.
+- [x] TypeScript passes with no emit.
+- [x] Unit and Convex backend tests pass.
+- [x] Production build passes.
+- [x] Every public route returns and exposes its expected `h1`.
+- [x] No route overflows at 320px, Pixel 7, or desktop.
+- [x] Sentence, prompt, activity, theme, and mobile menu keyboard tests pass.
+- [x] Contact persists a valid consented enquiry to the selected Convex Cloud development deployment.
+- [x] Axe finds no representative WCAG A or AA violations.
+- [x] Reduced-motion behavior is verified.
+- [x] Desktop light, desktop dark, mobile, and selected-state screenshots are captured.
+- [x] Screenshots are manually inspected, defects repaired, and affected gates rerun.
+- [x] Impeccable detector reports no unwaived authored-source findings.
+
+### Member extension
+
+- [x] Audit local roster evidence, role ambiguity, consent, and member-photo boundaries.
+- [x] Research current official people directories and W3C interaction guidance.
+- [x] Audit route, shell, Convex, R2, and test integration seams.
+- [x] Store the extension contract in `docs/MEMBER-EXTENSION-DIRECTION.md`.
+- [x] Add the numeric `0` through `4` role taxonomy and cross-field validation.
+- [x] Add the Convex `members` table, internal reviewed upsert, and public consent-gated query.
+- [x] Add the `/members` route, generated atmospheric hero, interactive role channels, and honest roster states.
+- [x] Add Members to desktop/mobile navigation, footer, sitemap, metadata, and setup guides.
+- [x] Add unit, Convex, route, Axe, motion, theme, responsive, and visual tests.
+- [x] Inspect desktop light, desktop dark, selected-role, phone, 320 px, and 900 px evidence.
+- [x] Run the complete release gate and update `docs/WORKLOG.md` plus `docs/QA-REPORT.md`.
+
+### Convex Cloud and R2 integration
+
+- [x] Select the existing Convex Cloud development deployment and stop relying on a local backend.
+- [x] Push the additive schema, journal, contact, Member, and internal R2 functions.
+- [x] Copy the five required public-bucket S3 variables to the selected Convex deployment. The separate private Assessment credentials remain an open gate below.
+- [x] Verify the bucket with `HeadBucket` from the Convex Node runtime.
+- [x] Add a private operator flow for short-lived presigned PUT uploads and `HeadObject` verification.
+- [x] Upload and verify six cleared generated derivatives without exposing credentials or signed URLs.
+- [x] Reject existing object keys so public assets remain immutable.
+- [x] Seed and query the cloud journal; keep the public Member result empty until real consented records exist while the route renders its separate source-only showcase.
+
+### Member organisation showcase
+
+- [x] Record the final source-only showcase and unchanged real-profile consent boundary in `docs/MEMBER-SHOWCASE-DECISION.md`.
+- [x] Add 15 fictional identities across all five role codes without inserting them into Convex.
+- [x] Cover all five Coordinator divisions, all four Core positions, and both Board positions.
+- [x] Generate a 16-cell portrait sheet, use 15 unique cells, and upload AVIF/WebP derivatives to R2.
+- [x] Replace the long roster rows with a true 5/4/3/2-column CSS contact sheet.
+- [x] Remove public QA, fixture, database, and placeholder language from the organisation profile.
+- [x] Hide the entire fixture when one or more real public profiles exist; retain the unavailable backend state.
+- [x] Add unit and browser assertions for identity uniqueness, role filtering, assignment validity, grid columns, and public copy.
+- [x] Run the complete static, browser, Axe, reduced-motion, and visual release gate after the grid change.
+
+### Administration CMS
+
+- [x] Add Convex Auth Password identities and a server-owned `adminUsers` allowlist.
+- [x] Keep account creation separate from authorization: an identity alone never opens the CMS.
+- [x] Add the one-time internal owner bootstrap and owner/editor/publisher permission map.
+- [x] Build the protected `/admin` shell, Pages, Journal, Members, Media, Appearance, Assessments, and Activity workspaces.
+- [x] Replace code-only journal maintenance with immutable structured revisions, reviewed covers/inline media, safe coordinate map nodes, publish, archive, and cursor pagination.
+- [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 200 entries per page and locale.
+- [x] Add browser-to-R2 reviewed media upload, metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.
+- [x] Add structured public theme drafts, server-side OKLCH derivation and contrast validation, immutable versions, atomic publish/rollback pointers, and a checked-in fallback.
+- [x] Keep admin symbols on Heroicons, controls at least 44px, dialogs focus-contained, and motion reduced under `prefers-reduced-motion`.
+- [ ] Complete a real first-owner creation and bootstrap round trip on the announced non-production cloud deployment.
+
+### Assessment Lab
+
+- [x] Publish the canonical `/practice` route family under the English Club Assessment Lab name.
+- [x] Implement reviewed catalog reads, full-form and quick-quiz briefings, an owned attempt runner, raw-result report, and paginated post-submit review.
+- [x] Keep the Home programme quiz local and derive its questions from reviewed Activities wording; it creates no visitor identity or Convex attempt.
+- [x] Add Anonymous Convex Auth only after the visitor presses Start on a persisted assessment.
+- [x] Derive participant ownership from server auth, normalize route IDs before typed access, and return the same unavailable state for malformed, missing, and cross-owner IDs.
+- [x] Keep answer keys, explanations, provenance, draft media, admin IDs, and scoring authority out of pre-submit public payloads.
+- [x] Implement per-section deadlines, revision conflicts, idempotent Start/Submit, transcript-supported mode, owned deletion, and bounded result snapshots.
+- [x] Report only raw correct, possible, and omitted counts with time and mode labels; never publish an official, predicted, CEFR, certificate, or admission result.
+- [x] Add assessment authoring, current-revision validation, academic/rights/accessibility/bias approvals, immutable publication, safe reorder/delete, and bounded next-draft cloning.
+- [x] Add a separate private-source/public-derivative media contract and a UI configuration gate.
+- [ ] Create and configure the separate private Assessment R2 bucket, apply exact-origin CORS, and prove checksum-aware PUT, preview, verification, and public derivative delivery against Cloudflare.
+- [ ] Publish a real assessment only after original content, rights, academic, accessibility, and bias approvals are complete.
+
+### Integrated release gate
+
+- [x] Remove the stale client call to `adminUsers:bootstrapState`; the admin setup choice is now controlled by the Next.js environment and does not depend on a newly deployed public query.
+- [x] Use server-side `CONVEX_URL` for Next adapters and pass the resolved deployment URL into scoped browser providers. `NEXT_PUBLIC_CONVEX_URL` is not required.
+- [x] Preserve port `3987` while running focused admin, public mobile, journal, and Practice checks.
+- [ ] Push the final integrated Convex schema/functions to the announced development deployment after all lanes are stable.
+- [ ] Run the final integrated lint, typecheck, unit, backend, production-build, Playwright, Axe, reduced-motion, responsive, and screenshot gates.
+- [ ] Run a secret scan and commit only reviewed source and documentation.
+
+## Working rules
+
+1. Evidence precedes implementation. Every supplied reference remains traceable.
+2. Unknown claims stay absent. Fictional showcase identities are allowed only inside the documented source fixture; metrics, dates, partners, testimonials, schedules, outcomes, and real-member claims are not invented.
+3. Language leads the identity. A route must remain visually finished without optional media.
+4. Motion must communicate hierarchy, handoff, feedback, or state change.
+5. Client code stays inside discrete interactive leaves. Server HTML carries core content and links.
+6. The default is bright. Theme selection changes the complete document and is saved locally.
+7. Every control works with keyboard, pointer, touch, and reduced motion.
+8. Each verification gate runs explicitly and leaves evidence.
+9. Production media remains blocked until consent is cleared, regardless of local preview quality.
+10. Every admin capability rechecks the signed identity and permission inside Convex; route visibility is never authority.
+11. Assessment results describe original English Club practice only. Raw counts cannot be relabelled as an official or predicted score.
+12. Public R2 media and confidential Assessment sources use separate access boundaries. Missing private configuration blocks the write before a reservation row is created.
+
+## Workflow
+
+### Gate A: Evidence
+
+- [x] Read the product and factual boundaries.
+- [x] Review the reference contact sheet and each original file.
+- [x] Re-audit all supplied references after the brief changed.
+- [x] Audit current visual repetition, image count, interaction, and focus behavior.
+- [x] Browse primary creative websites rather than copy a design gallery.
+
+Exit condition: local evidence, external evidence, and rejected patterns are written down. **Met.**
+
+### Gate B: Design contract
+
+- [x] Choose the creative north star.
+- [x] Define the homepage interaction sequence.
+- [x] Define light and dark semantic palettes.
+- [x] Set typography, shape, spacing, motion, and photo limits.
+- [x] Define route signatures and interactive component boundaries.
+- [x] Write the anti-slop rejection list.
+- [x] Cross-read all root documents for naming, token, route, and backend agreement.
+
+Exit condition: code can proceed without a visual or architectural choice being invented mid-build.
+
+### Gate C: Global foundation
+
+- [x] Replace global visual tokens and base CSS.
+- [x] Add pre-paint theme script and theme toggle.
+- [x] Rebuild navigation and fix focus isolation.
+- [x] Keep skip link, main focus target, metadata, font loading, and page frame.
+- [x] Confirm both themes meet contrast requirements.
+
+Exit condition: one route renders the new shell without flash, overflow, or keyboard regressions.
+
+### Gate D: Signature interactions
+
+- [x] Build Sentence Playground with complete server HTML.
+- [x] Build Prompt Mixer with authored combinations and polite announcements.
+- [x] Build Activity Relay with `aria-pressed`, arrow keys, and one active image.
+- [x] Build Journal Relay with link-first content and optional preview.
+- [x] Add unit tests for data and interaction state where useful.
+
+Exit condition: every interaction has keyboard, touch, reduced-motion, and no-JavaScript behavior.
+
+### Gate E: Route recomposition
+
+- [x] Home.
+- [x] About.
+- [x] Activities.
+- [x] Journal index.
+- [x] Journal detail.
+- [x] Contact.
+- [x] Loading, error, not-found, Open Graph image, and footer.
+
+Exit condition: all routes have distinct first moments but one coherent system.
+
+### Gate F: Static and backend verification
+
+- [x] `npm run lint`.
+- [x] `npm run typecheck`.
+- [x] `npm run test:unit`.
+- [x] `npm run test:backend`.
+- [x] `npm run build`.
+- [x] Convex Cloud seed, journal, Member, contact, and R2 paths remain operational.
+
+Exit condition: source, types, backend contracts, and production output pass.
+
+### Gate G: Browser and visual verification
+
+- [x] Route contract at desktop, Pixel 7, and 320px.
+- [x] Mobile menu focus isolation and focus return.
+- [x] Theme persistence.
+- [x] Signature-interaction keyboard tests.
+- [x] Contact success focus and persistence.
+- [x] Axe representative scans.
+- [x] Reduced-motion checks.
+- [x] Evidence screenshots.
+- [x] Manual crop, spacing, hierarchy, overflow, focus, and anti-slop review.
+- [x] Repair and rerun.
+
+Exit condition: screenshots and machine checks agree that the final experience is usable and visually intentional.
+
+### Gate H: Admin CMS
+
+- [x] Add the auth provider, allowlist, permission checks, and one-time owner bootstrap.
+- [x] Add reusable admin shell, custom form controls, structured journal editor, media flow, public-copy editor, theme editor, and assessment workspace.
+- [x] Validate admin layout at desktop, Pixel 7, and 320px through focused tests and an authenticated data-isolated visual harness.
+- [ ] Exercise initial identity creation, owner bootstrap, sign-in, sign-out, and negative role permissions against the selected cloud deployment.
+
+Exit condition: a real owner can sign in and manage reviewed content without any browser-supplied value becoming authorization.
+
+### Gate I: Assessment vertical slice
+
+- [x] Add the additive assessment schema, bounded APIs, Anonymous Auth ownership, original-content publication gates, and raw-result contract.
+- [x] Build `/practice`, full/quick briefings, runner, result review, Home programme quiz, and the assessment authoring workspace.
+- [x] Verify malformed/cross-owner IDs, key privacy, section lifecycle, transcript persistence, deletion, publication approvals, clone recovery, and media relationship guards in isolated tests.
+- [ ] Configure and smoke-test the private Assessment R2 bucket without falling back to the public bucket.
+- [ ] Supply an approved original question bank before any public assessment is published.
+
+Exit condition: the technical path is proven and every content, rights, retention, and private-media gate is explicit.
+
+### Gate J: Integrated certification
+
+- [ ] Generate Convex types and push the final schema/functions to the announced cloud development deployment.
+- [ ] Run every static and browser gate on the combined public, admin, journal, Member, theme, and Assessment surfaces.
+- [ ] Inspect desktop, phone, 320px, light, dark, reduced-motion, admin, Practice, and unavailable/configuration-gate screenshots.
+- [ ] Reconcile `docs/QA-REPORT.md`, `docs/WORKLOG.md`, and `docs/INTEGRATION-REVIEW.md` with the final command output.
+
+Exit condition: source, cloud behavior, documents, and evidence describe the same release state.
+
+## Risks
+
+| Risk | Likelihood | Impact | Control |
+| --- | --- | --- | --- |
+| Interaction hides server content | Medium | High | Complete SSR default; client state changes presentation only |
+| Theme flashes on load | Medium | Medium | Inline pre-paint storage script and deterministic tests |
+| Experimental type overflows phones | Medium | High | Fluid type bounds plus 320px route assertions |
+| Mobile menu traps or leaks focus | Medium | High | Real dialog focus loop or non-modal disclosure, browser test |
+| Motion creates discomfort | Low | High | User-controlled motion and global reduced-motion fallback |
+| Photos regain visual dominance | Medium | Medium | The generated hero layer is decorative, heavily faded, replaceable, and capped alongside route-level image budgets |
+| Pending consent reaches production | Low | High | Typed consent state, upload checklist, and release blocker |
+| R2 free-tier overage | Low | Medium | Standard storage, custom-domain caching, monthly metrics review |
+| Invalid role and subtype reaches the directory | Low | High | Internal cross-field guard plus projection-boundary validation |
+| Unconsented profile or portrait reaches production | Low | High | Indexed profile-consent gate and a separate portrait-consent gate |
+| New navigation link crowds tablet widths | Medium | Medium | Explicit 880, 900, 1024, and 1440 px shell checks |
+| Backend extension regresses existing data | Low | Medium | Additive member table, generated types, Convex push, and complete backend regression suite |
+| First admin identity is mistaken for authorization | Low | High | Explicit setup flag, identity-only copy, one-time internal owner bootstrap, and server permission checks |
+| An assessment draft leaks through the public R2 bucket | Medium until configured | High | Separate private bucket and credentials; confidential reservation and upload controls stay blocked when absent |
+| Practice wording implies an official score | Low | High | Raw-count DTO and fixed claim contract; no scale, percentage, CEFR, certificate, or admission conversion |
+| Anonymous attempts outlive the promised retention period | Medium | High | Do not promise automatic deletion; approve and test cleanup before public launch |
+| CMS page growth truncates Practice copy | Low | Medium | Indexed read of 201, explicit failure above 200, and refusal to create a 201st entry |
+
+## Release boundaries
+
+Code completion does not authorise public deployment. Release still requires:
+
+- cleared consent for every public participant image;
+- canonical public site domain and a production recheck of the already-active `r2.mukhtada.my.id` media domain;
+- verified organisation details that are currently omitted;
+- versioned derivative upload to Cloudflare R2;
+- production Convex deployment variables;
+- separate production Convex Auth signing keys and exact `SITE_URL`;
+- a tested first-owner provisioning policy and recovery owner;
+- a separate private Assessment R2 bucket with least-privilege credentials and exact CORS;
+- approved retention and anonymous-auth cleanup behavior;
+- original reviewed Assessment content with current academic, rights, accessibility, and bias approvals;
+- post-deployment accessibility, form, media, and metadata smoke tests.
