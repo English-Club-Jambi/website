@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import { publicAssessmentDerivativeKey } from "../../convex/lib/assessmentMedia";
 import schema from "../../convex/schema";
+import { isTaskFamilyForSkill } from "../../content/assessment-task-families";
 
 const rawModules = import.meta.glob("../../convex/**/*.ts");
 const modules = Object.fromEntries(
@@ -411,6 +412,9 @@ describe("four-skill assessment seed", () => {
       listeningMode: "audio-primary" as const,
       startRequestId: "random-bank-attempt-0001",
     };
+    await expect(
+      t.mutation(api.assessmentAttempts.start, startArgs),
+    ).rejects.toThrow();
     const first = await learner.mutation(api.assessmentAttempts.start, startArgs);
     const retried = await learner.mutation(api.assessmentAttempts.start, startArgs);
     expect(retried.attemptId).toBe(first.attemptId);
@@ -427,6 +431,44 @@ describe("four-skill assessment seed", () => {
     expect(new Set(manifest.map((entry) => entry.bankQuestionId)).size).toBe(120);
     expect(new Set(manifest.map((entry) => entry.itemId)).size).toBe(120);
     expect(manifest.every((entry) => entry.selectionContract === 1)).toBe(true);
+    const fullManifestAudit = await t.run(async (ctx) =>
+      await Promise.all(
+        manifest.map(async (entry) => {
+          const [section, question] = await Promise.all([
+            ctx.db.get("assessmentSections", entry.sectionId),
+            ctx.db.get("assessmentQuestionBank", entry.bankQuestionId),
+          ]);
+          if (section === null || question === null) {
+            throw new Error("Random manifest relation is missing.");
+          }
+          return {
+            sectionSkill: section.skill,
+            questionSkill: question.skill,
+            taskFamily: question.taskFamily,
+            sourceItemMatches: question.sourceItemId === entry.itemId,
+          };
+        }),
+      ),
+    );
+    expect(
+      fullManifestAudit.every(
+        (entry) =>
+          entry.sectionSkill === entry.questionSkill &&
+          entry.sourceItemMatches &&
+          isTaskFamilyForSkill(entry.questionSkill, entry.taskFamily),
+      ),
+    ).toBe(true);
+    expect(
+      fullManifestAudit.reduce<Record<string, number>>((counts, entry) => {
+        counts[entry.sectionSkill] = (counts[entry.sectionSkill] ?? 0) + 1;
+        return counts;
+      }, {}),
+    ).toEqual({
+      reading: 50,
+      listening: 47,
+      writing: 12,
+      speaking: 11,
+    });
 
     const secondAttempt = await learner.mutation(api.assessmentAttempts.start, {
       ...startArgs,
@@ -444,47 +486,96 @@ describe("four-skill assessment seed", () => {
       manifest.map((entry) => entry.itemId),
     );
 
-    const quickReading = await t.run(async (ctx) => {
-      const definition = await ctx.db
-        .query("assessmentDefinitions")
-        .withIndex("by_slug", (q) =>
-          q.eq("slug", "quick-reading-text-in-context"),
-        )
-        .unique();
-      if (definition?.publishedVersionId === undefined) {
-        throw new Error("Quick Reading was not published.");
-      }
-      return {
-        definitionId: definition._id,
-        versionId: definition.publishedVersionId,
-      };
-    });
-    const quickAttempt = await learner.mutation(api.assessmentAttempts.start, {
-      ...quickReading,
-      timingMode: "standard",
-      timeMultiplier: 1,
-      listeningMode: "audio-primary",
-      startRequestId: "random-quick-reading-attempt-0001",
-    });
-    const quickManifest = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentAttemptItems")
-        .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
-          q.eq("attemptId", quickAttempt.attemptId),
-        )
-        .take(9),
-    );
-    expect(quickManifest).toHaveLength(8);
-    expect(
-      await t.run(async (ctx) =>
+    const quickFormats = [
+      {
+        slug: "quick-listening-campus-voices",
+        skill: "listening",
+      },
+      {
+        slug: "quick-reading-text-in-context",
+        skill: "reading",
+      },
+      {
+        slug: "quick-writing-sentence-to-discussion",
+        skill: "writing",
+      },
+      {
+        slug: "quick-speaking-repeat-and-respond",
+        skill: "speaking",
+      },
+    ] as const;
+    for (const format of quickFormats) {
+      const quick = await t.run(async (ctx) => {
+        const definition = await ctx.db
+          .query("assessmentDefinitions")
+          .withIndex("by_slug", (q) => q.eq("slug", format.slug))
+          .unique();
+        if (definition?.publishedVersionId === undefined) {
+          throw new Error(`${format.slug} was not published.`);
+        }
+        const versionId = definition.publishedVersionId;
+        const sections = await ctx.db
+          .query("assessmentSections")
+          .withIndex("by_version_id_and_order", (q) =>
+            q.eq("versionId", versionId),
+          )
+          .take(2);
+        if (
+          sections.length !== 1 ||
+          sections[0].skill !== format.skill
+        ) {
+          throw new Error(`${format.slug} has an invalid skill section.`);
+        }
+        return {
+          definitionId: definition._id,
+          versionId,
+          itemCount: sections[0].itemCount,
+        };
+      });
+      const quickAttempt = await learner.mutation(api.assessmentAttempts.start, {
+        definitionId: quick.definitionId,
+        versionId: quick.versionId,
+        timingMode: "standard",
+        timeMultiplier: 1,
+        listeningMode: "audio-primary",
+        startRequestId: `random-${format.skill}-attempt-0001`,
+      });
+      const quickManifest = await t.run(async (ctx) =>
+        await ctx.db
+          .query("assessmentAttemptItems")
+          .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
+            q.eq("attemptId", quickAttempt.attemptId),
+          )
+          .take(quick.itemCount + 1),
+      );
+      expect(quickManifest).toHaveLength(quick.itemCount);
+      const quickManifestAudit = await t.run(async (ctx) =>
         await Promise.all(
-          quickManifest.map(async (entry) =>
-            (await ctx.db.get("assessmentQuestionBank", entry.bankQuestionId))
-              ?.skill,
-          ),
+          quickManifest.map(async (entry) => {
+            const question = await ctx.db.get(
+              "assessmentQuestionBank",
+              entry.bankQuestionId,
+            );
+            if (question === null) {
+              throw new Error("Quick manifest question is missing.");
+            }
+            return {
+              skill: question.skill,
+              taskFamily: question.taskFamily,
+              sourceItemMatches: question.sourceItemId === entry.itemId,
+            };
+          }),
         ),
-      ),
-    ).toEqual(Array.from({ length: 8 }, () => "reading"));
+      );
+      expect(
+        quickManifestAudit.every(
+          (entry) =>
+            entry.skill === format.skill &&
+            entry.sourceItemMatches &&
+            isTaskFamilyForSkill(entry.skill, entry.taskFamily),
+        ),
+      ).toBe(true);
+    }
 
     await expect(
       t.query(api.adminAssessmentQuestionBank.getSummary, {}),

@@ -48,6 +48,7 @@ This file is the release checklist for the English Club website. A task is marke
 - [x] Add the public Practice menu, quick Listening/Reading/Writing/Speaking routes, full practice, attempts, results, and the Home programme quiz.
 - [x] Persist attempts under authenticated ownership and keep answers private.
 - [x] Build a real Convex Question Bank and random, duplicate-free immutable attempt manifests.
+- [x] Enforce and prove skill-scoped random Question Bank selection for every Full and Quick Live Practice section.
 - [x] Seed a sufficiently large original demonstration bank into the development database.
 - [x] Add grouped Task Family dropdown sections for Reading, Listening, Writing, and Speaking.
 - [x] Add the Question Bank `Add question` entry point and private answer-key authoring.

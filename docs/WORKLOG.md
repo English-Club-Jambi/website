@@ -217,3 +217,11 @@ No public production deployment was performed.
 - Added a strict public media manifest and filesystem allowlist: every mapped asset is rights-cleared, consent-cleared, generated-synthetic, and recorded as containing no real people.
 - Removed the obsolete real-cloud admin screenshot and added capture-time identity masking to five admin E2E suites. All 33 remaining admin evidence PNGs passed full-image OCR plus a 400 percent footer-crop check with no email pattern.
 - The final public-media browser review found no pending-file request, horizontal overflow, or WCAG A/AA violation on Home, Activities, About, or Journal. The supporting prompt, hash, recovery, and R2 ledger is in `docs/PUBLIC-MEDIA-RELEASE-AUDIT.md`.
+
+## 26 August 2026 — Skill-scoped Live Practice randomization follow-up
+
+- Hardened random selection so each section can draw only ready Question Bank rows with the same skill and a task family valid for that skill. The selector also enforces the section quota and unique content fingerprints before returning a plan.
+- Added a second boundary check before immutable attempt rows are inserted. A cross-skill bank row now fails the start mutation instead of entering a learner manifest.
+- Expanded the Convex regression from one quick Reading path to the full 120-question form plus Listening, Reading, Writing, and Speaking focused sprints. The test resolves every bank/source relationship and confirms exact full-form counts of 50/47/12/11.
+- Synced only the authorised development deployment. Its bank verifier returned 146 ready records, 121 selectable fingerprints, eight random sections, and eligible capacity of 51 Reading, 47 Listening, 12 Writing, and 11 Speaking questions.
+- Browser verification started the full form at desktop, Pixel 7, and 320 px, then started all four focused public routes and confirmed the first live question belonged to the route's skill. Port 3987 remained running; no production deployment was performed.

@@ -514,7 +514,25 @@ export async function prepareRandomSelectionPlans(
         available: eligible.length,
       });
     }
-    plans.set(section._id, shuffled(eligible).slice(0, section.itemCount));
+    const selected = shuffled(eligible).slice(0, section.itemCount);
+    const fingerprints = new Set(
+      selected.map((question) => question.contentFingerprint),
+    );
+    if (
+      selected.length !== section.itemCount ||
+      fingerprints.size !== selected.length ||
+      selected.some(
+        (question) =>
+          question.skill !== section.skill ||
+          !isTaskFamilyForSkill(question.skill, question.taskFamily),
+      )
+    ) {
+      throw new ConvexError({
+        code: "QUESTION_BANK_SELECTION_INVALID" as const,
+        skill: section.skill,
+      });
+    }
+    plans.set(section._id, selected);
   }
   return plans;
 }

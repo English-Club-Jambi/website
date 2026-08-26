@@ -352,6 +352,12 @@ export const start = mutation({
       const selection = randomSelectionPlans.get(section._id) ?? [];
       for (let order = 0; order < selection.length; order += 1) {
         const bankQuestion = selection[order];
+        if (bankQuestion.skill !== section.skill) {
+          throw new ConvexError({
+            code: "QUESTION_BANK_SELECTION_INVALID" as const,
+            skill: section.skill,
+          });
+        }
         const sourceItem = await ctx.db.get(
           "assessmentItems",
           bankQuestion.sourceItemId,

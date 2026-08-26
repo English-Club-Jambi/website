@@ -98,6 +98,47 @@ test.describe("seeded four-skill practice flow", () => {
     });
   });
 
+  test("starts every focused sprint in its matching live skill section", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "desktop-chromium",
+      "The full-practice test already covers the mobile start interaction.",
+    );
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+    const focusedFormats = [
+      { skill: "listening", title: "Listening", itemCount: 8 },
+      { skill: "reading", title: "Reading", itemCount: 8 },
+      { skill: "writing", title: "Writing", itemCount: 5 },
+      { skill: "speaking", title: "Speaking", itemCount: 4 },
+    ] as const;
+
+    for (const format of focusedFormats) {
+      await page.goto(`/practice/quick/${format.skill}`);
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "Start practice" }).click();
+      await page.waitForURL(/\/practice\/attempt\//);
+      await expect(
+        page.getByRole("heading", { name: format.title, level: 1 }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Begin section" }).click();
+      await expect(
+        page.getByText(`QUESTION 1 OF ${format.itemCount}`),
+      ).toBeVisible();
+      await expect(
+        page.locator("main").getByText(format.title, {
+          exact: true,
+        }).first(),
+      ).toBeVisible();
+    }
+
+    expect(browserErrors).toEqual([]);
+  });
+
   test("delivers the seeded bank illustration inside the immutable live manifest", async ({
     page,
   }, testInfo) => {
