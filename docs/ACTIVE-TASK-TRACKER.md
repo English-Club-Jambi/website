@@ -83,6 +83,8 @@ This file is the release checklist for the English Club website. A task is marke
 - [x] Run full lint, TypeScript, unit, backend, production build, Playwright, Axe, responsive geometry, and screenshot review from the final source.
 - [x] Confirm port 3987 remains listening and returns HTTP 200; do not kill or restart it.
 - [x] Run dependency, secret, ignored-file, raw-asset/privacy, absolute-path, file-size, and staged-diff audits.
-- [ ] Commit every reviewed change to the local Git repository only after all gates pass.
-- [ ] Verify the repository is clean after commit.
-- [ ] Read and hand off the development owner password only after the successful commit; do not expose R2 or Convex secrets.
+- [x] Commit every reviewed change to the local Git repository only after all gates pass.
+- [x] Verify the repository is clean after commit.
+- [x] Read and hand off the development owner password only after the successful commit; do not expose R2 or Convex secrets.
+
+Closeout evidence: functional release commit `3f17ae5`; the post-commit worktree check returned clean, port 3987 returned HTTP 200, and the ignored owner credential was read only after that successful commit.
