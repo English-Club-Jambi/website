@@ -27,6 +27,7 @@ import {
 import { JournalCover } from "@/components/journal/journal-cover";
 import { getMedia } from "@/content/media";
 import type { PublicJournalMedia } from "@/lib/journal";
+import { isCurrentJournalRevisionPublished } from "@/lib/journal-publication";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { api } from "../../../convex/_generated/api";
 
@@ -193,6 +194,9 @@ function JournalWorkspaceEditor({
       : { ...newStoryState },
   );
   const [revision, setRevision] = useState(workspace?.draft?.revision ?? 0);
+  const [confirmedPublishedRevision, setConfirmedPublishedRevision] = useState<
+    number | null
+  >(null);
   const [coverPreview, setCoverPreview] = useState<JournalCoverPreview | null>(
     initialCover,
   );
@@ -220,6 +224,14 @@ function JournalWorkspaceEditor({
     coverPreview !== null &&
     (coverPreview.coverMedia !== undefined ||
       getMedia(coverPreview.coverKey) !== undefined);
+  const storyIsArchived = workspace?.post.status === "archived";
+  const currentRevisionIsPublished =
+    !storyIsArchived &&
+    isCurrentJournalRevisionPublished({
+      currentRevision: revision,
+      publishedRevision: workspace?.published?.revision,
+      confirmedPublishedRevision,
+    });
   const editorInitialContent = useMemo(
     () =>
       source === undefined
@@ -335,6 +347,7 @@ function JournalWorkspaceEditor({
     setError("");
     try {
       const result = await publish({ postId: typedPostId, expectedRevision: revision });
+      setConfirmedPublishedRevision(result.revision);
       setMessage(`Revision ${result.revision} is now public.`);
     } catch (caught) {
       setError(humanizeError(caught));
@@ -636,7 +649,14 @@ function JournalWorkspaceEditor({
         <div className={styles.editorActionBar}>
           <div>
             <ClockIcon aria-hidden width={18} height={18} />
-            <span>{message || (revision > 0 ? `Working from revision ${revision}.` : "Not saved yet.")}</span>
+            <span>
+              {message ||
+                (currentRevisionIsPublished
+                  ? `Revision ${revision} is public.`
+                  : revision > 0
+                    ? `Working from revision ${revision}.`
+                    : "Not saved yet.")}
+            </span>
           </div>
           <div className={styles.buttonRow}>
             {typedPostId !== undefined && canPublish(admin) ? (
@@ -652,12 +672,33 @@ function JournalWorkspaceEditor({
             <button
               className={styles.primaryButton}
               type="button"
-              disabled={typedPostId === undefined || !canPublish(admin) || pending !== null || revision < 1}
-              title={canPublish(admin) ? undefined : "Publisher or owner access is required"}
+              disabled={
+                typedPostId === undefined ||
+                !canPublish(admin) ||
+                pending !== null ||
+                revision < 1 ||
+                currentRevisionIsPublished ||
+                storyIsArchived
+              }
+              title={
+                !canPublish(admin)
+                  ? "Publisher or owner access is required"
+                  : storyIsArchived
+                    ? "Restore this story from the journal archive before publishing."
+                    : currentRevisionIsPublished
+                      ? "Save a new revision before publishing again."
+                      : undefined
+              }
               onClick={() => void handlePublish()}
             >
               <PaperAirplaneIcon aria-hidden width={18} height={18} />
-              {pending === "publish" ? "Publishing…" : "Publish revision"}
+              {pending === "publish"
+                ? "Publishing…"
+                : storyIsArchived
+                  ? "Archived"
+                  : currentRevisionIsPublished
+                    ? "Published"
+                    : "Publish revision"}
             </button>
           </div>
         </div>

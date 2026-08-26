@@ -7,6 +7,7 @@ import {
   getPublishedPosts,
   parseJournalCursor,
 } from "@/lib/journal";
+import { isCurrentJournalRevisionPublished } from "@/lib/journal-publication";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -75,5 +76,38 @@ describe("journal Convex adapter", () => {
     expect(parseJournalCursor(["one", "two"])).toEqual({ state: "invalid" });
     expect(parseJournalCursor(" ")).toEqual({ state: "invalid" });
     expect(parseJournalCursor("x".repeat(2_049))).toEqual({ state: "invalid" });
+  });
+});
+
+describe("journal publication state", () => {
+  it("recognizes both server-confirmed and just-published revisions", () => {
+    expect(
+      isCurrentJournalRevisionPublished({
+        currentRevision: 3,
+        publishedRevision: 3,
+      }),
+    ).toBe(true);
+    expect(
+      isCurrentJournalRevisionPublished({
+        currentRevision: 4,
+        publishedRevision: 3,
+        confirmedPublishedRevision: 4,
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps new and newer draft revisions publishable", () => {
+    expect(
+      isCurrentJournalRevisionPublished({
+        currentRevision: 0,
+        publishedRevision: 0,
+      }),
+    ).toBe(false);
+    expect(
+      isCurrentJournalRevisionPublished({
+        currentRevision: 4,
+        publishedRevision: 3,
+      }),
+    ).toBe(false);
   });
 });

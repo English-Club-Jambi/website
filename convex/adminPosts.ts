@@ -447,7 +447,17 @@ export const publish = mutation({
       throw new Error("Journal draft changed before publication.");
     }
     if (post.publishedRevisionId === revision._id) {
-      throw new Error("This journal revision is already published.");
+      if (post.status !== "published" || post.publishedAt === undefined) {
+        throw new Error(
+          post.status === "archived"
+            ? "Restore this archived journal story before publishing another revision."
+            : "Journal publication state is inconsistent.",
+        );
+      }
+      return {
+        publishedAt: post.publishedAt,
+        revision: revision.revision,
+      };
     }
     if (revision.plainText.length < 80) {
       throw new Error("Journal story is too short to publish.");

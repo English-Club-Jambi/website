@@ -380,6 +380,15 @@ test.describe("current administration fixes", () => {
       "alt",
       alternativeText,
     );
+    const publishButton = page.getByRole("button", {
+      name: "Published",
+      exact: true,
+    });
+    await expect(publishButton).toBeDisabled();
+    await expect(publishButton).toHaveAttribute(
+      "title",
+      "Save a new revision before publishing again.",
+    );
 
     await page.getByRole("heading", { name: "Featured image" }).scrollIntoViewIfNeeded();
     await captureAdminEvidence(page, {

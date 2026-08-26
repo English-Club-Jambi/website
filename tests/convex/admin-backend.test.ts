@@ -536,7 +536,7 @@ describe("admin journal revisions", () => {
   });
 
   it("stores immutable structured drafts and only lets publishers publish", async () => {
-    const { editor, publisher } = await bootstrap();
+    const { t, editor, publisher } = await bootstrap();
     const saved = await editor.mutation(api.adminPosts.saveDraft, {
       expectedRevision: 0,
       slug: "listening-changes-the-room",
@@ -556,7 +556,7 @@ describe("admin journal revisions", () => {
         expectedRevision: 1,
       }),
     ).rejects.toThrow();
-    await publisher.mutation(api.adminPosts.publish, {
+    const firstPublication = await publisher.mutation(api.adminPosts.publish, {
       postId: saved.postId,
       expectedRevision: 1,
     });
@@ -565,7 +565,19 @@ describe("admin journal revisions", () => {
         postId: saved.postId,
         expectedRevision: 1,
       }),
-    ).rejects.toThrow("already published");
+    ).resolves.toEqual(firstPublication);
+    const publicationEvents = await t.run(async (ctx) => {
+      const events = await ctx.db
+        .query("cmsAuditEvents")
+        .withIndex("by_area_and_created_at", (q) => q.eq("area", "journal"))
+        .order("desc")
+        .take(10);
+      return events.filter(
+        (event) =>
+          event.resourceId === saved.postId && event.action === "publish",
+      );
+    });
+    expect(publicationEvents).toHaveLength(1);
     const publicPost = await publisher.query(api.posts.getPublishedBySlug, {
       slug: "listening-changes-the-room",
     });

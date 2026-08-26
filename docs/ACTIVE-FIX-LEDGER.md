@@ -25,6 +25,15 @@ Implementation commit: `9846874 fix: load legacy journal posts in editor`.
 - [x] Remove archived stories from public reads and restore the last valid published revision safely.
 - [x] Confirm lifecycle transitions, negative permissions, public visibility, and audit records in Convex tests.
 
+## Journal publication retry
+
+- [x] Reproduce the reported `This journal revision is already published` failure by publishing the same saved revision twice.
+- [x] Make an exact publication retry idempotent while preserving publisher authorization and optimistic revision checks.
+- [x] Return the original publication timestamp and avoid duplicate writes or audit events on retry.
+- [x] Mark the current public revision as **Published** in the editor and disable the action until a new revision is saved.
+- [x] Verify the reported Leeds edit route at desktop, Pixel 7, and 320 px with no browser errors.
+- [x] Push the repaired mutation to `dev:perfect-greyhound-270` only.
+
 ## Page Copy scrolling
 
 - [x] Give the content-field rail its own labelled, keyboard-scrollable region on desktop.
