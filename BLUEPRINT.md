@@ -127,7 +127,7 @@ The result reports exact bank outcomes, mode, time, ordered section rows, and cu
 
 ### Administration
 
-`/admin` uses its own noindex layout, rounded operational visual system, and scoped Convex Auth provider. Pages edits manifest-bound public copy. Journal stores immutable reviewed Tiptap-compatible revisions with image media IDs and bounded map coordinates. Members maintains role, joined year, publication, profile consent, portrait consent, and reviewed portrait selection. Media verifies browser-to-R2 uploads. Appearance publishes structured theme versions. Assessments manages definitions, versions, ordered sections/stimuli/items, protected keys, validation, four human reviews, publication, retirement, and next-draft cloning. Activity exposes the bounded owner audit trail.
+`/admin` uses its own noindex layout, rounded operational visual system, and scoped Convex Auth provider. Pages edits manifest-bound public copy. Journal stores immutable reviewed Tiptap-compatible revisions with image media IDs and bounded map coordinates. Contact desk keeps join requests, collaboration proposals, and questions in separate indexed queues, then records internal follow-up status without pretending to send email. Members maintains role, joined year, publication, profile consent, portrait consent, and reviewed portrait selection. Media verifies browser-to-R2 uploads. Appearance publishes structured theme versions. Assessments manages definitions, versions, ordered sections/stimuli/items, protected keys, validation, four human reviews, publication, retirement, and next-draft cloning. Activity exposes the bounded owner audit trail.
 
 The browser never creates Password identities. The deployment operator runs one internal provisioning action that creates or verifies the Password account and binds its stable issuer/Auth-user identity to a reviewed admin role. Every protected function repeats permission checks inside Convex.
 
@@ -197,6 +197,7 @@ AdminLayout
         └── AdminShell
             ├── ContentManager
             ├── JournalWorkspace + RichJournalEditor
+            ├── ContactManager
             ├── AssessmentWorkspace + SectionManager + MediaManager
             ├── MemberManager
             ├── MediaManager

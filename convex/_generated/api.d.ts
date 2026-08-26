@@ -20,6 +20,7 @@ import type * as adminMembers from "../adminMembers.js";
 import type * as adminPosts from "../adminPosts.js";
 import type * as adminPrograms from "../adminPrograms.js";
 import type * as adminProvisioning from "../adminProvisioning.js";
+import type * as adminSubmissions from "../adminSubmissions.js";
 import type * as adminThemes from "../adminThemes.js";
 import type * as adminUsers from "../adminUsers.js";
 import type * as assessmentAttempts from "../assessmentAttempts.js";
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   adminPosts: typeof adminPosts;
   adminPrograms: typeof adminPrograms;
   adminProvisioning: typeof adminProvisioning;
+  adminSubmissions: typeof adminSubmissions;
   adminThemes: typeof adminThemes;
   adminUsers: typeof adminUsers;
   assessmentAttempts: typeof assessmentAttempts;

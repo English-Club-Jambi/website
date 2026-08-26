@@ -11,6 +11,7 @@ import {
   DocumentTextIcon,
   HomeIcon,
   IdentificationIcon,
+  InboxStackIcon,
   PaintBrushIcon,
   PhotoIcon,
   RectangleStackIcon,
@@ -78,6 +79,12 @@ const navigation: ReadonlyArray<AdminNavigationItem> = [
     label: "Programs",
     description: "Programme record and public work",
     icon: RectangleStackIcon,
+  },
+  {
+    href: "/admin/contacts",
+    label: "Contact desk",
+    description: "Join, proposals, and questions",
+    icon: InboxStackIcon,
   },
   {
     href: "/admin/assessments",

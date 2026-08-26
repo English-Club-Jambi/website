@@ -342,7 +342,8 @@ The composition may change on hover or focus, but no JavaScript is needed.
 ### Administration shell
 
 - A fixed sidebar becomes a focus-contained mobile dialog below the desktop workspace threshold.
-- Pages, Journal, Programs, Practice Builder, Members, Media, Appearance, and Audit log use one navigation, heading, toolbar, field, status, pagination, and error system.
+- Pages, Journal, Programs, Contact desk, Practice Builder, Members, Media, Appearance, and Audit log use one navigation, heading, toolbar, field, status, pagination, and error system.
+- Contact desk is a queue-and-reading-pane tool, not a metric dashboard: four intent controls sit above one status filter, one bounded message rail, and one reading pane. Mobile stacks the rail and detail without converting personal messages into cards.
 - Journal authoring stores allowlisted structured JSON. Media nodes hold verified IDs and alt text; map nodes hold finite bounded coordinates.
 - Practice Builder separates the fixed format contract, fixed skill quotas, a versioned eligible Question Bank pool, aggregate learner-flag review, validation, four review decisions, publication, and next-revision cloning. It exposes no format/section creation controls.
 - Configuration gates remain visible as operational states. Missing private Assessment R2 credentials disable confidential upload without hiding the media ledger.
@@ -359,7 +360,7 @@ The composition may change on hover or focus, but no JavaScript is needed.
 | Story | Calm article title and metadata | Optional cover and narrow Markdown body | Journal return |
 | Contact | Direct route phrase | Context plus existing form cycle | Form success state |
 | Practice | Assessment Lab statement and claim boundary | Published full/quick paths, briefing, owned Answer Line runner, bounded result/review | Back to Practice or another reviewed path |
-| Admin | Compact workspace identity and current access | Pages, Journal, Assessments, Members, Media, Appearance, and Activity tools | Save/publish state rather than a marketing close |
+| Admin | Compact workspace identity and current access | Pages, Journal, Contact desk, Assessments, Members, Media, Appearance, and Activity tools | Save/publish or recorded-work state rather than a marketing close |
 
 No shared route masthead selector should force these openings into the same geometry.
 

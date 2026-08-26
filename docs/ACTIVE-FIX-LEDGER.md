@@ -86,6 +86,16 @@ Implementation commit: `9846874 fix: load legacy journal posts in editor`.
 - [x] Verify profile consent and portrait consent remain independent publication gates.
 - [x] Verify desktop, Pixel 7, and 320 px layouts, keyboard operation, touch targets, reduced motion, and Axe.
 
+## Contact desk administration
+
+- [x] Keep Join, Propose something together, and Ask a question as three explicit queues matching the public form.
+- [x] Add a protected 20-row cursor query backed by exact intent/status indexes; never expose normalized email or source-path fields.
+- [x] Add a responsive queue-and-reading-pane workspace with custom status filtering and real email handoff.
+- [x] State that status is an internal work note and never sends an email automatically.
+- [x] Protect reads and status changes with server-owned permissions and optimistic concurrency.
+- [x] Keep contact audit summaries free of names, email addresses, and message bodies.
+- [x] Verify the development-cloud route at desktop, Pixel 7, and 320 px with masked PII, touch, Axe, and no overflow.
+
 ## Release discipline
 
 - [x] Do not stop or kill port 3987.

@@ -110,7 +110,8 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Add Convex Auth Password identities and a server-owned `adminUsers` allowlist.
 - [x] Remove browser account creation and provision Password identity plus authorization through one internal operator action.
 - [x] Add stable Auth-account binding, guarded placeholder recovery, and the owner/editor/publisher permission map.
-- [x] Build the protected `/admin` shell, Pages, Journal, Members, Media, Appearance, Assessments, and Activity workspaces.
+- [x] Build the protected `/admin` shell, Pages, Journal, Contact desk, Members, Media, Appearance, Assessments, and Activity workspaces.
+- [x] Connect the three public Contact intents to a private admin Contact desk with separate queues, bounded pagination, explicit work status, email handoff, optimistic concurrency, and PII-safe audit events.
 - [x] Replace code-only journal maintenance with immutable structured revisions, reviewed covers/inline media, safe coordinate map nodes, publish, archive, and cursor pagination.
 - [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 200 entries per page and locale.
 - [x] Add reviewed media upload through a validated same-origin streaming relay, Convex metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.

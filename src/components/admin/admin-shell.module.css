@@ -1345,6 +1345,296 @@
   gap: 0.55rem;
 }
 
+.contactIntentRail {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border-bottom: 2px solid var(--admin-line);
+  background: var(--admin-soft-line);
+}
+
+.contactIntentButton {
+  min-width: 0;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 1.45rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  padding: 0.85rem 1rem;
+  background: var(--admin-paper);
+  color: var(--admin-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--admin-ease),
+    box-shadow 160ms var(--admin-ease);
+}
+
+.contactIntentButton:hover {
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 52%, var(--admin-paper));
+}
+
+.contactIntentButton[aria-pressed="true"] {
+  background: var(--admin-cobalt-wash);
+  box-shadow: inset 0 -4px 0 var(--admin-cobalt);
+}
+
+.contactIntentButton > svg {
+  color: var(--admin-cobalt-dark);
+}
+
+.contactIntentButton > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.contactIntentButton strong {
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.contactIntentButton small {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.contactToolbar {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.7fr) minmax(10rem, auto) minmax(18rem, 1.3fr);
+  align-items: end;
+  gap: 1rem;
+  border-bottom: 2px solid var(--admin-line);
+  padding: 1rem 1.15rem;
+}
+
+.contactToolbar > p {
+  margin: 0 0 0.15rem;
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.contactNotice {
+  margin: 0;
+  border-bottom: 2px solid var(--admin-line);
+  padding: 0.75rem 1.15rem;
+  background: color-mix(in oklch, var(--admin-green) 16%, var(--admin-paper));
+  color: var(--admin-green);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.contactDesk {
+  min-width: 0;
+  height: clamp(34rem, calc(100dvh - 15rem), 48rem);
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(19rem, 0.8fr) minmax(0, 1.2fr);
+}
+
+.contactList {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-right: 2px solid var(--admin-line);
+  scrollbar-gutter: stable;
+}
+
+.contactListRow {
+  width: 100%;
+  min-width: 0;
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 0.25rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 0.9rem 1rem;
+  background: var(--admin-paper);
+  color: var(--admin-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--admin-ease),
+    box-shadow 160ms var(--admin-ease);
+}
+
+.contactListRow:hover {
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 42%, var(--admin-paper));
+}
+
+.contactListRow[data-active="true"] {
+  background: var(--admin-cobalt-wash);
+  box-shadow: inset 4px 0 0 var(--admin-cobalt);
+}
+
+.contactListRow > span:not(.contactListHead) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactListRow > small {
+  align-self: center;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+}
+
+.contactListRow > :last-child {
+  justify-self: end;
+}
+
+.contactListHead {
+  min-width: 0;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.contactListHead strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactListHead time {
+  flex: 0 0 auto;
+  color: var(--admin-muted);
+  font-size: 0.66rem;
+}
+
+.contactLoadMore {
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem;
+}
+
+.contactDetail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.contactDetailHeader {
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: clamp(1.15rem, 3vw, 2rem);
+}
+
+.contactDetailHeader > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.contactDetailHeader span,
+.contactMessage > span {
+  color: var(--admin-cobalt-dark);
+  font-size: 0.7rem;
+  font-weight: 790;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.contactDetailHeader h3 {
+  overflow-wrap: anywhere;
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.75rem, 4vw, 3.3rem);
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+}
+
+.contactDetailHeader > div > a {
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--admin-muted);
+  font-size: 0.8rem;
+}
+
+.contactFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--admin-soft-line);
+}
+
+.contactFacts > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem clamp(1.15rem, 3vw, 2rem);
+}
+
+.contactFacts > div + div {
+  border-left: 1px solid var(--admin-soft-line);
+}
+
+.contactFacts dt {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.contactFacts dd {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.contactMessage {
+  display: grid;
+  gap: 0.7rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem) clamp(1.15rem, 3vw, 2rem);
+}
+
+.contactMessage p {
+  max-width: 68ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(1rem, 2vw, 1.16rem);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.contactActionRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.75fr) minmax(16rem, 1.25fr);
+  align-items: end;
+  gap: 1rem;
+  border-top: 2px solid var(--admin-line);
+  padding: 1rem clamp(1.15rem, 3vw, 2rem);
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 34%, var(--admin-paper));
+}
+
+.contactActionRow > p {
+  margin: 0 0 0.2rem;
+  color: var(--admin-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
 .storyWorkspaceHeader {
   width: min(100%, 62rem);
   min-width: 0;
@@ -2669,6 +2959,18 @@
 }
 
 @media (max-width: 1180px) {
+  .contactIntentRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contactToolbar {
+    grid-template-columns: minmax(13rem, 1fr) minmax(10rem, auto);
+  }
+
+  .contactToolbar > p {
+    grid-column: 1 / -1;
+  }
+
   .memberFilterToolbar {
     grid-template-columns: repeat(2, minmax(10rem, 1fr));
   }
@@ -2823,6 +3125,22 @@
     overflow: visible;
   }
 
+  .contactDesk {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .contactList {
+    max-height: 28rem;
+    border-right: 0;
+    border-bottom: 2px solid var(--admin-line);
+  }
+
+  .contactDetail {
+    overflow: visible;
+    scroll-margin-top: 5rem;
+  }
+
   .journalAdminRow {
     grid-template-columns: minmax(12rem, 0.85fr) minmax(14rem, 1.15fr);
   }
@@ -2918,6 +3236,30 @@
 
   .toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .contactIntentRail,
+  .contactToolbar,
+  .contactFacts,
+  .contactActionRow {
+    grid-template-columns: 1fr;
+  }
+
+  .contactDetailHeader {
+    display: grid;
+  }
+
+  .contactDetailHeader > .primaryButton {
+    width: 100%;
+  }
+
+  .contactFacts > div + div {
+    border-top: 1px solid var(--admin-soft-line);
+    border-left: 0;
+  }
+
+  .contactToolbar > p {
+    grid-column: 1;
   }
 
   .dataTable {

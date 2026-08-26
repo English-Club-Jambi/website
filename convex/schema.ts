@@ -191,7 +191,14 @@ export default defineSchema({
       "normalizedEmail",
       "createdAt",
     ])
-    .index("by_status_created_at", ["status", "createdAt"]),
+    .index("by_status_created_at", ["status", "createdAt"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_intent_and_created_at", ["intent", "createdAt"])
+    .index("by_intent_and_status_and_created_at", [
+      "intent",
+      "status",
+      "createdAt",
+    ]),
 
   memberDivisions: defineTable({
     slug: v.string(),

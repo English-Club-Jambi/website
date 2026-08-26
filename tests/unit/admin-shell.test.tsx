@@ -46,6 +46,7 @@ describe("AdminShellView", () => {
       "Pages",
       "Journal",
       "Programs",
+      "Contact desk",
       "Practice Builder",
       "Members",
       "Media",

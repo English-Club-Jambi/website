@@ -88,7 +88,7 @@ Jobs:
 - Keep draft content out of public queries.
 - Add an event record without changing the schema.
 - Add, update, archive, and withdraw reviewed member profiles without exposing consent records publicly.
-- Review contact submissions by status.
+- Review contact submissions in explicit Join, Proposal, and Question queues; open the sender's email client and record the internal follow-up status separately.
 - Edit manifest-bound public wording without changing layout or script behavior.
 - Preview and publish a complete validated light/dark public colour scheme.
 - Author, validate, review, publish, retire, and clone immutable Assessment versions without exposing protected keys.
@@ -380,8 +380,10 @@ Acceptance:
 - Create or verify the Auth account and bind its stable issuer/Auth-user identity to an `adminUsers` role in one internal workflow. Browser `flow=signUp` requests must fail and no default credential may exist in source.
 - Derive the active administrator from the signed identity in every protected Convex function, resolving the stable issuer/Auth-user binding with a legacy complete-token fallback. Ignore role, email, or actor identifiers supplied by the client.
 - Enforce `editor`, `publisher`, and `owner` permissions server-side. An editor manages content; a publisher can publish general content and review/publish Assessments but cannot author Assessment questions; an owner also manages administrators.
-- Protect Overview, Pages, Journal, Assessments, Members, Media, Appearance, and Activity routes. None is indexed or linked from the public shell.
-- Record bounded audit events for content, journal, Member, media, Assessment, theme, and administrator changes.
+- Protect Overview, Pages, Journal, Contact desk, Assessments, Members, Media, Appearance, and Activity routes. None is indexed or linked from the public shell.
+- Give all active administrator roles `contact:read` and `contact:manage`; personal messages remain inaccessible before this server-side permission check.
+- Keep Contact reads on 20-row cursor pages backed by intent/status indexes. Status updates use an expected timestamp and fail visibly on concurrent changes.
+- Record bounded audit events for content, journal, Contact, Member, media, Assessment, theme, and administrator changes. Contact summaries never copy a name, email address, or message body.
 - Present the workspace in the rounded semi-neobrutal register defined in `DESIGN-SYSTEM.md`, with reusable selects, dialogs, pagination, status chips, and validation rails.
 
 Acceptance:
@@ -391,6 +393,7 @@ Acceptance:
 - Password input is 12–128 characters with upper-case, lower-case, and numeric characters; email is normalised and validated.
 - The client does not query the removed deployment-era `adminUsers:bootstrapState` function.
 - A complete publish action updates the public projection; a saved draft does not.
+- The Contact desk names the same three intents as `/contact`, opens a real `mailto:` handoff, and states that a status change does not send a reply.
 
 ### FR-14 Journal and theme publishing
 

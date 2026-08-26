@@ -4,6 +4,7 @@ import {
   ArrowTopRightOnSquareIcon,
   BookOpenIcon,
   DocumentTextIcon,
+  InboxStackIcon,
   PaintBrushIcon,
   PhotoIcon,
   RectangleStackIcon,
@@ -37,6 +38,13 @@ const workAreas = [
     description: "Keep delivered work, programme lines, sources, and open community directions distinct.",
     action: "Open programs",
     icon: RectangleStackIcon,
+  },
+  {
+    href: "/admin/contacts",
+    label: "Contact desk",
+    description: "Review join requests, collaboration proposals, and questions in separate queues.",
+    action: "Open contact desk",
+    icon: InboxStackIcon,
   },
   {
     href: "/admin/members",

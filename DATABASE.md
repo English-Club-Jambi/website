@@ -76,7 +76,7 @@ erDiagram
 | `posts` | Mutable journal identity and draft/published revision pointers; retains legacy safe body fields for compatible public projection | slug; status + publication time; status + featured + publication time; status/update; update |
 | `postRevisions` | Immutable Tiptap JSON, plain text, title metadata, cover media, author, and revision number | post + revision |
 | `events` | Schema-ready verified event record; no first-release public route | slug; status + start |
-| `contactSubmissions` | Private join, partner, and question enquiries | normalized email + creation; status + creation |
+| `contactSubmissions` | Private join, partner, and question enquiries with internal follow-up status | normalized email + creation; creation; intent + creation; status + creation; intent + status + creation |
 | `memberDivisions` | Managed working-division catalogue with stable slug, public name, summary, lifecycle status, and order | slug; status + order; order |
 | `members` | Public-role record with consent gates, optional portrait, optional joined year, managed division link, and stable order | slug; public consent/order; public role/order; division + role; status/update; update |
 
@@ -239,7 +239,7 @@ Every protected function calls `requireAdmin(permission)`, which resolves the cu
 
 ### Protected administration
 
-Protected pages use cursor pagination: administrators 20, Members 20, media no more than 24, Assessment definitions 20, Assessment items no more than 25, and approval history 20. Mutation families are split by domain (`adminContent`, `adminPosts`, `adminMembers`, `adminMemberDivisions`, `adminMedia`, `adminThemes`, `adminAssessments`, `adminAssessmentItems`, and Assessment review/media modules) so each call has one explicit permission.
+Protected pages use cursor pagination: administrators 20, Contact messages exactly 20, Members 20, media no more than 24, Assessment definitions 20, Assessment items no more than 25, and approval history 20. Mutation families are split by domain (`adminContent`, `adminPosts`, `adminSubmissions`, `adminMembers`, `adminMemberDivisions`, `adminMedia`, `adminThemes`, `adminAssessments`, `adminAssessmentItems`, and Assessment review/media modules) so each call has one explicit permission. Contact status writes compare `expectedUpdatedAt`, return a conflict instead of overwriting concurrent work, and append an audit event that contains no PII.
 
 ## 7. Media record and R2 boundaries
 
@@ -269,6 +269,7 @@ The public bucket/custom domain is working. The separate private Assessment buck
 | Admin user page | status/update index | 20 |
 | Admin Member page | status/update or update index | 20 |
 | Admin media page | purpose/access/status indexes | 24 |
+| Admin Contact desk | intent/status/creation indexes | exactly 20 per cursor page |
 | Assessment catalogue | visibility/update index | 9 public, 20 admin |
 | Assessment version children | version/section/order indexes | 9 sections, 200 items/stimuli/keys |
 | Assessment answer review | attempt/item indexes | 20 per cursor page |
@@ -278,6 +279,7 @@ The public bucket/custom domain is working. The separate private Assessment buck
 ## 9. Privacy and retention
 
 - Contact records are private and used only to answer the selected intent.
+- The admin Contact projection omits normalized email and source-path fields. It returns name, reply address, message, intent, consent time, work status, and timestamps only after `contact:read` authorization.
 - Email, message, Auth token identifier, answer selections, transcript state, and raw result totals do not enter analytics, URLs, client storage, or routine logs.
 - Member profile consent is separate from contact consent; portrait consent is separate from profile-text consent.
 - Revoking portrait consent removes its key from the public projection before any later object cleanup.

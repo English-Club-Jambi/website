@@ -13,6 +13,8 @@ export type AdminPermission =
   | "journal:read"
   | "journal:edit"
   | "journal:publish"
+  | "contact:read"
+  | "contact:manage"
   | "members:read"
   | "members:edit"
   | "media:read"
@@ -37,6 +39,8 @@ const rolePermissions: Record<
     "content:edit",
     "journal:read",
     "journal:edit",
+    "contact:read",
+    "contact:manage",
     "members:read",
     "members:edit",
     "media:read",
@@ -55,6 +59,8 @@ const rolePermissions: Record<
     "journal:read",
     "journal:edit",
     "journal:publish",
+    "contact:read",
+    "contact:manage",
     "members:read",
     "members:edit",
     "media:read",
@@ -77,6 +83,8 @@ const rolePermissions: Record<
     "journal:read",
     "journal:edit",
     "journal:publish",
+    "contact:read",
+    "contact:manage",
     "members:read",
     "members:edit",
     "media:read",
