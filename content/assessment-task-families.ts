@@ -19,6 +19,14 @@ export const assessmentTaskFamilyGroups = [
     ],
   },
   {
+    skill: "structure",
+    label: "Structure and Written Expression",
+    options: [
+      { value: "structure-sentence-completion", label: "Sentence completion" },
+      { value: "structure-written-expression", label: "Written expression" },
+    ],
+  },
+  {
     skill: "writing",
     label: "Writing",
     options: [

@@ -16,11 +16,12 @@ describe("assessment task-family catalogue", () => {
     expect(assessmentTaskFamilyGroups.map((group) => group.label)).toEqual([
       "Reading",
       "Listening",
+      "Structure and Written Expression",
       "Writing",
       "Speaking",
     ]);
     expect(new Set(values).size).toBe(values.length);
-    expect(values).toHaveLength(12);
+    expect(values).toHaveLength(14);
     expect(
       values.every((value) => assessmentTaskFamilyLabelByValue[value].length > 0),
     ).toBe(true);

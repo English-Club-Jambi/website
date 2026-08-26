@@ -3,9 +3,8 @@ import {
   BookOpenIcon,
   ClockIcon,
   DocumentCheckIcon,
-  MicrophoneIcon,
   SpeakerWaveIcon,
-  PencilSquareIcon,
+  WrenchScrewdriverIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
@@ -27,9 +26,8 @@ import styles from "./practice.module.css";
 
 const iconBySkill = {
   listening: SpeakerWaveIcon,
+  structure: WrenchScrewdriverIcon,
   reading: BookOpenIcon,
-  writing: PencilSquareIcon,
-  speaking: MicrophoneIcon,
 } as const;
 
 function formatTime(
@@ -71,7 +69,14 @@ export function PracticeOverview({
   catalog: AssessmentRead<AssessmentCatalogPage>;
   copy: PublicContentFor<"practice">;
 }) {
-  const full = catalog.data.page.find((entry) => entry.kind === "full-practice");
+  const full = catalog.data.page.find(
+    (entry) =>
+      entry.kind === "full-practice" &&
+      entry.skills.length === 3 &&
+      (["listening", "structure", "reading"] as const).every((skill) =>
+        entry.skills.includes(skill),
+      ),
+  );
   const quickBySkill = new Map(
     practiceSkills.map((skill) => [
       skill.key,
@@ -90,17 +95,13 @@ export function PracticeOverview({
       title: copy.quickListeningTitle,
       summary: copy.quickListeningSummary,
     },
+    structure: {
+      title: copy.quickStructureTitle,
+      summary: copy.quickStructureSummary,
+    },
     reading: {
       title: copy.quickReadingTitle,
       summary: copy.quickReadingSummary,
-    },
-    writing: {
-      title: copy.quickWritingTitle,
-      summary: copy.quickWritingSummary,
-    },
-    speaking: {
-      title: copy.quickSpeakingTitle,
-      summary: copy.quickSpeakingSummary,
     },
   } as const;
 

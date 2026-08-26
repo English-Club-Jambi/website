@@ -15,7 +15,7 @@ const modules = Object.fromEntries(
   ]),
 );
 
-const confirm = "seed-ec-ibt-style-2026-v1" as const;
+const confirm = "seed-ec-paper-level1-v1" as const;
 
 function harness() {
   return convexTest(schema, modules);
@@ -35,7 +35,7 @@ async function seedOwner(t: ReturnType<typeof harness>) {
 
 async function attachAllAudio(
   t: ReturnType<typeof harness>,
-  prepared: FunctionReturnType<typeof internal.assessmentSeed.prepareIbtPractice>,
+  prepared: FunctionReturnType<typeof internal.assessmentSeed.preparePaperPractice>,
 ) {
   const plan = prepared.audio;
   for (let offset = 0; offset < plan.length; offset += 20) {
@@ -61,7 +61,7 @@ async function attachAllAudio(
   }
 }
 
-describe("four-skill assessment seed", () => {
+describe("paper-based assessment seed", () => {
   it("authors an illustrated bank question and delivers it through a random live session", async () => {
     const t = harness();
     const ownerId = await seedOwner(t);
@@ -188,7 +188,7 @@ describe("four-skill assessment seed", () => {
       const definitionId = await ctx.db.insert("assessmentDefinitions", {
         slug: "illustrated-random-practice",
         kind: "full-practice",
-        profile: "ec-ibt-style-2026-v1",
+        profile: "ec-itp-level-1-aligned-v1",
         adminTitle: "Illustrated random practice",
         nextVersion: 2,
         visibility: "published",
@@ -208,7 +208,7 @@ describe("four-skill assessment seed", () => {
         timePolicy: "untimed",
         allowResume: true,
         reviewPolicy: "after-submit",
-        scorePolicy: "practice-estimate-v1",
+        scorePolicy: "raw-objective",
         defaultTimingMode: "untimed",
         defaultListeningMode: "transcript-supported",
         maxAttemptsPerDay: 4,
@@ -233,7 +233,7 @@ describe("four-skill assessment seed", () => {
         instructions: "Read the prompt and choose the best answer.",
         itemCount: 1,
         deliveryMode: "random-bank",
-        bankProfile: "ec-ibt-style-2026-v1",
+        bankProfile: "ec-itp-level-1-aligned-v1",
         bankSelectionContract: 1,
       });
       return { definitionId, versionId };
@@ -286,36 +286,35 @@ describe("four-skill assessment seed", () => {
     });
   });
 
-  it("inserts five published forms atomically and is idempotent", async () => {
+  it("inserts four published paper forms atomically and is idempotent", async () => {
     const t = harness();
     await seedOwner(t);
-    const first = await t.mutation(internal.assessmentSeed.prepareIbtPractice, { confirm });
-    expect(first.definitions).toHaveLength(5);
+    const first = await t.mutation(internal.assessmentSeed.preparePaperPractice, { confirm });
+    expect(first.definitions).toHaveLength(4);
     expect(first.definitions.every((entry) => entry.inserted)).toBe(true);
-    expect(first.definitions.find((entry) => entry.slug === "four-skill-practice-form-1")?.itemCount).toBe(120);
-    expect(first.audio.length).toBeGreaterThan(40);
+    expect(first.definitions.find((entry) => entry.slug === "paper-practice-form-1")?.itemCount).toBe(140);
+    expect(first.audio.length).toBe(40);
 
-    const second = await t.mutation(internal.assessmentSeed.prepareIbtPractice, { confirm });
+    const second = await t.mutation(internal.assessmentSeed.preparePaperPractice, { confirm });
     expect(second.definitions.every((entry) => !entry.inserted)).toBe(true);
     expect(second.audio.map((entry) => entry.stimulusId)).toEqual(
       first.audio.map((entry) => entry.stimulusId),
     );
 
-    const verification = await t.query(internal.assessmentSeed.verifyIbtPractice, { confirm });
-    const full = verification.definitions.find((entry) => entry.slug === "four-skill-practice-form-1");
-    expect(full).toMatchObject({ published: true, items: 120 });
+    const verification = await t.query(internal.assessmentSeed.verifyPaperPractice, { confirm });
+    const full = verification.definitions.find((entry) => entry.slug === "paper-practice-form-1");
+    expect(full).toMatchObject({ published: true, items: 140 });
     expect(full?.sections).toEqual([
-      { skill: "reading", items: 50, points: 35 },
-      { skill: "listening", items: 47, points: 35 },
-      { skill: "writing", items: 12, points: 20 },
-      { skill: "speaking", items: 11, points: 55 },
+      { skill: "listening", items: 50, points: 50 },
+      { skill: "structure", items: 40, points: 40 },
+      { skill: "reading", items: 50, points: 50 },
     ]);
   });
 
   it("attaches immutable public audio metadata and rejects collisions", async () => {
     const t = harness();
     await seedOwner(t);
-    const prepared = await t.mutation(internal.assessmentSeed.prepareIbtPractice, { confirm });
+    const prepared = await t.mutation(internal.assessmentSeed.preparePaperPractice, { confirm });
     const plan = prepared.audio[0];
     const checksumSha256 = "a".repeat(64);
     const objectKey = publicAssessmentDerivativeKey({
@@ -349,7 +348,7 @@ describe("four-skill assessment seed", () => {
     const t = harness();
     await seedOwner(t);
     const prepared = await t.mutation(
-      internal.assessmentSeed.prepareIbtPractice,
+      internal.assessmentSeed.preparePaperPractice,
       { confirm },
     );
     await attachAllAudio(t, prepared);
@@ -357,38 +356,37 @@ describe("four-skill assessment seed", () => {
     await expect(
       t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm }),
     ).resolves.toEqual({
-      inserted: 145,
+      inserted: 164,
       existing: 0,
-      eligible: 120,
-      randomSections: 8,
+      eligible: 140,
+      randomSections: 6,
     });
     await expect(
       t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm }),
     ).resolves.toEqual({
       inserted: 0,
-      existing: 145,
-      eligible: 120,
-      randomSections: 8,
+      existing: 164,
+      eligible: 140,
+      randomSections: 6,
     });
     await expect(
       t.query(internal.assessmentSeed.verifyQuestionBank, { confirm }),
     ).resolves.toMatchObject({
-      total: 145,
-      ready: 145,
-      eligible: 120,
-      randomSections: 8,
+      total: 164,
+      ready: 164,
+      eligible: 140,
+      randomSections: 6,
       bySkill: [
+        { skill: "listening", eligible: 50 },
+        { skill: "structure", eligible: 40 },
         { skill: "reading", eligible: 50 },
-        { skill: "listening", eligible: 47 },
-        { skill: "writing", eligible: 12 },
-        { skill: "speaking", eligible: 11 },
       ],
     });
 
     const full = await t.run(async (ctx) => {
       const definition = await ctx.db
         .query("assessmentDefinitions")
-        .withIndex("by_slug", (q) => q.eq("slug", "four-skill-practice-form-1"))
+        .withIndex("by_slug", (q) => q.eq("slug", "paper-practice-form-1"))
         .unique();
       if (definition?.publishedVersionId === undefined) {
         throw new Error("Full practice was not published.");
@@ -425,11 +423,11 @@ describe("four-skill assessment seed", () => {
         .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
           q.eq("attemptId", first.attemptId),
         )
-        .take(121),
+        .take(141),
     );
-    expect(manifest).toHaveLength(120);
-    expect(new Set(manifest.map((entry) => entry.bankQuestionId)).size).toBe(120);
-    expect(new Set(manifest.map((entry) => entry.itemId)).size).toBe(120);
+    expect(manifest).toHaveLength(140);
+    expect(new Set(manifest.map((entry) => entry.bankQuestionId)).size).toBe(140);
+    expect(new Set(manifest.map((entry) => entry.itemId)).size).toBe(140);
     expect(manifest.every((entry) => entry.selectionContract === 1)).toBe(true);
     const fullManifestAudit = await t.run(async (ctx) =>
       await Promise.all(
@@ -464,11 +462,49 @@ describe("four-skill assessment seed", () => {
         return counts;
       }, {}),
     ).toEqual({
+      listening: 50,
+      structure: 40,
       reading: 50,
-      listening: 47,
-      writing: 12,
-      speaking: 11,
     });
+
+    let begun = await learner.mutation(api.assessmentAttempts.beginSection, {
+      attemptId: first.attemptId,
+    });
+    for (let sectionIndex = 0; sectionIndex < 2; sectionIndex += 1) {
+      const finalized = await learner.mutation(
+        api.assessmentAttempts.finalizeCurrentSection,
+        {
+          attemptId: first.attemptId,
+          expectedRevision: begun.revision,
+        },
+      );
+      if (!finalized.ok) throw new Error("Paper section revision conflicted.");
+      begun = await learner.mutation(api.assessmentAttempts.beginSection, {
+        attemptId: first.attemptId,
+      });
+    }
+    const fullSubmitted = await learner.mutation(api.assessmentAttempts.submit, {
+      attemptId: first.attemptId,
+      submitRequestId: "paper-full-submit-0001",
+      expectedRevision: begun.revision,
+    });
+    if (!fullSubmitted.ok) throw new Error("Paper submit revision conflicted.");
+    const fullResult = await learner.query(api.assessmentAttempts.getResult, {
+      attemptId: first.attemptId,
+    });
+    expect(fullResult).toMatchObject({
+      objective: { correct: 0, possible: 140, omitted: 140 },
+      estimate: {
+        model: "ec-paper-linear-v1",
+        total: 310,
+        minimum: 310,
+        maximum: 677,
+        method: "fixed-linear",
+      },
+    });
+    expect(
+      fullResult?.sections.map((section) => section.paperSectionEstimate),
+    ).toEqual([31, 31, 31]);
 
     const secondAttempt = await learner.mutation(api.assessmentAttempts.start, {
       ...startArgs,
@@ -480,7 +516,7 @@ describe("four-skill assessment seed", () => {
         .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
           q.eq("attemptId", secondAttempt.attemptId),
         )
-        .take(121),
+        .take(141),
     );
     expect(secondManifest.map((entry) => entry.itemId)).not.toEqual(
       manifest.map((entry) => entry.itemId),
@@ -488,20 +524,16 @@ describe("four-skill assessment seed", () => {
 
     const quickFormats = [
       {
-        slug: "quick-listening-campus-voices",
+        slug: "paper-quick-listening-objective",
         skill: "listening",
       },
       {
-        slug: "quick-reading-text-in-context",
+        slug: "paper-quick-structure-objective",
+        skill: "structure",
+      },
+      {
+        slug: "paper-quick-reading-objective",
         skill: "reading",
-      },
-      {
-        slug: "quick-writing-sentence-to-discussion",
-        skill: "writing",
-      },
-      {
-        slug: "quick-speaking-repeat-and-respond",
-        skill: "speaking",
       },
     ] as const;
     for (const format of quickFormats) {
@@ -573,8 +605,31 @@ describe("four-skill assessment seed", () => {
             entry.skill === format.skill &&
             entry.sourceItemMatches &&
             isTaskFamilyForSkill(entry.skill, entry.taskFamily),
-        ),
+          ),
       ).toBe(true);
+      const quickBegun = await learner.mutation(
+        api.assessmentAttempts.beginSection,
+        { attemptId: quickAttempt.attemptId },
+      );
+      const quickSubmitted = await learner.mutation(
+        api.assessmentAttempts.submit,
+        {
+          attemptId: quickAttempt.attemptId,
+          submitRequestId: `random-${format.skill}-submit-0001`,
+          expectedRevision: quickBegun.revision,
+        },
+      );
+      if (!quickSubmitted.ok) {
+        throw new Error(`${format.slug} submit revision conflicted.`);
+      }
+      const quickResult = await learner.query(
+        api.assessmentAttempts.getResult,
+        { attemptId: quickAttempt.attemptId },
+      );
+      expect(quickResult).toMatchObject({
+        objective: { possible: quick.itemCount },
+        estimate: null,
+      });
     }
 
     await expect(
@@ -601,7 +656,7 @@ describe("four-skill assessment seed", () => {
           entry.status === "ready" &&
           entry.difficulty === "advanced" &&
           entry.tags.includes("original-question") &&
-          entry.tags.includes("source-ets-2026-blueprint"),
+          entry.tags.includes("source-ets-itp-level-1-content"),
       ),
     ).toBe(true);
     expect(
@@ -653,7 +708,7 @@ describe("four-skill assessment seed", () => {
     const t = harness();
     await seedOwner(t);
     const prepared = await t.mutation(
-      internal.assessmentSeed.prepareIbtPractice,
+      internal.assessmentSeed.preparePaperPractice,
       { confirm },
     );
     await attachAllAudio(t, prepared);
@@ -686,7 +741,7 @@ describe("four-skill assessment seed", () => {
       const definition = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) =>
-          q.eq("slug", "four-skill-practice-form-1"),
+          q.eq("slug", "paper-practice-form-1"),
         )
         .unique();
       if (definition?.publishedVersionId === undefined) {
@@ -696,6 +751,31 @@ describe("four-skill assessment seed", () => {
         definitionId: definition._id,
         versionId: definition.publishedVersionId,
       };
+    });
+
+    await t.run(async (ctx) => {
+      const [source] = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_profile_and_status_and_updated_at", (q) =>
+          q.eq("profile", "ec-itp-level-1-aligned-v1").eq("status", "ready"),
+        )
+        .take(1);
+      if (source === undefined) {
+        throw new Error("Expected a current paper bank row.");
+      }
+      const { _id: _sourceId, _creationTime: _sourceCreationTime, ...record } =
+        source;
+      void _sourceId;
+      void _sourceCreationTime;
+      for (let index = 0; index < 50; index += 1) {
+        await ctx.db.insert("assessmentQuestionBank", {
+          ...record,
+          bankKey: `historical-pool-row-${index + 1}`,
+          profile: "ec-ibt-style-2026-v1",
+          status: "archived",
+          updatedAt: record.updatedAt + index + 1,
+        });
+      }
     });
 
     const publishedPool = await owner.query(
@@ -711,6 +791,7 @@ describe("four-skill assessment seed", () => {
       source: "published",
       mutable: false,
     });
+    expect(publishedPool?.questions).toHaveLength(140);
     expect(
       publishedPool?.sections.every(
         (section) => section.allowedCount >= section.requiredCount,
@@ -751,11 +832,11 @@ describe("four-skill assessment seed", () => {
     const initialReading = workingPool?.sections.find(
       (section) => section.skill === "reading",
     );
-    const initialSpeaking = workingPool?.sections.find(
-      (section) => section.skill === "speaking",
+    const initialStructure = workingPool?.sections.find(
+      (section) => section.skill === "structure",
     );
-    if (initialReading === undefined || initialSpeaking === undefined) {
-      throw new Error("Expected reading and speaking pool sections.");
+    if (initialReading === undefined || initialStructure === undefined) {
+      throw new Error("Expected reading and structure pool sections.");
     }
 
     await expect(
@@ -817,23 +898,23 @@ describe("four-skill assessment seed", () => {
       ),
     ).toMatchObject({ ruleState: "inherit", effectiveAllowed: true });
 
-    const inheritedSpeaking = revisedPool?.questions.find(
+    const inheritedStructure = revisedPool?.questions.find(
       (question) =>
-        question.skill === "speaking" &&
+        question.skill === "structure" &&
         question.allowedByDefault &&
         question.effectiveAllowed,
     );
-    if (inheritedSpeaking === undefined) {
-      throw new Error("Expected an inherited speaking question.");
+    if (inheritedStructure === undefined) {
+      throw new Error("Expected an inherited structure question.");
     }
     await t.run(async (ctx) => {
       const section = await ctx.db
         .query("assessmentSections")
         .withIndex("by_version_id_and_section_key", (q) =>
-          q.eq("versionId", clone.versionId).eq("sectionKey", "speaking"),
+          q.eq("versionId", clone.versionId).eq("sectionKey", "structure"),
         )
         .unique();
-      if (section === null) throw new Error("Expected cloned speaking section.");
+      if (section === null) throw new Error("Expected cloned structure section.");
       await ctx.db.replace("assessmentSections", section._id, {
         versionId: section.versionId,
         sectionKey: section.sectionKey,
@@ -851,19 +932,19 @@ describe("four-skill assessment seed", () => {
       { definitionId: published.definitionId },
     );
     expect(
-      legacyPool?.sections.find((section) => section.skill === "speaking"),
+      legacyPool?.sections.find((section) => section.skill === "structure"),
     ).toMatchObject({ deliveryMode: "fixed", allowedCount: 0 });
     expect(
       legacyPool?.questions.find(
         (question) =>
-          question.bankQuestionId === inheritedSpeaking.bankQuestionId,
+          question.bankQuestionId === inheritedStructure.bankQuestionId,
       ),
     ).toMatchObject({ allowedByDefault: true, effectiveAllowed: false });
 
     await expect(
       owner.mutation(api.adminAssessmentPools.setQuestionAllowed, {
         definitionId: published.definitionId,
-        bankQuestionId: inheritedSpeaking.bankQuestionId,
+        bankQuestionId: inheritedStructure.bankQuestionId,
         allowed: true,
         expectedContentRevision: 3,
       }),
@@ -873,16 +954,16 @@ describe("four-skill assessment seed", () => {
       { definitionId: published.definitionId },
     );
     expect(
-      repairedPool?.sections.find((section) => section.skill === "speaking"),
+      repairedPool?.sections.find((section) => section.skill === "structure"),
     ).toMatchObject({
       deliveryMode: "random-bank",
-      requiredCount: 11,
-      allowedCount: initialSpeaking.allowedCount,
+      requiredCount: 40,
+      allowedCount: initialStructure.allowedCount,
     });
     expect(
       repairedPool?.questions.find(
         (question) =>
-          question.bankQuestionId === inheritedSpeaking.bankQuestionId,
+          question.bankQuestionId === inheritedStructure.bankQuestionId,
       ),
     ).toMatchObject({ ruleState: "inherit", effectiveAllowed: true });
 
@@ -926,7 +1007,7 @@ describe("four-skill assessment seed", () => {
     );
     expect(maintainedSection).toMatchObject({
       deliveryMode: "random-bank",
-      bankProfile: "ec-ibt-style-2026-v1",
+      bankProfile: "ec-itp-level-1-aligned-v1",
       bankSelectionContract: 1,
     });
 
@@ -1033,7 +1114,7 @@ describe("four-skill assessment seed", () => {
       tokenIdentifier: "https://example.test|seed-owner",
     });
     const prepared = await t.mutation(
-      internal.assessmentSeed.prepareIbtPractice,
+      internal.assessmentSeed.preparePaperPractice,
       { confirm },
     );
     await attachAllAudio(t, prepared);
@@ -1044,13 +1125,13 @@ describe("four-skill assessment seed", () => {
         .query("assessmentQuestionBank")
         .withIndex("by_profile_and_status_and_skill", (q) =>
           q
-            .eq("profile", "ec-ibt-style-2026-v1")
+            .eq("profile", "ec-itp-level-1-aligned-v1")
             .eq("status", "ready")
             .eq("skill", "reading"),
         )
         .take(201);
       for (const row of rows) {
-        if (!row.bankKey.includes("/four-skill-practice-form-1/")) continue;
+        if (!row.bankKey.includes("/paper-practice-form-1/")) continue;
         const [item, key] = await Promise.all([
           ctx.db.get("assessmentItems", row.sourceItemId),
           ctx.db
@@ -1095,9 +1176,9 @@ describe("four-skill assessment seed", () => {
       t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm }),
     ).resolves.toMatchObject({
       inserted: 0,
-      existing: 145,
-      eligible: 121,
-      randomSections: 8,
+      existing: 164,
+      eligible: 141,
+      randomSections: 6,
     });
     const preserved = await t.run(async (ctx) => {
       const row = await ctx.db.get("assessmentQuestionBank", fixture.row._id);

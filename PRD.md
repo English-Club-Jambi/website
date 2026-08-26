@@ -8,7 +8,7 @@ Register: brand
 
 English Club needs a public home that makes an informal community legible without sanding away its personality, plus maintainable tools for the people who run it. The product combines a concise organisation profile, a landing path for prospective members and collaborators, a consent-gated Member directory, a journal, an original English Club Assessment Lab, and a protected administration workspace backed by Convex. Cloudflare R2 Standard stores reviewed media bytes.
 
-The public experience demonstrates its subject through interactive language. Real activity remains visible as selective documentary proof. Practice results report reproducible outcomes from original reviewed questions; the four-skill fixed form may add explicitly limited English Club estimates. Credibility comes from clear behavior and sourced content, not institutional claims, official-score language, unqualified prediction claims, awards, partner marks, or testimonials.
+The public experience demonstrates its subject through interactive language. Real activity remains visible as selective documentary proof. Practice results report reproducible outcomes from original reviewed questions; the complete paper-format practice may add an explicitly limited English Club estimate from 310 through 677. Credibility comes from clear behavior and sourced content, not institutional claims, official-score language, unqualified prediction claims, awards, partner marks, or testimonials.
 
 ## Problem
 
@@ -23,7 +23,7 @@ The public organisation profile is working, but the complete product must also r
 - Keep the default experience clean and bright while providing one persistent site-wide dark theme.
 - Keep posts and future events maintainable through a typed Convex backend.
 - Let authorized staff manage public copy, journal revisions, Member records, media, themes, and Assessments through one protected CMS.
-- Offer one original fixed-form Reading, Listening, Writing, and Speaking practice plus short skill forms under the English Club Assessment Lab name.
+- Offer one original paper-format practice with Listening, Structure and Written Expression, and Reading, plus one short practice for each section under the English Club Assessment Lab name.
 - Preserve participant ownership through Anonymous Convex Auth only after Start and keep answer keys private until submission.
 - Report correct, possible, omitted, and English Club practice-point values with mode/time context; keep any external-scale estimate visibly fixed-form and non-official.
 - Explain all five user-supplied role codes and publish only verified member profiles with explicit consent.
@@ -40,7 +40,7 @@ The public organisation profile is working, but the complete product must also r
 - Comments, newsletter automation, event ticketing, payment, chat, or social feed embedding.
 - Publishing the donation photo or video that contains children.
 - A complete Indonesian translation. The architecture must leave room for one later.
-- Uploaded speech recordings, automatic speech recognition, camera capture, official or calibrated scores, exact score prediction, CEFR placement, certificates, admission advice, streaks, or personalised learning claims. A Speaking rehearsal may remain local to the current browser tab and submit only a learner-entered transcript.
+- Uploaded speech recordings, automatic speech recognition, camera capture, official or calibrated scores, exact score prediction, CEFR placement, certificates, admission advice, streaks, or personalised learning claims.
 - Adaptive routing, remote proctoring, browser lockdown, webcam monitoring, device fingerprinting, or AI-published questions.
 - Public Assessment questions before original-content, academic, rights, accessibility, and bias review gates pass.
 - WebGL, a canvas-only hero, scroll hijacking, a custom cursor, or decorative pointer physics.
@@ -413,16 +413,16 @@ Acceptance:
 
 ### FR-15 Assessment Lab
 
-- Publish `/practice`, `/practice/full`, four quick-skill briefing routes, an owned player route, and an owned result route under the English Club Assessment Lab name.
-- Full practice is an original fixed four-skill form: Reading 50 items/30 minutes, Listening 47 items/29 minutes, Writing 12 tasks/23 minutes, and Speaking 11 tasks/8 minutes. Its task rhythm follows the documented public 2026 blueprint, but it is not adaptive and does not claim ETS affiliation or equivalence.
+- Publish `/practice`, `/practice/full`, three quick-skill briefing routes, an owned player route, and an owned result route under the English Club Assessment Lab name.
+- Full practice follows a paper-delivered Level 1 structure: Listening 50 items/35 minutes, Structure and Written Expression 40 items/25 minutes, and Reading 50 items/55 minutes. All questions are original English Club content; the form does not claim ETS affiliation, calibration, or equivalence.
 - Keep the programme quiz on Home to four locally authored questions grounded in published Activities copy. It stores no identity, answer, or score.
 - Create Anonymous Convex Auth only after the visitor presses Start on persisted practice. Bind every attempt to `identity.tokenIdentifier`; normalize the string route ID before typed ID lookup and return one indistinguishable unavailable result for malformed, missing, or cross-owner IDs.
 - Support idempotent start and submit request IDs, per-section timers, explicit transcript enablement, response save, navigation, resume, final-section-only submission, owned attempt listing, result review, and bounded graph deletion.
 - Keep answer keys outside every pre-submit response. After submission, expose exact correct, possible, omitted, and practice-point values plus section/time/mode context and a 20-item paginated answer review.
-- `ec-itp-level-1-aligned-v1` remains a legacy `raw-objective` contract. New four-skill definitions bind `ec-ibt-style-2026-v1` to `practice-estimate-v1`; mismatched profile/policy input fails server-side.
-- Fixed-form section estimates are transparent derivatives of this bank's practice points. An overall estimate appears only when all four skills are present. Never label any value as an official score, predicted TOEFL score, calibrated equivalent, CEFR band, certificate, placement, admission guidance, or personalised learning claim.
+- The full `ec-itp-level-1-aligned-v1` definition binds to `paper-estimate-v1`; its three section estimates span 31–68, 31–68, and 31–67. The total is `round((L + S + R) × 10 ÷ 3)` and is constrained to 310–677. Quick forms use `raw-objective` only.
+- The section conversion is an explicit English Club fixed-linear recipe, not ETS equating. Never label it as an official score, exact prediction, calibrated equivalent, CEFR band, certificate, placement, admission guidance, or personalised learning claim. Historical four-skill results retain their original model and wording.
 - Keep definitions, immutable versions, checks, approvals, sections, stimuli, items, answer keys, attempts, responses, and result revisions as separate Convex records.
-- Keep the five Practice Formats fixed. The protected catalogue has no create action; an operator-only maintenance gate protects the legacy server creation function.
+- Keep the four active Practice Formats fixed. The protected catalogue has no public create action; an operator-only maintenance gate protects the server creation function, while retired formats remain immutable for historical attempts.
 - Treat Question Bank as reusable inventory and each Practice Format as a versioned delivery rule. Admins can allow or disable eligible questions per working revision without changing a live published attempt.
 - Provide an Add Question builder for original single-choice items. Require skill, skill-compatible task family, difficulty, prompt, four distinct choices, one private correct key, and optional answer note/tags. Save new items as paused and excluded from full practice until an editor deliberately activates them.
 - Let an administrator attach no image, select a ready Question illustration from the reviewed R2 library, or upload an AVIF/JPEG/PNG/WebP image with required alternative text. Reject pending, archived, private, wrong-purpose, non-image, or dimensionless media.
@@ -449,7 +449,7 @@ Acceptance:
 - The archive shows an English Club gathering in a library-like room.
 - A photographed discussion is titled "Leeds the Way: Bridging England and Indonesia."
 - A poster visible in the room reads "EC Incoming Day: Journey of the Golden Island."
-- The public Practice interface is an English Club Assessment Lab. It reports exact outcomes for original questions and clearly bounded fixed-form estimates only for the four-skill profile.
+- The public Practice interface is an English Club Assessment Lab. It reports exact outcomes for original questions and a clearly bounded 310–677 estimate only for the complete three-section paper form.
 
 ### Held content
 

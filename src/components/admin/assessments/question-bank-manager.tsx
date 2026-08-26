@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowsPointingOutIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -23,6 +24,7 @@ import {
 import { SelectField } from "@/components/forms/select-field";
 
 import { useAdminSession } from "../admin-session";
+import { AdminWorkspaceDialog } from "../admin-workspace-dialog";
 import adminStyles from "../admin-shell.module.css";
 import {
   AdminEmpty,
@@ -46,7 +48,7 @@ import styles from "./assessment-admin.module.css";
 
 type BankStatus = "ready" | "paused" | "archived";
 type Difficulty = "foundational" | "developing" | "advanced";
-type Skill = "reading" | "listening" | "writing" | "speaking";
+type Skill = "listening" | "structure" | "reading";
 type TaskFamily = FunctionReturnType<
   typeof api.adminAssessmentQuestionBank.listPage
 >["page"][number]["taskFamily"];
@@ -64,10 +66,9 @@ const statusOptions = [
 
 const skillOptions = [
   { value: "all", label: "All skills" },
-  { value: "reading", label: "Reading" },
   { value: "listening", label: "Listening" },
-  { value: "writing", label: "Writing" },
-  { value: "speaking", label: "Speaking" },
+  { value: "structure", label: "Structure and Written Expression" },
+  { value: "reading", label: "Reading" },
 ] as const;
 
 const difficultyOptions = [
@@ -78,10 +79,9 @@ const difficultyOptions = [
 ] as const;
 
 const requiredBySkill: Record<Skill, number> = {
+  listening: 50,
+  structure: 40,
   reading: 50,
-  listening: 47,
-  writing: 12,
-  speaking: 11,
 };
 
 function titleCase(value: string) {
@@ -105,7 +105,7 @@ function itemTypeLabel(value: BankContent["type"]) {
 }
 
 const profileLabelByValue: Record<BankProfile, string> = {
-  "ec-itp-level-1-aligned-v1": "English Club ITP Level 1",
+  "ec-itp-level-1-aligned-v1": "English Club paper-based Level 1 practice",
   "ec-ibt-style-2026-v1": "English Club four-skill practice (2026)",
   "club-program-v1": "English Club programme quiz",
 };
@@ -143,6 +143,7 @@ export function QuestionBankManager() {
   const [difficulty, setDifficulty] = useState<Difficulty | "all">("all");
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogQuestionId, setDialogQuestionId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const cursor = cursors.at(-1) ?? null;
   const summary = useQuery(api.adminAssessmentQuestionBank.getSummary, {});
@@ -180,12 +181,15 @@ export function QuestionBankManager() {
   function resetPage() {
     setCursors([null]);
     setSelectedId(null);
+    setDialogQuestionId(null);
   }
 
   const selected =
     result?.page.find((row) => row.bankQuestionId === selectedId) ??
     result?.page[0] ??
     null;
+  const dialogQuestion =
+    result?.page.find((row) => row.bankQuestionId === dialogQuestionId) ?? null;
 
   return (
     <>
@@ -382,11 +386,12 @@ export function QuestionBankManager() {
               })}
             </div>
             <QuestionBankEditor
-              key={selected.bankQuestionId}
+              key={`${selected.bankQuestionId}-${selected.updatedAt}`}
               row={selected}
               canEdit={capabilities.canEdit}
               illustrationAssets={illustrationAssets}
               audioAssets={audioAssets}
+              onOpenDialog={() => setDialogQuestionId(selected.bankQuestionId)}
             />
           </div>
         )}
@@ -427,15 +432,37 @@ export function QuestionBankManager() {
           </nav>
         ) : null}
       </AdminSection>
+
+      <AdminWorkspaceDialog
+        open={dialogQuestion !== null}
+        eyebrow="Question Bank"
+        title="Edit question in a focused workspace"
+        description={
+          dialogQuestion === null
+            ? undefined
+            : `${titleCase(dialogQuestion.skill)} · ${assessmentTaskFamilyLabelByValue[dialogQuestion.taskFamily]}`
+        }
+        closeLabel="Close question popup"
+        onClose={() => setDialogQuestionId(null)}
+      >
+        {dialogQuestion ? (
+          <QuestionBankEditor
+            key={`${dialogQuestion.bankQuestionId}-${dialogQuestion.updatedAt}-dialog`}
+            row={dialogQuestion}
+            canEdit={capabilities.canEdit}
+            illustrationAssets={illustrationAssets}
+            audioAssets={audioAssets}
+          />
+        ) : null}
+      </AdminWorkspaceDialog>
     </>
   );
 }
 
 const defaultTaskFamilyBySkill: Record<Skill, TaskFamily> = {
-  reading: "read-academic-passage",
   listening: "listen-conversation",
-  writing: "build-sentence",
-  speaking: "take-interview",
+  structure: "structure-sentence-completion",
+  reading: "read-academic-passage",
 };
 
 const authoredSkillOptions = skillOptions.filter(
@@ -719,11 +746,13 @@ function QuestionBankEditor({
   canEdit,
   illustrationAssets,
   audioAssets,
+  onOpenDialog,
 }: {
   row: BankRow;
   canEdit: boolean;
   illustrationAssets: ReadonlyArray<QuestionIllustrationAsset>;
   audioAssets: ReadonlyArray<QuestionAudioAsset>;
+  onOpenDialog?: () => void;
 }) {
   const updateContent = useMutation(
     api.adminAssessmentQuestionBank.updateContent,
@@ -900,9 +929,22 @@ function QuestionBankEditor({
           <span>{row.sourceTitle}</span>
           <h3>Edit bank question</h3>
         </div>
-        <AdminStatus tone="neutral">
-          {itemTypeLabel(row.content.type)}
-        </AdminStatus>
+        <div className={styles.bankEditorHeaderActions}>
+          <AdminStatus tone="neutral">
+            {itemTypeLabel(row.content.type)}
+          </AdminStatus>
+          {onOpenDialog ? (
+            <button
+              className={adminStyles.secondaryButton}
+              type="button"
+              aria-haspopup="dialog"
+              onClick={onOpenDialog}
+            >
+              <ArrowsPointingOutIcon aria-hidden width={18} height={18} />
+              Open popup
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <form className={styles.bankEditorSection} onSubmit={saveContent}>

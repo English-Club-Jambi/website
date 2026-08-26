@@ -558,6 +558,30 @@ export default defineSchema({
       "skill",
       "fullPracticeEligible",
     ])
+    .index("by_profile_and_status_and_updated_at", [
+      "profile",
+      "status",
+      "updatedAt",
+    ])
+    .index("by_profile_status_difficulty_and_updated_at", [
+      "profile",
+      "status",
+      "difficulty",
+      "updatedAt",
+    ])
+    .index("by_profile_skill_status_and_updated_at", [
+      "profile",
+      "skill",
+      "status",
+      "updatedAt",
+    ])
+    .index("by_profile_skill_status_difficulty_and_updated_at", [
+      "profile",
+      "skill",
+      "status",
+      "difficulty",
+      "updatedAt",
+    ])
     .index("by_status_and_updated_at", ["status", "updatedAt"])
     .index("by_status_and_difficulty_and_updated_at", [
       "status",
@@ -716,10 +740,13 @@ export default defineSchema({
     omitted: v.number(),
     earnedPoints: v.optional(v.number()),
     possiblePoints: v.optional(v.number()),
-    scoringModel: v.optional(v.literal("ec-ibt-style-v1")),
+    scoringModel: v.optional(
+      v.union(v.literal("ec-ibt-style-v1"), v.literal("ec-paper-linear-v1")),
+    ),
     overallBandEstimate: v.optional(v.number()),
     comparableTotalEstimate: v.optional(v.number()),
     estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
+    paperTotalEstimate: v.optional(v.number()),
     supersedesResultId: v.optional(v.id("assessmentResults")),
     adjustmentReason: v.optional(v.string()),
     completedAt: v.number(),
@@ -743,6 +770,7 @@ export default defineSchema({
     bandEstimate: v.optional(v.number()),
     comparableScoreEstimate: v.optional(v.number()),
     estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
+    paperSectionEstimate: v.optional(v.number()),
   })
     .index("by_result_id_and_section_id", ["resultId", "sectionId"])
     .index("by_result_id", ["resultId"]),

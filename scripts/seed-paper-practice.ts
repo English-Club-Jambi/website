@@ -13,7 +13,7 @@ import {
   type QuestionBankVerification,
 } from "./lib/assessment-seed-verification.ts";
 
-const confirm = "seed-ec-ibt-style-2026-v1";
+const confirm = "seed-ec-paper-level1-v1";
 const publicDomain = "https://r2.mukhtada.my.id";
 
 type AudioPlan = {
@@ -157,7 +157,7 @@ async function main() {
   });
 
   const prepared = convexRun<PrepareResult>(
-    "assessmentSeed:prepareIbtPractice",
+    "assessmentSeed:preparePaperPractice",
     { confirm },
   );
   const inserted = prepared.definitions.filter((entry) => entry.inserted).length;
@@ -165,7 +165,7 @@ async function main() {
     `Prepared ${prepared.definitions.length} practice forms (${inserted} inserted) and ${prepared.audio.length} audio derivatives.`,
   );
 
-  const tempDirectory = await mkdtemp(join(tmpdir(), "ec-ibt-audio-"));
+  const tempDirectory = await mkdtemp(join(tmpdir(), "ec-paper-audio-"));
   try {
     const voices = ["en-us", "en-gb", "en-sc"];
     const uploaded = await mapLimit(prepared.audio, 4, async (entry, index) => {
@@ -252,7 +252,7 @@ async function main() {
         audioTotal: number;
         sections: Array<{ skill: string; items: number; points: number }>;
       }>;
-    }>("assessmentSeed:verifyIbtPractice", { confirm });
+    }>("assessmentSeed:verifyPaperPractice", { confirm });
     const invalid = verification.definitions.filter(
       (entry) => !entry.published || entry.audioReady !== entry.audioTotal,
     );

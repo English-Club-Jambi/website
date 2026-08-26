@@ -122,15 +122,15 @@ Convex remains the application database and authorization boundary. Cloudflare R
 ### Assessment Lab
 
 - [x] Publish the canonical `/practice` route family under the English Club Assessment Lab name.
-- [x] Implement reviewed catalog reads, four-skill full-form and quick-quiz briefings, an owned attempt runner, exact-result report with bounded optional estimates, and paginated post-submit review.
+- [x] Implement reviewed catalog reads, one three-section paper full form and three quick-quiz briefings, an owned attempt runner, exact-result report with bounded optional estimates, and paginated post-submit review.
 - [x] Keep the Home programme quiz local and derive its questions from reviewed Programs wording; it creates no visitor identity or Convex attempt.
 - [x] Add Anonymous Convex Auth only after the visitor presses Start on a persisted assessment.
 - [x] Derive participant ownership from server auth, normalize route IDs before typed access, and return the same unavailable state for malformed, missing, and cross-owner IDs.
 - [x] Keep answer keys, explanations, provenance, draft media, admin IDs, and scoring authority out of pre-submit public payloads.
 - [x] Implement per-section deadlines, revision conflicts, idempotent Start/Submit, transcript-supported mode, owned deletion, and bounded result snapshots.
-- [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep four-skill estimates explicitly fixed-form, non-official, and unusable as certificates or admission evidence.
+- [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep the 310–677 paper estimate explicitly fixed-linear, non-official, and unusable as a certificate or admission evidence.
 - [x] Add assessment authoring, current-revision validation, academic/rights/accessibility/bias approvals, immutable publication, safe reorder/delete, and bounded next-draft cloning.
-- [x] Lock the five Practice Formats as an internally installed catalogue: remove the browser creation flow and reject server-side creation unless an operator deliberately enables internal maintenance mode.
+- [x] Lock the four active Practice Formats as an internally installed catalogue: one 50/40/50 paper form plus Listening, Structure, and Reading quick forms. Retire rather than delete the earlier four-skill catalogue.
 - [x] Add versioned per-format Question Bank allow/disable rules, fixed skill quotas, structured random draws pinned at Start, shortage validation, and privacy-safe aggregate flag review.
 - [x] Add real Question Bank authoring with idempotent Convex writes, private answer keys, duplicate fingerprints, skill-grouped task families, and a paused-by-default review state.
 - [x] Add optional Question illustration selection/direct R2 upload, validate the media contract server-side, pin its ID in each random attempt manifest, and render it accessibly in Live Session.
@@ -260,7 +260,7 @@ Exit condition: a real owner can sign in and manage reviewed content without any
 - [x] Build `/practice`, full/quick briefings, runner, result review, Home programme quiz, and the assessment authoring workspace.
 - [x] Verify malformed/cross-owner IDs, key privacy, section lifecycle, transcript persistence, deletion, publication approvals, clone recovery, and media relationship guards in isolated tests.
 - [ ] Configure and smoke-test the private Assessment R2 bucket without falling back to the public bucket.
-- [x] Supply a typed original development bank and prove one full plus four quick flows without treating the seed as production approval.
+- [x] Supply a typed original development bank and prove one complete paper form plus three quick flows without treating the seed as production approval.
 - [ ] Move any production candidate through current validation/provenance plus academic, rights, accessibility, and bias approvals.
 
 Exit condition: the technical path is proven and every content, rights, retention, and private-media gate is explicit.

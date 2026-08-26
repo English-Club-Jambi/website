@@ -400,6 +400,84 @@
   background: color-mix(in oklch, var(--admin-ink) 52%, transparent);
 }
 
+.workspaceDialog {
+  width: min(calc(100% - 2rem), 74rem);
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--admin-ink);
+  overflow: visible;
+}
+
+.workspaceDialog::backdrop {
+  background: color-mix(in oklch, var(--admin-ink) 58%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.workspaceDialogPanel {
+  max-height: inherit;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 2px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  background: var(--admin-paper);
+  box-shadow: var(--admin-shadow);
+  overflow: hidden;
+  animation: admin-dialog-enter 180ms var(--admin-ease) both;
+}
+
+.workspaceDialogPanel > header {
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 2px solid var(--admin-line);
+  padding: 0.9rem 1rem;
+  background: var(--admin-cobalt-wash);
+}
+
+.workspaceDialogPanel > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.workspaceDialogPanel > header span {
+  color: var(--admin-cobalt-dark);
+  font-size: 0.66rem;
+  font-weight: 780;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.workspaceDialogPanel h2,
+.workspaceDialogPanel p {
+  margin: 0;
+}
+
+.workspaceDialogPanel h2 {
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.workspaceDialogPanel p {
+  max-width: 72ch;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.workspaceDialogBody {
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 .confirmDialogPanel {
   max-height: inherit;
   border: 2px solid var(--admin-line);
@@ -3485,6 +3563,15 @@
 
   .confirmDialog {
     width: calc(100% - 1.25rem);
+  }
+
+  .workspaceDialog {
+    width: calc(100% - 0.75rem);
+    max-height: calc(100dvh - 0.75rem);
+  }
+
+  .workspaceDialogPanel > header {
+    padding-inline: 0.75rem;
   }
 
   .confirmDialogPanel > footer {

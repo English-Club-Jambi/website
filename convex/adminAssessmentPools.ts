@@ -220,7 +220,12 @@ export const getOverview = query({
           q.eq("versionId", version._id),
         )
         .take(9),
-      ctx.db.query("assessmentQuestionBank").take(201),
+      ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_profile_and_status_and_updated_at", (q) =>
+          q.eq("profile", definition.profile).eq("status", "ready"),
+        )
+        .take(201),
       ctx.db
         .query("assessmentVersionQuestionRules")
         .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
@@ -247,10 +252,7 @@ export const getOverview = query({
     }
 
     const sectionSkills = new Set(sections.map((section) => section.skill));
-    const candidates = bankRows.filter(
-      (row) =>
-        row.profile === definition.profile && sectionSkills.has(row.skill),
-    );
+    const candidates = bankRows.filter((row) => sectionSkills.has(row.skill));
     const ruleByQuestion = new Map(
       rules.map((rule) => [rule.bankQuestionId, rule]),
     );

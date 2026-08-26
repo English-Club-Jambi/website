@@ -16,7 +16,7 @@ export type AssessmentMetadataInput = {
   timePolicy: "untimed" | "per-section";
   allowResume: boolean;
   reviewPolicy: "none" | "after-section" | "after-submit";
-  scorePolicy: "raw-objective";
+  scorePolicy: "raw-objective" | "practice-estimate-v1" | "paper-estimate-v1";
   defaultTimingMode: "standard" | "extended" | "untimed";
   defaultListeningMode: "audio-primary" | "transcript-supported";
   maxAttemptsPerDay: number;
@@ -105,6 +105,18 @@ export function AssessmentMetadataForm({
           <div className={adminStyles.workspaceFact}>
             <span>Review moment</span>
             <strong>After submission</strong>
+          </div>
+        </div>
+        <div className={adminStyles.spanFour}>
+          <div className={adminStyles.workspaceFact}>
+            <span>Scoring</span>
+            <strong>
+              {draft.scorePolicy === "paper-estimate-v1"
+                ? "Paper estimate · 310–677"
+                : draft.scorePolicy === "practice-estimate-v1"
+                  ? "Legacy four-skill estimate"
+                  : "Raw correct counts"}
+            </strong>
           </div>
         </div>
         <div className={adminStyles.spanFour}>

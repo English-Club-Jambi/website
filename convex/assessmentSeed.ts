@@ -1,11 +1,11 @@
 import {
-  IBT_PRACTICE_BANK_CHECKSUM,
-  IBT_PRACTICE_RESEARCH_SOURCES,
-  ibtPracticeBank,
+  PAPER_PRACTICE_BANK_CHECKSUM,
+  PAPER_PRACTICE_RESEARCH_SOURCES,
+  paperPracticeBank,
   researchSourceIdsForBankItem,
-  type IbtBankDefinition,
-  type IbtBankItem,
-} from "../content/assessment-ibt-bank";
+  type PaperBankDefinition,
+  type PaperBankItem,
+} from "../content/assessment-paper-bank";
 import { ConvexError, v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
@@ -20,7 +20,17 @@ import {
   taskFamilyForItemKey,
 } from "./lib/assessmentQuestionBank";
 
-const confirmation = "seed-ec-ibt-style-2026-v1" as const;
+const confirmation = "seed-ec-paper-level1-v1" as const;
+const legacyPublicSlugs = [
+  "four-skill-practice-form-1",
+  "quick-listening-campus-voices",
+  "quick-reading-text-in-context",
+  "quick-writing-sentence-to-discussion",
+  "quick-speaking-repeat-and-respond",
+  "paper-quick-listening",
+  "paper-quick-structure",
+  "paper-quick-reading",
+] as const;
 
 const audioPlanValidator = v.object({
   definitionId: v.id("assessmentDefinitions"),
@@ -40,7 +50,7 @@ const preparedDefinitionValidator = v.object({
 });
 
 function checksumForSlug(slug: string) {
-  return `${IBT_PRACTICE_BANK_CHECKSUM}:${slug}`;
+  return `${PAPER_PRACTICE_BANK_CHECKSUM}:${slug}`;
 }
 
 async function isTrustedSeedCopyOnWrite(
@@ -53,8 +63,8 @@ async function isTrustedSeedCopyOnWrite(
 ) {
   if (
     row.bankKey !== expected.bankKey ||
-    row.seedBatch !== IBT_PRACTICE_BANK_CHECKSUM ||
-    row.profile !== "ec-ibt-style-2026-v1" ||
+    row.seedBatch !== PAPER_PRACTICE_BANK_CHECKSUM ||
+    row.profile !== "ec-itp-level-1-aligned-v1" ||
     row.skill !== expected.skill ||
     row.origin !== "bank-authored"
   ) {
@@ -92,21 +102,21 @@ async function requireSeedAuthor(ctx: MutationCtx) {
   throw new ConvexError({ code: "ASSESSMENT_SEED_AUTHOR_REQUIRED" as const });
 }
 
-function provenanceJson(definition: IbtBankDefinition) {
+function provenanceJson(definition: PaperBankDefinition) {
   return JSON.stringify({
     source: "English Club original practice bank",
-    bank: IBT_PRACTICE_BANK_CHECKSUM,
+    bank: PAPER_PRACTICE_BANK_CHECKSUM,
     definition: definition.slug,
     rights: "project-authored",
-    publicBlueprintReference: "ETS 2026 public task families and counts",
-    researchSources: IBT_PRACTICE_RESEARCH_SOURCES,
+    publicBlueprintReference: "ETS TOEFL ITP Level 1 public section structure",
+    researchSources: PAPER_PRACTICE_RESEARCH_SOURCES,
     contentPolicy:
       "Facts were researched from the listed sources; passages, prompts, options, transcripts, and answer keys are English Club originals.",
   });
 }
 
 function itemDocument(
-  item: IbtBankItem,
+  item: PaperBankItem,
   base: {
     versionId: Id<"assessmentVersions">;
     sectionId: Id<"assessmentSections">;
@@ -162,7 +172,7 @@ function itemDocument(
 
 async function insertAnswerKey(
   ctx: MutationCtx,
-  item: IbtBankItem,
+  item: PaperBankItem,
   versionId: Id<"assessmentVersions">,
   itemId: Id<"assessmentItems">,
 ) {
@@ -238,14 +248,14 @@ async function audioPlanForVersion(
 
 async function insertDefinition(
   ctx: MutationCtx,
-  definition: IbtBankDefinition,
+  definition: PaperBankDefinition,
   author: Doc<"adminUsers">,
   now: number,
 ) {
   const definitionId = await ctx.db.insert("assessmentDefinitions", {
     slug: definition.slug,
     kind: definition.kind,
-    profile: "ec-ibt-style-2026-v1",
+    profile: "ec-itp-level-1-aligned-v1",
     adminTitle: definition.adminTitle,
     nextVersion: 2,
     visibility: "published",
@@ -265,7 +275,10 @@ async function insertDefinition(
     timePolicy: "per-section",
     allowResume: true,
     reviewPolicy: "after-submit",
-    scorePolicy: "practice-estimate-v1",
+    scorePolicy:
+      definition.kind === "full-practice"
+        ? "paper-estimate-v1"
+        : "raw-objective",
     defaultTimingMode: "standard",
     defaultListeningMode: "audio-primary",
     maxAttemptsPerDay: definition.maxAttemptsPerDay,
@@ -351,7 +364,7 @@ async function insertDefinition(
   return { definitionId, versionId };
 }
 
-export const prepareIbtPractice = internalMutation({
+export const preparePaperPractice = internalMutation({
   args: { confirm: v.literal(confirmation) },
   returns: v.object({
     definitions: v.array(preparedDefinitionValidator),
@@ -361,7 +374,7 @@ export const prepareIbtPractice = internalMutation({
     const author = await requireSeedAuthor(ctx);
     const definitions = [];
     const audio = [];
-    for (const bankDefinition of ibtPracticeBank) {
+    for (const bankDefinition of paperPracticeBank) {
       const existing = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) => q.eq("slug", bankDefinition.slug))
@@ -376,7 +389,7 @@ export const prepareIbtPractice = internalMutation({
         inserted = true;
       } else {
         if (
-          existing.profile !== "ec-ibt-style-2026-v1" ||
+          existing.profile !== "ec-itp-level-1-aligned-v1" ||
           existing.publishedVersionId === undefined
         ) {
           throw new ConvexError({ code: "ASSESSMENT_SEED_SLUG_CONFLICT" as const, slug: bankDefinition.slug });
@@ -403,6 +416,51 @@ export const prepareIbtPractice = internalMutation({
         itemCount: bankDefinition.sections.reduce((total, section) => total + section.items.length, 0),
         audioCount: plan.length,
       });
+    }
+    const legacyDefinitionIds = new Set<Id<"assessmentDefinitions">>();
+    for (const slug of legacyPublicSlugs) {
+      const legacy = await ctx.db
+        .query("assessmentDefinitions")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (legacy === null) continue;
+      legacyDefinitionIds.add(legacy._id);
+      if (legacy.visibility !== "published" || legacy.publishedVersionId === undefined) continue;
+      const legacyVersion = await ctx.db.get(
+        "assessmentVersions",
+        legacy.publishedVersionId,
+      );
+      if (legacyVersion?.status !== "published") continue;
+      const retiredAt = Date.now();
+      await ctx.db.patch("assessmentVersions", legacyVersion._id, {
+        status: "retired",
+        updatedAt: retiredAt,
+      });
+      await ctx.db.patch("assessmentDefinitions", legacy._id, {
+        visibility: "retired",
+        updatedBy: author._id,
+        updatedAt: retiredAt,
+      });
+    }
+    const bankRows = await ctx.db
+      .query("assessmentQuestionBank")
+      .withIndex("by_status_and_updated_at", (q) => q.eq("status", "ready"))
+      .take(501);
+    if (bankRows.length > 500) {
+      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+    }
+    const archivedAt = Date.now();
+    for (const row of bankRows) {
+      if (
+        row.status !== "archived" &&
+        legacyDefinitionIds.has(row.sourceDefinitionId)
+      ) {
+        await ctx.db.patch("assessmentQuestionBank", row._id, {
+          status: "archived",
+          updatedBy: author._id,
+          updatedAt: archivedAt,
+        });
+      }
     }
     return { definitions, audio };
   },
@@ -455,7 +513,7 @@ export const attachPublicAudio = internalMutation({
         version === null ||
         version.status !== "published" ||
         version.contentChecksum === undefined ||
-        !version.contentChecksum.startsWith(IBT_PRACTICE_BANK_CHECKSUM) ||
+        !version.contentChecksum.startsWith(PAPER_PRACTICE_BANK_CHECKSUM) ||
         stimulus === null ||
         stimulus.versionId !== version._id ||
         stimulus.kind !== "audio" ||
@@ -528,7 +586,7 @@ export const seedQuestionBank = internalMutation({
     let existingCount = 0;
     let randomSections = 0;
     const now = Date.now();
-    for (const source of ibtPracticeBank) {
+    for (const source of paperPracticeBank) {
       const definition = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) => q.eq("slug", source.slug))
@@ -575,9 +633,9 @@ export const seedQuestionBank = internalMutation({
         if (usesQuestionBank) {
           await ctx.db.patch("assessmentSections", section._id, {
             deliveryMode: "random-bank",
-            bankProfile: "ec-ibt-style-2026-v1",
+            bankProfile: "ec-itp-level-1-aligned-v1",
             bankSelectionContract: 1,
-            bankSeedBatch: IBT_PRACTICE_BANK_CHECKSUM,
+            bankSeedBatch: PAPER_PRACTICE_BANK_CHECKSUM,
           });
           randomSections += 1;
         }
@@ -609,7 +667,7 @@ export const seedQuestionBank = internalMutation({
               }
             }
           }
-          const bankKey = `${IBT_PRACTICE_BANK_CHECKSUM}/${source.slug}/${section.sectionKey}/${item.itemKey}`;
+          const bankKey = `${PAPER_PRACTICE_BANK_CHECKSUM}/${source.slug}/${section.sectionKey}/${item.itemKey}`;
           const existing = await ctx.db
             .query("assessmentQuestionBank")
             .withIndex("by_bank_key", (q) => q.eq("bankKey", bankKey))
@@ -620,8 +678,8 @@ export const seedQuestionBank = internalMutation({
               existing.sourceVersionId !== version._id ||
               existing.sourceSectionId !== section._id;
             const seedIdentityMatches =
-              existing.seedBatch === IBT_PRACTICE_BANK_CHECKSUM &&
-              existing.profile === "ec-ibt-style-2026-v1" &&
+              existing.seedBatch === PAPER_PRACTICE_BANK_CHECKSUM &&
+              existing.profile === "ec-itp-level-1-aligned-v1" &&
               existing.skill === section.skill;
             if (
               !seedIdentityMatches ||
@@ -656,9 +714,9 @@ export const seedQuestionBank = internalMutation({
             taskFamily,
             difficulty: difficultyForPosition(item.order, section.itemCount),
             status: "ready",
-            profile: "ec-ibt-style-2026-v1",
+            profile: "ec-itp-level-1-aligned-v1",
             fullPracticeEligible,
-            contentFingerprint: `ec-ibt-style-2026-v1:${section.skill}:${item.itemKey}`,
+            contentFingerprint: `ec-itp-level-1-aligned-v1:${section.skill}:${item.itemKey}`,
             promptSearch: normalizeBankPrompt(item.prompt),
             tags: [
               section.skill,
@@ -666,7 +724,7 @@ export const seedQuestionBank = internalMutation({
               "original-question",
               ...sourceTags,
             ],
-            seedBatch: IBT_PRACTICE_BANK_CHECKSUM,
+            seedBatch: PAPER_PRACTICE_BANK_CHECKSUM,
             createdBy: author._id,
             updatedBy: author._id,
             createdAt: now,
@@ -676,14 +734,14 @@ export const seedQuestionBank = internalMutation({
         }
       }
     }
-    const bankRows = await ctx.db.query("assessmentQuestionBank").take(201);
-    if (bankRows.length > 200) {
+    const bankRows = await ctx.db.query("assessmentQuestionBank").take(501);
+    if (bankRows.length > 500) {
       throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
     }
     const selectableFingerprints = new Set<string>();
     for (const row of bankRows) {
       if (
-        row.profile === "ec-ibt-style-2026-v1" &&
+        row.profile === "ec-itp-level-1-aligned-v1" &&
         (await questionBankRowIsReadyForSelection(ctx, row))
       ) {
         selectableFingerprints.add(row.contentFingerprint);
@@ -695,7 +753,7 @@ export const seedQuestionBank = internalMutation({
         area: "assessment",
         action: "update",
         resourceType: "question-bank-seed",
-        resourceId: IBT_PRACTICE_BANK_CHECKSUM,
+        resourceId: PAPER_PRACTICE_BANK_CHECKSUM,
         summary: `${inserted + existingCount} original questions indexed in the bank`,
         actorId: author._id,
         createdAt: now,
@@ -716,7 +774,7 @@ export const repairLegacyDraftQuestionPools = internalMutation({
     let repairedDefinitions = 0;
     let repairedSections = 0;
 
-    for (const bankDefinition of ibtPracticeBank) {
+    for (const bankDefinition of paperPracticeBank) {
       const definition = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) => q.eq("slug", bankDefinition.slug))
@@ -818,21 +876,21 @@ export const repairLegacyDraftQuestionPools = internalMutation({
 
 const verificationSectionValidator = v.object({
   skill: v.union(
-    v.literal("reading"),
     v.literal("listening"),
-    v.literal("writing"),
-    v.literal("speaking"),
+    v.literal("structure"),
+    v.literal("reading"),
   ),
   items: v.number(),
   points: v.number(),
 });
 
-export const verifyIbtPractice = internalQuery({
+export const verifyPaperPractice = internalQuery({
   args: { confirm: v.literal(confirmation) },
   returns: v.object({
     definitions: v.array(v.object({
       slug: v.string(),
       published: v.boolean(),
+      scorePolicy: v.union(v.string(), v.null()),
       items: v.number(),
       audioReady: v.number(),
       audioTotal: v.number(),
@@ -841,7 +899,7 @@ export const verifyIbtPractice = internalQuery({
   }),
   handler: async (ctx) => {
     const definitions = [];
-    for (const bankDefinition of ibtPracticeBank) {
+    for (const bankDefinition of paperPracticeBank) {
       const definition = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) => q.eq("slug", bankDefinition.slug))
@@ -850,6 +908,7 @@ export const verifyIbtPractice = internalQuery({
         definitions.push({
           slug: bankDefinition.slug,
           published: false,
+          scorePolicy: null,
           items: 0,
           audioReady: 0,
           audioTotal: 0,
@@ -879,7 +938,7 @@ export const verifyIbtPractice = internalQuery({
           return total + (key.kind === "text-rubric" ? key.maxPoints : key.points ?? 1);
         }, 0);
         return {
-          skill: section.skill as "reading" | "listening" | "writing" | "speaking",
+          skill: section.skill as "listening" | "structure" | "reading",
           items: sectionItems.length,
           points: Math.round(points * 100) / 100,
         };
@@ -890,7 +949,12 @@ export const verifyIbtPractice = internalQuery({
         published:
           definition.visibility === "published" &&
           version.status === "published" &&
-          version.contentChecksum === checksumForSlug(bankDefinition.slug),
+          version.contentChecksum === checksumForSlug(bankDefinition.slug) &&
+          version.scorePolicy ===
+            (bankDefinition.kind === "full-practice"
+              ? "paper-estimate-v1"
+              : "raw-objective"),
+        scorePolicy: version.scorePolicy,
         items: items.length,
         audioReady: audioStimuli.filter((stimulus) => stimulus.mediaId !== undefined).length,
         audioTotal: audioStimuli.length,
@@ -911,10 +975,9 @@ export const verifyQuestionBank = internalQuery({
     bySkill: v.array(
       v.object({
         skill: v.union(
-          v.literal("reading"),
           v.literal("listening"),
-          v.literal("writing"),
-          v.literal("speaking"),
+          v.literal("structure"),
+          v.literal("reading"),
         ),
         ready: v.number(),
         eligible: v.number(),
@@ -922,12 +985,12 @@ export const verifyQuestionBank = internalQuery({
     ),
   }),
   handler: async (ctx) => {
-    const rows = await ctx.db.query("assessmentQuestionBank").take(201);
-    if (rows.length > 200) {
+    const rows = await ctx.db.query("assessmentQuestionBank").take(501);
+    if (rows.length > 500) {
       throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
     }
     let randomSections = 0;
-    for (const source of ibtPracticeBank) {
+    for (const source of paperPracticeBank) {
       const definition = await ctx.db
         .query("assessmentDefinitions")
         .withIndex("by_slug", (q) => q.eq("slug", source.slug))
@@ -954,7 +1017,7 @@ export const verifyQuestionBank = internalQuery({
     >();
     for (const row of rows) {
       if (
-        row.profile === "ec-ibt-style-2026-v1" &&
+        row.profile === "ec-itp-level-1-aligned-v1" &&
         !selectableByFingerprint.has(row.contentFingerprint) &&
         (await questionBankRowIsReadyForSelection(ctx, row))
       ) {
@@ -962,7 +1025,7 @@ export const verifyQuestionBank = internalQuery({
       }
     }
     const selectableRows = [...selectableByFingerprint.values()];
-    const skills = ["reading", "listening", "writing", "speaking"] as const;
+    const skills = ["listening", "structure", "reading"] as const;
     return {
       total: rows.length,
       ready: rows.filter((row) => row.status === "ready").length,

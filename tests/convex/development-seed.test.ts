@@ -213,6 +213,6 @@ describe("development database seed", () => {
     );
     expect(
       practiceCopy.find((entry) => entry.contentKey === "full-summary")?.value,
-    ).toContain("question bank");
+    ).toMatch(/question bank/i);
   });
 });

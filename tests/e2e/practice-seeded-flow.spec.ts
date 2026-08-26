@@ -5,16 +5,16 @@ const runSeededFlow = process.env.RUN_SEEDED_PRACTICE_E2E === "1";
 const runIllustratedQuestion =
   process.env.RUN_ILLUSTRATED_QUESTION_E2E === "1";
 
-test.describe("seeded four-skill practice flow", () => {
+test.describe("seeded paper-based practice flow", () => {
   test.skip(!runSeededFlow, "Requires the idempotent dev practice seed.");
 
-  test("publishes one complete form and four focused sprints", async ({
+  test("publishes one complete paper form and three focused sprints", async ({
     page,
   }) => {
     await page.goto("/practice");
 
     await expect(page.locator('a[href="/practice/full"]').first()).toBeVisible();
-    for (const skill of ["listening", "reading", "writing", "speaking"]) {
+    for (const skill of ["listening", "structure", "reading"]) {
       await expect(
         page
           .locator("main")
@@ -26,11 +26,15 @@ test.describe("seeded four-skill practice flow", () => {
     await page.goto("/practice/full");
     await expect(
       page.getByRole("heading", {
-        name: "English Club Four-Skill Practice Form 1",
+        name: "English Club Paper-Based Practice Form 1",
       }),
     ).toBeVisible();
-    await expect(page.getByText("Reading, Listening, Writing, Speaking")).toBeVisible();
-    await expect(page.locator("main")).toContainText("90 minutes in standard mode");
+    await expect(
+      page.getByText("Listening, Structure and Written Expression, Reading"),
+    ).toBeVisible();
+    await expect(page.locator("main")).toContainText("115 minutes in standard mode");
+    await expect(page.locator('a[href="/practice/quick/writing"]')).toHaveCount(0);
+    await expect(page.locator('a[href="/practice/quick/speaking"]')).toHaveCount(0);
 
     const overflow = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
@@ -101,10 +105,6 @@ test.describe("seeded four-skill practice flow", () => {
   test("starts every focused sprint in its matching live skill section", async ({
     page,
   }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "desktop-chromium",
-      "The full-practice test already covers the mobile start interaction.",
-    );
     const browserErrors: string[] = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     page.on("console", (message) => {
@@ -112,20 +112,32 @@ test.describe("seeded four-skill practice flow", () => {
     });
     const focusedFormats = [
       { skill: "listening", title: "Listening", itemCount: 8 },
+      {
+        skill: "structure",
+        title: "Structure and Written Expression",
+        itemCount: 8,
+      },
       { skill: "reading", title: "Reading", itemCount: 8 },
-      { skill: "writing", title: "Writing", itemCount: 5 },
-      { skill: "speaking", title: "Speaking", itemCount: 4 },
     ] as const;
 
     for (const format of focusedFormats) {
       await page.goto(`/practice/quick/${format.skill}`);
-      await page.getByRole("checkbox").check();
-      await page.getByRole("button", { name: "Start practice" }).click();
+      const acknowledgement = page.getByRole("checkbox");
+      const start = page.getByRole("button", { name: "Start practice" });
+      if (testInfo.project.name === "desktop-chromium") {
+        await acknowledgement.check();
+        await start.click();
+      } else {
+        await acknowledgement.tap();
+        await start.tap();
+      }
       await page.waitForURL(/\/practice\/attempt\//);
       await expect(
         page.getByRole("heading", { name: format.title, level: 1 }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Begin section" }).click();
+      const begin = page.getByRole("button", { name: "Begin section" });
+      if (testInfo.project.name === "desktop-chromium") await begin.click();
+      else await begin.tap();
       await expect(
         page.getByText(`QUESTION 1 OF ${format.itemCount}`),
       ).toBeVisible();
@@ -216,86 +228,16 @@ test.describe("seeded four-skill practice flow", () => {
     expect(found).toBe(true);
   });
 
-  test("completes the Writing sprint and renders its estimated result", async ({
+  test("submits a quick Reading sprint as a raw objective result", async ({
     page,
   }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop-chromium", "One live result is sufficient.");
     const browserErrors: string[] = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
     });
 
-    await page.goto("/practice/quick/writing");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Start practice" }).click();
-    await page.waitForURL(/\/practice\/attempt\//);
-    await page.getByRole("button", { name: "Begin section" }).click();
-
-    for (let question = 1; question <= 5; question += 1) {
-      await expect(page.getByText(`QUESTION ${question} OF 5`)).toBeVisible();
-      const available = page.locator('[aria-label="Available phrases"] button');
-      const textarea = page.locator("textarea");
-      const radio = page.getByRole("radio");
-      if ((await available.count()) > 0) {
-        while ((await available.count()) > 0) await available.first().click();
-      } else if ((await textarea.count()) > 0) {
-        const writingResponse =
-          "I would explain the change clearly, give the practical reason, and offer one next step so everyone can respond with the same information.";
-        await textarea.pressSequentially(writingResponse);
-        await expect(textarea).toBeFocused();
-        await expect(textarea).toHaveValue(writingResponse);
-      } else if ((await radio.count()) > 0) {
-        await radio.first().check();
-      } else {
-        throw new Error(
-          "The selected Writing item has no supported response control.",
-        );
-      }
-      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
-      if (question < 5) {
-        await page.getByRole("button", { name: "Next", exact: true }).click();
-      }
-    }
-
-    await page.getByRole("button", { name: "Submit practice" }).click();
-    const dialog = page.getByRole("dialog", { name: "Submit this practice?" });
-    await expect(dialog).toContainText("5 / 5");
-    await dialog.getByRole("button", { name: "Submit and view result" }).click();
-    await page.waitForURL(/\/practice\/result\//);
-
-    await expect(page.getByRole("heading", { name: "Your practice result" })).toBeVisible();
-    await expect(page.getByText(/Estimated band \/ 6/i)).toBeVisible();
-    await expect(page.getByText(/Comparable (?:practice score|estimate)/i)).toBeVisible();
-    await expect(page.getByText(/not an official ETS score/i)).toBeVisible();
-    await expect(page.locator("main")).toHaveCount(1);
-
-    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
-    expect(
-      accessibility.violations.filter(
-        (violation) => violation.impact === "critical" || violation.impact === "serious",
-      ),
-    ).toEqual([]);
-    expect(browserErrors).toEqual([]);
-
-    await page.screenshot({
-      path: "docs/evidence/practice-writing-result-desktop-chromium.png",
-      fullPage: true,
-      animations: "disabled",
-    });
-  });
-
-  test("keeps the Writing response focused after every character at each supported width", async ({
-    page,
-  }, testInfo) => {
-    test.setTimeout(120_000);
-    const browserErrors: string[] = [];
-    page.on("pageerror", (error) => browserErrors.push(error.message));
-    page.on("console", (message) => {
-      if (message.type() === "error") browserErrors.push(message.text());
-    });
-
-    await page.goto("/practice/quick/writing");
+    await page.goto("/practice/quick/reading");
     const acknowledgement = page.getByRole("checkbox");
     const start = page.getByRole("button", { name: "Start practice" });
     if (testInfo.project.name === "desktop-chromium") {
@@ -310,59 +252,43 @@ test.describe("seeded four-skill practice flow", () => {
     if (testInfo.project.name === "desktop-chromium") await begin.click();
     else await begin.tap();
 
-    const textarea = page.getByRole("textbox", { name: "Your response" });
-    let found = false;
-    for (let question = 1; question <= 5; question += 1) {
-      await expect(page.getByText(`QUESTION ${question} OF 5`)).toBeVisible();
-      if (await textarea.isVisible().catch(() => false)) {
-        found = true;
-        break;
-      }
-      if (question < 5) {
+    for (let question = 1; question <= 8; question += 1) {
+      await expect(page.getByText(`QUESTION ${question} OF 8`)).toBeVisible();
+      if (question < 8) {
         const next = page.getByRole("button", { name: "Next", exact: true });
         if (testInfo.project.name === "desktop-chromium") await next.click();
         else await next.tap();
       }
     }
-    expect(found).toBe(true);
 
-    if (testInfo.project.name === "desktop-chromium") await textarea.click();
-    else await textarea.tap();
-    const response = "Clear notes keep us ready.";
-    for (const character of response) {
-      await page.keyboard.type(character);
-      await expect(textarea).toBeFocused();
-    }
-    await expect(textarea).toHaveValue(response);
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    const submit = page.getByRole("button", { name: "Submit practice" });
+    if (testInfo.project.name === "desktop-chromium") await submit.click();
+    else await submit.tap();
+    const dialog = page.getByRole("dialog", { name: "Submit this practice?" });
+    await expect(dialog).toContainText("0 / 8");
+    const confirm = dialog.getByRole("button", { name: "Submit and view result" });
+    if (testInfo.project.name === "desktop-chromium") await confirm.click();
+    else await confirm.tap();
+    await page.waitForURL(/\/practice\/result\//);
 
-    const geometry = await textarea.evaluate((field) => {
-      const box = field.getBoundingClientRect();
-      return {
-        fieldLeft: box.left,
-        fieldRight: box.right,
-        viewportWidth: document.documentElement.clientWidth,
-        documentWidth: document.documentElement.scrollWidth,
-      };
-    });
-    expect(geometry.fieldLeft).toBeGreaterThanOrEqual(0);
-    expect(geometry.fieldRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
-    expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
-
-    await page.screenshot({
-      path: `docs/evidence/practice-writing-focus-${testInfo.project.name}.png`,
-      animations: "disabled",
-    });
+    await expect(page.getByRole("heading", { name: "Your practice result" })).toBeVisible();
+    await expect(page.getByText(/Correct answers \/ 8/i)).toBeVisible();
+    await expect(page.getByText(/not an official or predicted score/i)).toBeVisible();
+    await expect(page.getByText(/Paper-based estimate/i)).toHaveCount(0);
+    await expect(page.locator("main")).toHaveCount(1);
 
     const accessibility = await new AxeBuilder({ page }).include("main").analyze();
     expect(
       accessibility.violations.filter(
-        (violation) =>
-          violation.impact === "critical" || violation.impact === "serious",
+        (violation) => violation.impact === "critical" || violation.impact === "serious",
       ),
     ).toEqual([]);
     expect(browserErrors).toEqual([]);
 
+    await page.screenshot({
+      path: `docs/evidence/practice-reading-result-${testInfo.project.name}.png`,
+      animations: "disabled",
+    });
   });
 
   test("serves one pinned Question Bank recording without duplicating legacy audio", async ({

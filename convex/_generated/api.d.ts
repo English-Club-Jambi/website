@@ -43,6 +43,7 @@ import type * as lib_assessmentEngine from "../lib/assessmentEngine.js";
 import type * as lib_assessmentEstimate from "../lib/assessmentEstimate.js";
 import type * as lib_assessmentMedia from "../lib/assessmentMedia.js";
 import type * as lib_assessmentModel from "../lib/assessmentModel.js";
+import type * as lib_assessmentPaperEstimate from "../lib/assessmentPaperEstimate.js";
 import type * as lib_assessmentQuestionBank from "../lib/assessmentQuestionBank.js";
 import type * as lib_assessmentQuestionSignals from "../lib/assessmentQuestionSignals.js";
 import type * as lib_assessmentScoring from "../lib/assessmentScoring.js";
@@ -102,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   "lib/assessmentEstimate": typeof lib_assessmentEstimate;
   "lib/assessmentMedia": typeof lib_assessmentMedia;
   "lib/assessmentModel": typeof lib_assessmentModel;
+  "lib/assessmentPaperEstimate": typeof lib_assessmentPaperEstimate;
   "lib/assessmentQuestionBank": typeof lib_assessmentQuestionBank;
   "lib/assessmentQuestionSignals": typeof lib_assessmentQuestionSignals;
   "lib/assessmentScoring": typeof lib_assessmentScoring;

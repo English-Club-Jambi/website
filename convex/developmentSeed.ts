@@ -736,6 +736,126 @@ export const seedPublicContentPage = internalMutation({
   },
 });
 
+const paperPracticeContentKeys = [
+  "paths-support",
+  "full-summary",
+  "scope-body",
+  "fact-result-body",
+  "evidence-body",
+  "acknowledgement",
+  "paper-estimate",
+  "paper-range",
+  "paper-section-estimate",
+  "paper-method-note",
+] as const;
+
+export const migratePaperPracticeCopy = internalMutation({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({ inserted: v.number(), updated: v.number() }),
+  handler: async (ctx) => {
+    assertDevelopmentTarget();
+    const author = await requireSeedAuthor(ctx);
+    const page = getPublicContentManifestPages().find(
+      (candidate) => candidate.pageKey === "practice",
+    );
+    if (page === undefined) {
+      throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_PAGE" as const });
+    }
+    const rows = await ctx.db
+      .query("siteContentEntries")
+      .withIndex("by_page_key_and_locale_and_content_key", (q) =>
+        q.eq("pageKey", "practice").eq("locale", publicContentLocale),
+      )
+      .take(201);
+    if (rows.length > 200) {
+      throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_LIMIT" as const });
+    }
+    const byKey = new Map(rows.map((row) => [row.contentKey, row]));
+    const fieldByKey = new Map(
+      Object.values(page.fields).map((field) => [field.contentKey, field]),
+    );
+    let inserted = 0;
+    let updated = 0;
+    for (const contentKey of paperPracticeContentKeys) {
+      const field = fieldByKey.get(contentKey);
+      if (field === undefined) {
+        throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_PAGE" as const });
+      }
+      const value = field.defaultValue.trim();
+      const now = Date.now();
+      const current = byKey.get(contentKey);
+      if (current === undefined) {
+        const entryId = await ctx.db.insert("siteContentEntries", {
+          pageKey: "practice",
+          locale: publicContentLocale,
+          contentKey,
+          label: field.label,
+          kind: field.kind,
+          draftValue: value,
+          draftRevision: 1,
+          createdBy: author._id,
+          updatedBy: author._id,
+          createdAt: now,
+          updatedAt: now,
+        });
+        const versionId = await ctx.db.insert("siteContentVersions", {
+          entryId,
+          revision: 1,
+          value,
+          publishedBy: author._id,
+          publishedAt: now,
+        });
+        await ctx.db.patch("siteContentEntries", entryId, {
+          publishedVersionId: versionId,
+        });
+        inserted += 1;
+        continue;
+      }
+      const published =
+        current.publishedVersionId === undefined
+          ? null
+          : await ctx.db.get("siteContentVersions", current.publishedVersionId);
+      if (
+        current.draftValue === value &&
+        published?.entryId === current._id &&
+        published.value === value
+      ) {
+        continue;
+      }
+      const revision = current.draftRevision + 1;
+      const versionId = await ctx.db.insert("siteContentVersions", {
+        entryId: current._id,
+        revision,
+        value,
+        publishedBy: author._id,
+        publishedAt: now,
+      });
+      await ctx.db.patch("siteContentEntries", current._id, {
+        label: field.label,
+        kind: field.kind,
+        draftValue: value,
+        draftRevision: revision,
+        publishedVersionId: versionId,
+        updatedBy: author._id,
+        updatedAt: now,
+      });
+      updated += 1;
+    }
+    if (inserted > 0 || updated > 0) {
+      await ctx.db.insert("cmsAuditEvents", {
+        area: "content",
+        action: "publish",
+        resourceType: "paper-practice-copy-migration",
+        resourceId: "practice",
+        summary: `${inserted + updated} paper-practice copy fields published`,
+        actorId: author._id,
+        createdAt: Date.now(),
+      });
+    }
+    return { inserted, updated };
+  },
+});
+
 export const verify = internalQuery({
   args: { confirm: v.literal(confirmation) },
   returns: v.object({

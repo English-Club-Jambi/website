@@ -65,10 +65,9 @@ test.describe("seeded public and admin integration", () => {
       .getByText("Full-practice capacity")
       .locator("xpath=ancestor::section");
     for (const [skill, required] of [
+      ["Listening", 50],
+      ["Structure", 40],
       ["Reading", 50],
-      ["Listening", 47],
-      ["Writing", 12],
-      ["Speaking", 11],
     ] as const) {
       const capacityText = await capacity
         .getByText(skill, { exact: true })
@@ -90,7 +89,7 @@ test.describe("seeded public and admin integration", () => {
       const value = await tags.inputValue();
       if (
         value.includes("original-question") &&
-        value.includes("source-ets-2026-blueprint")
+        value.includes("source-ets-itp-level-1-content")
       ) {
         foundSeededQuestion = true;
         break;
@@ -101,7 +100,7 @@ test.describe("seeded public and admin integration", () => {
     const taskFamily = page.getByRole("combobox", { name: "Task family" });
     await taskFamily.click();
     const taskFamilyList = page.getByRole("listbox");
-    for (const group of ["Reading", "Listening", "Writing", "Speaking"]) {
+    for (const group of ["Listening", "Structure and Written Expression", "Reading"]) {
       await expect(
         taskFamilyList.getByText(group, { exact: true }),
       ).toBeVisible();
@@ -125,6 +124,28 @@ test.describe("seeded public and admin integration", () => {
     await expect(
       directEditor.getByRole("link", { name: "Edit source" }),
     ).toHaveCount(0);
+    const popupTrigger = directEditor.getByRole("button", {
+      name: "Open popup",
+    });
+    await popupTrigger.click();
+    const questionPopup = page.getByRole("dialog", {
+      name: "Edit question in a focused workspace",
+    });
+    await expect(questionPopup).toBeVisible();
+    await expect(questionPopup.getByLabel("Question prompt")).toBeVisible();
+    const popupA11y = await new AxeBuilder({ page })
+      .include("dialog")
+      .analyze();
+    expect(
+      popupA11y.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    await questionPopup
+      .getByRole("button", { name: "Close question popup" })
+      .click();
+    await expect(popupTrigger).toBeFocused();
 
     await captureAdminEvidence(page, {
       path: "docs/evidence/admin/question-bank-seeded-desktop-chromium.png",
@@ -276,7 +297,7 @@ test.describe("seeded public and admin integration", () => {
 
     await builder.getByRole("combobox", { name: "Task family" }).click();
     const taskFamilyList = page.getByRole("listbox");
-    for (const group of ["Reading", "Listening", "Writing", "Speaking"]) {
+    for (const group of ["Listening", "Structure and Written Expression", "Reading"]) {
       await expect(
         taskFamilyList.getByText(group, { exact: true }),
       ).toBeVisible();

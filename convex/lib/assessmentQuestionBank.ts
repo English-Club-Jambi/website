@@ -9,7 +9,7 @@ type AssessmentReadCtx = Pick<QueryCtx | MutationCtx, "db">;
 type QuestionBankMutationCtx = Pick<MutationCtx, "db">;
 
 export const QUESTION_BANK_AUTHORING_LEDGER_SLUG =
-  "question-bank-authoring-ledger";
+  "paper-question-bank-authoring-ledger";
 
 export type AssessmentTaskFamily =
   | "complete-words"
@@ -19,6 +19,8 @@ export type AssessmentTaskFamily =
   | "listen-conversation"
   | "listen-announcement"
   | "listen-academic-talk"
+  | "structure-sentence-completion"
+  | "structure-written-expression"
   | "build-sentence"
   | "write-email"
   | "academic-discussion"
@@ -49,6 +51,8 @@ const taskFamilyByPrefix: ReadonlyArray<
   ["listening-conversation-", "listen-conversation"],
   ["listening-announcement-", "listen-announcement"],
   ["listening-talk-", "listen-academic-talk"],
+  ["structure-completion-", "structure-sentence-completion"],
+  ["structure-expression-", "structure-written-expression"],
   ["writing-build-", "build-sentence"],
   ["writing-email-", "write-email"],
   ["writing-discussion-", "academic-discussion"],
@@ -80,7 +84,7 @@ export function defaultTaskFamilyForSkill(
     case "speaking":
       return "take-interview";
     case "structure":
-      return null;
+      return "structure-sentence-completion";
   }
 }
 

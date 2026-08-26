@@ -230,10 +230,14 @@ function ResultReport({
   const possible = result.objective.possible;
   const elapsed = result.sections.reduce((total, section) => total + section.elapsedSeconds, 0);
   const selected = result.sections[sectionIndex];
+  const paperEstimate =
+    result.estimate?.model === "ec-paper-linear-v1" ? result.estimate : null;
+  const legacyEstimate =
+    result.estimate?.model === "ec-ibt-style-v1" ? result.estimate : null;
   const estimatedBand =
-    result.estimate?.overallBand ?? result.sections[0]?.bandEstimate ?? null;
+    legacyEstimate?.overallBand ?? result.sections[0]?.bandEstimate ?? null;
   const comparableScore =
-    result.estimate?.comparableTotal ??
+    legacyEstimate?.comparableTotal ??
     result.sections[0]?.comparableScoreEstimate ??
     null;
   const confidence = result.estimate?.confidence ?? result.sections[0]?.confidence ?? null;
@@ -253,9 +257,11 @@ function ResultReport({
       <div className={`page-container ${styles.resultBody}`}>
         <section className={styles.rawResult} aria-label={result.label}>
           <div className={styles.rawResultLead}>
-            <strong>{estimatedBand ?? result.objective.correct}</strong>
+            <strong>{paperEstimate?.total ?? estimatedBand ?? result.objective.correct}</strong>
             <span>
-              {estimatedBand === null
+              {paperEstimate !== null
+                ? copy.paperEstimate
+                : estimatedBand === null
                 ? `${copy.rawCount} / ${possible}`
                 : `${copy.estimatedBand} / 6`}
             </span>
@@ -268,7 +274,13 @@ function ResultReport({
             {comparableScore !== null ? (
               <div>
                 <dt>{copy.comparableScore}</dt>
-                <dd>{comparableScore} / {result.estimate?.comparableTotal !== null ? 120 : 30}</dd>
+                <dd>{comparableScore} / {legacyEstimate?.comparableTotal !== null ? 120 : 30}</dd>
+              </div>
+            ) : null}
+            {paperEstimate !== null ? (
+              <div>
+                <dt>{copy.paperRange}</dt>
+                <dd>{paperEstimate.minimum}–{paperEstimate.maximum}</dd>
               </div>
             ) : null}
             <div><dt>{copy.omitted}</dt><dd>{result.objective.omitted}</dd></div>
@@ -283,7 +295,9 @@ function ResultReport({
         </section>
 
         {result.estimate !== null ? (
-          <p className={styles.ruleBasedNote}>{copy.ruleBasedNote}</p>
+          <p className={styles.ruleBasedNote}>
+            {paperEstimate === null ? copy.ruleBasedNote : copy.paperMethodNote}
+          </p>
         ) : null}
 
         <section className={styles.sectionResults} aria-labelledby="section-results-title">
@@ -296,7 +310,9 @@ function ResultReport({
                   <p>{section.answered} / {section.items} {copy.answered.toLowerCase()}</p>
                 </div>
                 <strong>
-                  {section.bandEstimate === null
+                  {section.paperSectionEstimate !== null
+                    ? `${section.paperSectionEstimate} · ${copy.paperSectionEstimate}`
+                    : section.bandEstimate === null
                     ? `${section.correct} / ${section.possible}`
                     : `${section.bandEstimate} / 6`}
                 </strong>

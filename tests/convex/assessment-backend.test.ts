@@ -101,7 +101,10 @@ async function seedPublishedFixture(
     kind?: "full-practice" | "skill-quiz" | "club-program-quiz";
     timed?: boolean;
     multipleSelect?: boolean;
-    scorePolicy?: "raw-objective" | "practice-estimate-v1";
+    scorePolicy?:
+      | "raw-objective"
+      | "practice-estimate-v1"
+      | "paper-estimate-v1";
   } = {},
 ) {
   const now = Date.now();
@@ -643,6 +646,53 @@ describe("assessment lifecycle, transcript support, and review", () => {
     expect(result?.disclaimer).not.toMatch(
       /(?:is|reports|provides) an? (?:official|predicted) (?:ETS|TOEFL)? ?score/i,
     );
+  });
+
+  it("submits a legacy quick attempt with paper policy as a raw objective result", async () => {
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t, {
+      kind: "skill-quiz",
+      scorePolicy: "paper-estimate-v1",
+    });
+    const learner = await anonymousIdentity(t, "legacy-paper-quick-owner");
+    const attempt = await startAttempt(
+      learner,
+      fixture,
+      "legacy-paper-quick-start-0001",
+    );
+    const firstBegun = await learner.mutation(
+      api.assessmentAttempts.beginSection,
+      { attemptId: attempt.attemptId },
+    );
+    const firstDone = await learner.mutation(
+      api.assessmentAttempts.finalizeCurrentSection,
+      {
+        attemptId: attempt.attemptId,
+        expectedRevision: firstBegun.revision,
+      },
+    );
+    if (!firstDone.ok) throw new Error("section revision conflicted");
+    const secondBegun = await learner.mutation(
+      api.assessmentAttempts.beginSection,
+      { attemptId: attempt.attemptId },
+    );
+    const submitted = await learner.mutation(api.assessmentAttempts.submit, {
+      attemptId: attempt.attemptId,
+      submitRequestId: "legacy-paper-quick-submit-0001",
+      expectedRevision: secondBegun.revision,
+    });
+    if (!submitted.ok) throw new Error("submit revision conflicted");
+
+    const result = await learner.query(api.assessmentAttempts.getResult, {
+      attemptId: attempt.attemptId,
+    });
+    expect(result).toMatchObject({
+      objective: { possible: 2 },
+      estimate: null,
+      disclaimer:
+        "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.",
+    });
+    expect(result?.sections.every((section) => section.paperSectionEstimate === null)).toBe(true);
   });
 
   it("closes only the expired current section and leaves the next section unstarted", async () => {

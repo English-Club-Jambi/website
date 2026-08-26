@@ -469,7 +469,7 @@ export const publicContentManifest = {
     pathsSupport: text(
       "paths-support",
       "Practice paths support",
-      "Both paths return practice points and reviewed answers. Four-skill forms also show a clearly labelled band and 0–120 estimate.",
+      "Both paths return raw correct counts and reviewed answers. The full paper-based form also shows a clearly labelled 310–677 estimate.",
       240,
     ),
     unavailable: text(
@@ -482,7 +482,7 @@ export const publicContentManifest = {
     fullSummary: text(
       "full-summary",
       "Full practice summary",
-      "Work through Reading, Listening, Writing, and Speaking in one session. A reviewed set is drawn from the English Club question bank when you start.",
+      "Work through 50 Listening, 40 Structure and Written Expression, and 50 Reading questions in one session. A reviewed set is drawn from the Question Bank by skill when you start.",
       220,
     ),
     viewBriefing: text("view-briefing", "Full briefing action", "View the briefing", 40),
@@ -535,30 +535,6 @@ export const publicContentManifest = {
       "Read an original passage and check details, purpose, and relationships.",
       180,
     ),
-    quickWritingTitle: text(
-      "quick-writing-title",
-      "Quick writing title",
-      "Writing",
-      50,
-    ),
-    quickWritingSummary: text(
-      "quick-writing-summary",
-      "Quick writing summary",
-      "Build precise sentences, then answer an email and a short academic discussion.",
-      180,
-    ),
-    quickSpeakingTitle: text(
-      "quick-speaking-title",
-      "Quick speaking title",
-      "Speaking",
-      50,
-    ),
-    quickSpeakingSummary: text(
-      "quick-speaking-summary",
-      "Quick speaking summary",
-      "Rehearse a spoken response locally, then submit its transcript for a limited practice estimate.",
-      220,
-    ),
     openBriefing: text("open-briefing", "Quick briefing action", "Open briefing", 40),
     underReview: text("under-review", "Review state label", "Under review", 40),
     noQuick: text(
@@ -576,7 +552,7 @@ export const publicContentManifest = {
     scopeBody: text(
       "scope-body",
       "Practice scope body",
-      "Your raw points are exact for the questions delivered in that attempt. The band and 0–120 values are English Club practice estimates, not certificates or admission recommendations.",
+      "Your raw correct counts are exact for the questions delivered in that attempt. The 310–677 value is a fixed English Club estimate; official ETS results use form-specific equating and may differ.",
       280,
     ),
     labBack: text("lab-back", "Assessment Lab back link", "Assessment Lab", 40),
@@ -609,7 +585,7 @@ export const publicContentManifest = {
     factResultBody: text(
       "fact-result-body",
       "Briefing result description",
-      "Practice points, time used, reviewed answers, and a transparent estimate where the form supports one.",
+      "Raw correct counts, time used, reviewed answers, and a transparent 310–677 estimate for the full paper-based form.",
       180,
     ),
     evidenceTitle: text(
@@ -621,7 +597,7 @@ export const publicContentManifest = {
     evidenceBody: text(
       "evidence-body",
       "Evidence limit body",
-      "The question set is fixed after an attempt begins. Its band and 0–120 values follow a published English Club recipe; they do not reproduce ETS adaptive calibration or official response rating.",
+      "The 140-question selection is fixed after an attempt begins. Its score follows a published fixed-linear English Club recipe; it does not reproduce ETS statistical equating.",
       260,
     ),
     sessionBody: text(
@@ -705,7 +681,7 @@ export const publicContentManifest = {
     acknowledgement: text(
       "acknowledgement",
       "Practice acknowledgement",
-      "I understand that my raw result applies to this attempt, while its band and 0–120 values are English Club estimates, not an official ETS score or exact test prediction.",
+      "I understand that my raw counts apply to this attempt, while the 310–677 value is a fixed English Club estimate, not an official or ETS-equated score.",
       220,
     ),
     signingIn: text("signing-in", "Session creation status", "Creating a private session.", 80),
@@ -1007,6 +983,30 @@ export const publicContentManifest = {
       "Comparable score label",
       "Comparable estimate",
       50,
+    ),
+    paperEstimate: text(
+      "paper-estimate",
+      "Paper estimate label",
+      "Paper-based estimate",
+      50,
+    ),
+    paperRange: text(
+      "paper-range",
+      "Paper estimate range label",
+      "Score range",
+      40,
+    ),
+    paperSectionEstimate: text(
+      "paper-section-estimate",
+      "Paper section estimate label",
+      "Section estimate",
+      50,
+    ),
+    paperMethodNote: text(
+      "paper-method-note",
+      "Paper estimate method note",
+      "The 310–677 estimate uses a fixed linear conversion from raw correct counts. Official ETS results use form-specific statistical equating, so the values are not interchangeable.",
+      260,
     ),
     practicePoints: text(
       "practice-points",

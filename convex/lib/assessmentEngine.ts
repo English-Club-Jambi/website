@@ -9,6 +9,11 @@ import {
   estimateSectionScore,
   type IbtEstimateSkill,
 } from "./assessmentEstimate";
+import {
+  estimatePaperSectionScore,
+  estimatePaperTotal,
+  type PaperEstimateSkill,
+} from "./assessmentPaperEstimate";
 
 export async function finalizeAttempt(
   ctx: MutationCtx,
@@ -137,9 +142,31 @@ export async function finalizeAttempt(
             possiblePoints: score.possiblePoints,
           })
         : null;
-    sectionProjections.push({ section, progress, score, estimate });
+    const paperEstimate =
+      version.scorePolicy === "paper-estimate-v1" &&
+      (section.skill === "listening" ||
+        section.skill === "structure" ||
+        section.skill === "reading") &&
+      score.possible ===
+        (section.skill === "listening"
+          ? 50
+          : section.skill === "structure"
+            ? 40
+            : 50)
+        ? estimatePaperSectionScore({
+            skill: section.skill,
+            correct: score.correct,
+            possible: score.possible,
+          })
+        : null;
+    sectionProjections.push({ section, progress, score, estimate, paperEstimate });
   }
   sectionProjections.sort((left, right) => left.section.order - right.section.order);
+  const usesPaperEstimate =
+    version.scorePolicy === "paper-estimate-v1" &&
+    sectionProjections.length === 3 &&
+    new Set(sectionProjections.map(({ section }) => section.skill)).size === 3 &&
+    sectionProjections.every(({ paperEstimate }) => paperEstimate !== null);
   const overall =
     version.scorePolicy === "practice-estimate-v1"
       ? estimateOverallScore(
@@ -152,6 +179,25 @@ export async function finalizeAttempt(
                   comparableScore: estimate.comparableScore,
                 }],
           ),
+        )
+      : null;
+  const paperTotal =
+    usesPaperEstimate
+      ? estimatePaperTotal(
+          sectionProjections.map(({ section, paperEstimate }) => {
+            if (
+              paperEstimate === null ||
+              (section.skill !== "listening" &&
+                section.skill !== "structure" &&
+                section.skill !== "reading")
+            ) {
+              throw new ConvexError({ code: "PAPER_SCORE_SECTIONS_INVALID" as const });
+            }
+            return {
+              skill: section.skill as PaperEstimateSkill,
+              score: paperEstimate,
+            };
+          }),
         )
       : null;
   const revision = attempt.resultRevision + 1;
@@ -173,11 +219,18 @@ export async function finalizeAttempt(
           estimateConfidence: overall?.confidence ?? "low" as const,
         }
       : {}),
+    ...(usesPaperEstimate
+      ? {
+          scoringModel: "ec-paper-linear-v1" as const,
+          paperTotalEstimate: paperTotal ?? undefined,
+          estimateConfidence: "low" as const,
+        }
+      : {}),
     completedAt,
     claimContract: 1,
   });
 
-  for (const { section, progress, score, estimate } of sectionProjections) {
+  for (const { section, progress, score, estimate, paperEstimate } of sectionProjections) {
     await ctx.db.insert("assessmentSectionResults", {
       resultId,
       sectionId: section._id,
@@ -193,6 +246,7 @@ export async function finalizeAttempt(
       bandEstimate: estimate?.band,
       comparableScoreEstimate: estimate?.comparableScore,
       estimateConfidence: estimate?.confidence,
+      paperSectionEstimate: paperEstimate ?? undefined,
     });
   }
 

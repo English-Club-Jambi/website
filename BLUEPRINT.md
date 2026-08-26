@@ -47,7 +47,7 @@ Boundary rules:
 - Convex providers are scoped: `/practice` gets the Auth/Convex provider needed for Anonymous-owned attempts, and `/admin` gets the Auth/Convex provider needed for reactive protected work. Static organisation routes keep server adapters and discrete client leaves.
 - Raw HTML is disabled in Markdown rendering.
 - Admin route visibility is a UX gate only. Every protected Convex query, mutation, and action derives the signed identity, resolves an active `adminUsers` row through its stable Auth-account binding (with a legacy token fallback), and checks a server-owned permission.
-- Assessment results report exact outcomes for the published English Club bank. The four-skill profile may add a clearly labelled fixed-form estimate; legacy profiles remain raw-only. Official, predicted, calibrated, equivalent, CEFR, certificate, and admission claims are outside the contract.
+- Assessment results report exact outcomes for the published English Club bank. The active three-section paper profile may add a clearly labelled fixed-linear 310–677 estimate; quick forms remain raw-only, and legacy profiles keep their original model. Official, predicted, calibrated, equivalent, CEFR, certificate, and admission claims are outside the contract.
 
 ## 2. Route contract
 
@@ -119,11 +119,11 @@ The URL query may preselect `join`, `partner`, or `ask`; the form still exposes 
 
 ### Practice
 
-`/practice` explains English Club Assessment Lab and offers only published definitions. The current development bank has one fixed four-skill form with 50 Reading, 47 Listening, 12 Writing, and 11 Speaking tasks, plus one quick form per skill. Legacy ITP-shaped definitions remain supported but cannot use the estimate policy.
+`/practice` explains English Club Assessment Lab and offers only published definitions. The current development bank has one 140-question paper form with 50 Listening, 40 Structure and Written Expression, and 50 Reading items, plus one raw-objective quick form per section. The earlier four-skill definitions are retired, while their attempts and results remain readable.
 
 Browsing never creates an identity. After the visitor acknowledges the claim boundary and presses Start, the scoped provider creates an Anonymous Convex Auth identity when needed and starts one owned attempt with an idempotency key. The runner begins each section explicitly, saves bounded response shapes with optimistic revisions, keeps the current-section navigator bounded, and never receives an answer key before submission. Transcript support may be enabled at any time and persists as a result label.
 
-The result reports exact bank outcomes, mode, time, ordered section rows, and cursor-paginated review. Four-skill results may include a deterministic band and comparable-total estimate; quick forms may include only their section estimate. The interface identifies these as uncalibrated English Club fixed-form values, never an official score, exact prediction, equivalence, CEFR band, certificate, or admission recommendation.
+The result reports exact bank outcomes, mode, time, ordered section rows, and cursor-paginated review. A complete 50/40/50 form adds three fixed-linear section values and an integer total constrained to 310–677; quick forms stay raw-only. The interface identifies the total as an uncalibrated English Club estimate, never an official score, exact prediction, equivalence, CEFR band, certificate, or admission recommendation.
 
 ### Administration
 
@@ -495,7 +495,7 @@ Archive DTOs contain summaries and at most one reviewed cover projection. They d
 
 Published catalog and briefing DTOs contain definition/version identity, titles, instructions, declared modes, section summaries, and reviewed public media only. The pre-submit Player DTO contains one current public item, optional stimulus, saved response, response/attempt revisions, deadline state, and at most 50 current-section navigator entries. It contains no answer key, explanation, provenance, draft media URL, approval note, author ID, or score.
 
-The five Practice Formats are installed internally and cannot be added from Admin. Question Bank is the reusable inventory and has its own Add Question flow. That flow writes the prompt and choices to an internal source ledger, keeps the answer key in its private table, and creates a paused bank row for review. An optional illustration must be a ready public `assessment-image` record delivered from `r2.mukhtada.my.id`; a text-only question has no attachment record. A format working revision stores optional per-question allow/disable rules on top of its canonical skill pool. Validation checks that every fixed section quota can be satisfied. Start performs the structured random draw from the immutable published rules and stores the selected bank/item IDs, optional illustration media ID, and order in `assessmentAttemptItems`, so resume never redraws and a later bank edit cannot swap the attempt's illustration.
+The four active Practice Formats are installed internally and cannot be added from Admin: one complete paper form and one quick form for each of its three sections. Question Bank is the reusable inventory and has its own Add Question flow. That flow writes the prompt and choices to an internal source ledger, keeps the answer key in its private table, and creates a paused bank row for review. An optional illustration must be a ready public `assessment-image` record delivered from `r2.mukhtada.my.id`; a text-only question has no attachment record. A format working revision stores optional per-question allow/disable rules on top of its canonical skill pool. Validation checks that every fixed section quota can be satisfied. Start performs the structured random draw from the immutable published rules and stores the selected bank/item IDs, optional illustration media ID, and order in `assessmentAttemptItems`, so resume never redraws and a later bank edit cannot swap the attempt's illustration.
 
 Learner flags feed `assessmentQuestionFlagSignals` as aggregate editorial evidence. The protected format workspace receives only current count, lifetime events, latest time, and open/reviewed/dismissed state. Participant identity, attempt identifiers, responses, and answer keys are deliberately absent.
 

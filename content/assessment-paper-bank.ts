@@ -1,11 +1,17 @@
-export type IbtBankSkill = "reading" | "listening" | "writing" | "speaking";
+export type PaperBankSkill = "listening" | "structure" | "reading";
 
-export const IBT_PRACTICE_RESEARCH_SOURCES = [
+export const PAPER_PRACTICE_RESEARCH_SOURCES = [
   {
-    id: "ets-2026-blueprint",
-    title: "TOEFL iBT Test Content and Structure",
-    url: "https://www.ets.org/toefl/test-takers/ibt/about/content.html",
-    use: "Task-family names, public section counts, and approximate base times only; no ETS questions or answer keys are reproduced.",
+    id: "ets-itp-level-1-content",
+    title: "TOEFL ITP Level 1 Test Content",
+    url: "https://www.ets.org/toefl/itp/test-content.html",
+    use: "Section order, public question counts, timing, and score ranges only; no ETS questions or answer keys are reproduced.",
+  },
+  {
+    id: "ets-itp-handbook",
+    title: "TOEFL ITP Test Taker Handbook",
+    url: "https://www.ets.org/pdfs/toefl-itp-test-taker-handbook.pdf",
+    use: "No-penalty scoring rule, form-equating boundary, and the published three-section total-score formula.",
   },
   {
     id: "epa-urban-tree-cooling",
@@ -51,10 +57,10 @@ export const IBT_PRACTICE_RESEARCH_SOURCES = [
   },
 ] as const;
 
-export type IbtPracticeResearchSourceId =
-  (typeof IBT_PRACTICE_RESEARCH_SOURCES)[number]["id"];
+export type PaperPracticeResearchSourceId =
+  (typeof PAPER_PRACTICE_RESEARCH_SOURCES)[number]["id"];
 
-export type IbtBankOption = Readonly<{ key: string; label: string }>;
+export type PaperBankOption = Readonly<{ key: string; label: string }>;
 
 type ChoiceAnswer = Readonly<{
   kind: "choice";
@@ -90,10 +96,10 @@ type ItemBase = Readonly<{
   stimulusKey?: string;
 }>;
 
-export type IbtBankItem =
+export type PaperBankItem =
   | (ItemBase & Readonly<{
       type: "single-choice";
-      options: readonly IbtBankOption[];
+      options: readonly PaperBankOption[];
       answer: ChoiceAnswer;
     }>)
   | (ItemBase & Readonly<{
@@ -101,13 +107,13 @@ export type IbtBankItem =
       stemParts: readonly string[];
       gaps: readonly Readonly<{
         key: string;
-        options: readonly IbtBankOption[];
+        options: readonly PaperBankOption[];
       }>[];
       answer: ClozeAnswer;
     }>)
   | (ItemBase & Readonly<{
       type: "sentence-build";
-      tokens: readonly IbtBankOption[];
+      tokens: readonly PaperBankOption[];
       answer: TokenAnswer;
     }>)
   | (ItemBase & Readonly<{
@@ -121,7 +127,7 @@ export type IbtBankItem =
       answer: TextAnswer;
     }>);
 
-export type IbtBankStimulus = Readonly<{
+export type PaperBankStimulus = Readonly<{
   key: string;
   kind: "reading" | "audio";
   title: string;
@@ -130,17 +136,17 @@ export type IbtBankStimulus = Readonly<{
   alt?: string;
 }>;
 
-export type IbtBankSection = Readonly<{
+export type PaperBankSection = Readonly<{
   key: string;
-  skill: IbtBankSkill;
+  skill: PaperBankSkill;
   title: string;
   instructions: string;
   timeLimitSeconds: number;
-  stimuli: readonly IbtBankStimulus[];
-  items: readonly IbtBankItem[];
+  stimuli: readonly PaperBankStimulus[];
+  items: readonly PaperBankItem[];
 }>;
 
-export type IbtBankDefinition = Readonly<{
+export type PaperBankDefinition = Readonly<{
   slug: string;
   kind: "full-practice" | "skill-quiz";
   adminTitle: string;
@@ -148,13 +154,13 @@ export type IbtBankDefinition = Readonly<{
   summary: string;
   instructions: string;
   maxAttemptsPerDay: number;
-  sections: readonly IbtBankSection[];
+  sections: readonly PaperBankSection[];
 }>;
 
-export const IBT_PRACTICE_BANK_CHECKSUM =
-  "ec-ibt-style-2026-v1-2026-08-26-r1";
+export const PAPER_PRACTICE_BANK_CHECKSUM =
+  "ec-paper-level1-v1-2026-08-26-r1";
 
-const researchSourceByStimulusKey: Readonly<Record<string, IbtPracticeResearchSourceId>> = {
+const researchSourceByStimulusKey: Readonly<Record<string, PaperPracticeResearchSourceId>> = {
   "reading-academic-heat": "epa-urban-tree-cooling",
   "reading-academic-memory": "nih-sleep-memory",
   "reading-academic-reef": "noaa-reef-soundscape",
@@ -165,20 +171,20 @@ const researchSourceByStimulusKey: Readonly<Record<string, IbtPracticeResearchSo
 };
 
 export function researchSourceIdsForBankItem(
-  item: IbtBankItem,
-): readonly IbtPracticeResearchSourceId[] {
+  item: PaperBankItem,
+): readonly PaperPracticeResearchSourceId[] {
   const source =
     item.stimulusKey === undefined
       ? undefined
       : researchSourceByStimulusKey[item.stimulusKey];
   return source === undefined
-    ? ["ets-2026-blueprint"]
-    : ["ets-2026-blueprint", source];
+    ? ["ets-itp-level-1-content", "ets-itp-handbook"]
+    : ["ets-itp-level-1-content", "ets-itp-handbook", source];
 }
 
 const optionKeys = ["a", "b", "c", "d", "e", "f"] as const;
 
-function options(labels: readonly string[]): IbtBankOption[] {
+function options(labels: readonly string[]): PaperBankOption[] {
   return labels.map((label, index) => ({ key: optionKeys[index], label }));
 }
 function choice(args: {
@@ -189,7 +195,7 @@ function choice(args: {
   explanation: string;
   points: number;
   stimulusKey?: string;
-}): IbtBankItem {
+}): PaperBankItem {
   return {
     key: args.key,
     type: "single-choice",
@@ -213,7 +219,7 @@ function cloze(args: {
   correct: number;
   explanation: string;
   points: number;
-}): IbtBankItem {
+}): PaperBankItem {
   const gapKey = "gap-1";
   return {
     key: args.key,
@@ -230,77 +236,11 @@ function cloze(args: {
   };
 }
 
-function sentenceBuild(args: {
-  key: string;
-  prompt: string;
-  phrases: readonly string[];
-  explanation: string;
-  points?: number;
-}): IbtBankItem {
-  const tokens = args.phrases.map((label, index) => ({
-    key: `phrase-${index + 1}`,
-    label,
-  }));
-  return {
-    key: args.key,
-    type: "sentence-build",
-    prompt: args.prompt,
-    tokens,
-    explanation: args.explanation,
-    answer: {
-      kind: "token-order",
-      acceptedTokenOrders: [tokens.map((token) => token.key)],
-      points: args.points ?? 1,
-    },
-  };
-}
-
-function constructed(args: {
-  key: string;
-  prompt: string;
-  mode: "writing" | "speaking-repeat" | "speaking-interview";
-  minimumWords: number;
-  recommendedWords: number;
-  maximumCharacters: number;
-  targetTerms: readonly string[];
-  sampleResponse: string;
-  explanation: string;
-  stimulusKey?: string;
-  preparationSeconds?: number;
-  responseSeconds?: number;
-}): IbtBankItem {
-  return {
-    key: args.key,
-    type: "constructed-response",
-    prompt: args.prompt,
-    responseMode: args.mode,
-    minimumWords: args.minimumWords,
-    recommendedWords: args.recommendedWords,
-    maximumCharacters: args.maximumCharacters,
-    explanation: args.explanation,
-    ...(args.stimulusKey === undefined ? {} : { stimulusKey: args.stimulusKey }),
-    ...(args.preparationSeconds === undefined
-      ? {}
-      : { preparationSeconds: args.preparationSeconds }),
-    ...(args.responseSeconds === undefined
-      ? {}
-      : { responseSeconds: args.responseSeconds }),
-    answer: {
-      kind: "text-rubric",
-      rubricMode: args.mode,
-      maxPoints: 5,
-      minimumWords: args.minimumWords,
-      targetTerms: args.targetTerms,
-      sampleResponse: args.sampleResponse,
-    },
-  };
-}
-
-function readingStimulus(key: string, title: string, body: string): IbtBankStimulus {
+function readingStimulus(key: string, title: string, body: string): PaperBankStimulus {
   return { key, kind: "reading", title, body };
 }
 
-function audioStimulus(key: string, title: string, transcript: string): IbtBankStimulus {
+function audioStimulus(key: string, title: string, transcript: string): PaperBankStimulus {
   return {
     key,
     kind: "audio",
@@ -310,10 +250,10 @@ function audioStimulus(key: string, title: string, transcript: string): IbtBankS
   };
 }
 
-const readingPoint = 0.7;
-const listeningPoint = 35 / 47;
+const readingPoint = 1;
+const listeningPoint = 1;
 
-const wordCompletionItems: IbtBankItem[] = [
+const wordCompletionItems: PaperBankItem[] = [
   ["migr", " birds return to the wetland each spring.", ["atory", "ation", "ated"], 0, "Migratory describes birds that move seasonally."],
   ["The library installed adjust", " lamps beside every study desk.", ["able", "ment", "ing"], 0, "Adjustable means the lamps can be repositioned."],
   ["The committee reached a unan", " decision after reviewing the evidence.", ["imous", "imity", "imate"], 0, "Unanimous means everyone agreed."],
@@ -364,7 +304,7 @@ const dailyReadingStimuli = [
   ),
 ];
 
-const dailyReadingItems: IbtBankItem[] = [
+const dailyReadingItems: PaperBankItem[] = [
   choice({ key: "reading-daily-01", stimulusKey: "reading-daily-workshop", prompt: "Why does registration close before the workshop day?", choices: ["The number of mentor places is limited.", "Participants must buy their own tools.", "The courtyard closes on Wednesday.", "Rain is certain on Thursday."], correct: 0, explanation: "The notice links the deadline to the number of people each mentor can assist.", points: readingPoint }),
   choice({ key: "reading-daily-02", stimulusKey: "reading-daily-workshop", prompt: "How will registered participants learn about a rain relocation?", choices: ["A sign at the courtyard", "An email on Thursday", "A call from a mentor", "A notice in Room E14"], correct: 1, explanation: "The notice promises an email by 13:00 Thursday.", points: readingPoint }),
   choice({ key: "reading-daily-03", stimulusKey: "reading-daily-library", prompt: "What should the reader do if a friend will collect the book?", choices: ["Use the outdoor return slot", "Wait until Sunday", "Reply to the library message", "Go to the east entrance"], correct: 2, explanation: "A reply is requested only when another person will collect the book.", points: readingPoint }),
@@ -554,6 +494,9 @@ const announcementData = [
   ["listening-announcement-3", "Laboratory ventilation test", "A ventilation test will take place in the chemistry building at eight tomorrow morning. No experiments may begin before the all-clear message at nine. Researchers may enter offices during the test, but laboratory doors must remain closed. Samples requiring refrigeration should stay in the backup cold room overnight.", "What must wait for the all-clear message?", ["Starting experiments", "Entering offices", "Refrigerating samples", "Closing laboratory doors"], 0, "Experiments cannot begin before the message."],
   ["listening-announcement-4", "Community garden water schedule", "Because the west pump is being replaced, plots one through eighteen may use the east tap from six to eight in the morning this weekend. Please fill containers rather than attaching private hoses, which would reduce pressure for other gardeners. Normal access is expected to resume Monday.", "Why are private hoses prohibited?", ["They would reduce water pressure for others.", "They cannot reach the east tap.", "They damage the replacement pump.", "They are allowed only on Monday."], 0, "The announcement directly links hoses to reduced pressure."],
   ["listening-announcement-5", "Film screening discussion", "After tonight’s documentary, marine biologist Dr. Lena Ward will answer questions in the small theatre. The discussion begins ten minutes after the closing credits, not immediately, so staff can move two front rows for wheelchair access. Audience members who need to leave early may submit written questions at the foyer desk before the film.", "Why is there a ten-minute delay?", ["Staff need to adjust accessible seating.", "The speaker arrives after the film.", "Written questions must be translated.", "The theatre needs a new screen."], 0, "Staff will move rows to provide wheelchair access."],
+  ["listening-announcement-6", "Archive orientation", "Students joining tomorrow’s archive orientation should meet in Seminar Room Four at nine fifteen. Please bring a pencil, because pens are not permitted near the documents. Lockers are available for bags, and the archive will provide cotton supports for bound volumes. The reading room tour begins promptly at nine thirty.", "What should students bring to the orientation?", ["A pencil", "Cotton supports", "A bound volume", "A locker key"], 0, "The announcement asks students to bring a pencil; the archive supplies the supports."],
+  ["listening-announcement-7", "Riverside path survey", "Saturday’s riverside path survey will begin at the north footbridge at seven thirty, half an hour earlier than first advertised. Volunteers should wear closed shoes and download the observation sheet before arriving. If heavy rain is forecast, the coordinator will send a cancellation message by six that morning.", "What changed about the survey?", ["It will start thirty minutes earlier.", "It will use a different observation sheet.", "It will begin at the south footbridge.", "It will continue during heavy rain."], 0, "The start time moved thirty minutes earlier."],
+  ["listening-announcement-8", "Language exchange room", "This evening’s language exchange has moved from Room B12 to the library project room because the air conditioner in B12 is being repaired. The session still starts at six, and the topic remains food traditions. Enter the library through the west door after five thirty because the main entrance will be closed.", "Why has the language exchange moved?", ["Room B12 is being repaired.", "The topic has changed.", "The library closes at six.", "The west door is unavailable."], 0, "The room change is caused by repair work on the air conditioner in B12."],
 ] as const;
 
 const announcementStimuli = announcementData.map(([key, title, transcript]) =>
@@ -609,155 +552,97 @@ const talkItems = talkQuestions.flatMap(([stimulusKey, questions], talkIndex) =>
   ),
 );
 
-const writingBuildItems = [
-  ["The survey results", "were checked twice", "before the team published them."],
-  ["Although the room was small,", "the movable tables", "made group work possible."],
-  ["The researcher asked", "whether the pattern remained", "after temperature was controlled."],
-  ["Students who attend the workshop", "will receive the reading list", "by email on Friday."],
-  ["Because the first sample was damaged,", "the technician collected", "a second one downstream."],
-  ["The archive permits photographs", "provided that visitors", "turn off the camera flash."],
-  ["Neither the map nor the written directions", "showed where", "the temporary entrance was."],
-  ["The committee postponed its decision", "until residents had time", "to review the revised plan."],
-  ["What surprised the observers", "was how quickly", "the birds returned after the rain."],
-  ["By the time the lecture began,", "every available seat", "had already been taken."],
+const structureCompletionData = [
+  ["The campus garden ___ by student volunteers every Saturday.", ["maintains", "is maintained", "maintaining", "has maintain"], 1, "The passive form is required because volunteers maintain the garden."],
+  ["Only after the final sample arrived ___ the researchers begin the comparison.", ["did", "they did", "they", "were"], 0, "A restrictive opening phrase triggers subject–auxiliary inversion."],
+  ["The new reading room is quieter ___ the temporary room near the entrance.", ["from", "than", "that", "as"], 1, "The comparative adjective quieter takes than."],
+  ["Neither the tutor nor the students ___ aware of the schedule change.", ["was", "has been", "were", "be"], 2, "With neither…nor, the verb agrees with the nearer plural subject students."],
+  ["The report recommends that each laboratory ___ its emergency plan twice a year.", ["reviews", "review", "reviewed", "reviewing"], 1, "The mandative clause uses the base form review."],
+  ["By the time the lecture began, the technicians ___ the sound system.", ["test", "have tested", "had tested", "are testing"], 2, "The testing was completed before another past event, so past perfect is appropriate."],
+  ["The wetlands, ___ provide habitat for several bird species, are now protected.", ["that they", "which", "where they", "what"], 1, "Which introduces the nonrestrictive relative clause."],
+  ["A student may borrow the recorder provided that it ___ before Friday.", ["returns", "is returned", "returning", "has return"], 1, "The recorder receives the action, so a passive verb is needed."],
+  ["The committee postponed the vote ___ more residents could review the proposal.", ["so that", "despite", "unless", "whereas"], 0, "So that introduces the intended purpose of the postponement."],
+  ["___ the heavy rain, the field team completed the survey on schedule.", ["Although", "Despite", "Because", "Since"], 1, "Despite is followed by the noun phrase the heavy rain."],
+  ["There are fewer reference books on this shelf ___ there were last semester.", ["as", "that", "than", "then"], 2, "Fewer forms a comparison with than."],
+  ["The professor asked whether the results ___ if the smallest sample was removed.", ["change", "would change", "will have changed", "are changing"], 1, "Would change reports a hypothetical outcome from a past reporting point."],
+  ["Every application must include two references, ___ must be submitted online.", ["both of which", "both of them", "which both they", "that both"], 0, "Both of which correctly links the nonrestrictive relative clause."],
+  ["Not until the lights went out ___ that the building was empty.", ["we realized", "did we realize", "we did realize", "realized we"], 1, "Not until at the start of the sentence requires inversion."],
+  ["The more carefully the samples are labelled, the ___ they are to compare.", ["easy", "easiest", "more easily", "easier"], 3, "The correlative comparative pattern is the more…, the easier…."],
+  ["Dr. Rahman is one of the researchers who ___ the coastal data each month.", ["checks", "check", "is checking", "has checked"], 1, "Who refers to the plural noun researchers."],
+  ["Had the bus arrived five minutes later, we ___ the opening presentation.", ["missed", "would miss", "would have missed", "had missed"], 2, "The inverted third conditional requires would have missed."],
+  ["The equipment is too delicate ___ without a protective case.", ["transporting", "to transport", "that transport", "for transporting it"], 1, "Too + adjective is followed by an infinitive."],
+  ["No sooner had the meeting ended ___ the revised minutes were circulated.", ["when", "than", "then", "that"], 1, "The fixed construction is no sooner…than…."],
+  ["Because the evidence was incomplete, the conclusion remained ___.", ["question", "questioned", "questionable", "questioning"], 2, "The adjective questionable complements remained."],
 ] as const;
 
-const writingItems: IbtBankItem[] = [
-  ...writingBuildItems.map((phrases, index) =>
-    sentenceBuild({
-      key: `writing-build-${String(index + 1).padStart(2, "0")}`,
-      prompt: "Arrange the phrases to form one complete sentence.",
-      phrases,
-      explanation: "The completed sentence follows standard clause order and punctuation.",
+const structureCompletionItems: PaperBankItem[] = structureCompletionData.map(
+  ([sentence, labels, correct, explanation], index) =>
+    choice({
+      key: `structure-completion-${String(index + 1).padStart(2, "0")}`,
+      prompt: `Choose the option that best completes the sentence: ${sentence}`,
+      choices: labels,
+      correct,
+      explanation,
+      points: 1,
     }),
-  ),
-  constructed({
-    key: "writing-email-01",
-    mode: "writing",
-    prompt: "You registered for a Saturday photography walk, but the confirmation email lists the wrong meeting point. Write to the organiser. Explain which walk you registered for, identify the conflicting locations, and ask which location is correct.",
-    minimumWords: 80,
-    recommendedWords: 120,
-    maximumCharacters: 2_500,
-    targetTerms: ["Saturday", "meeting point", "correct location"],
-    sampleResponse: "Subject: Saturday photography walk meeting point\n\nHello, I registered for the Saturday morning photography walk. The registration page said to meet at the east gate, but my confirmation email lists the visitor centre. Could you please confirm which meeting point is correct? I want to arrive early enough for the safety briefing. Thank you for your help.",
-    explanation: "A strong response states the event, explains the conflict, and makes a direct request in an appropriate email tone.",
-  }),
-  constructed({
-    key: "writing-discussion-01",
-    mode: "writing",
-    prompt: "Your class is discussing whether universities should reserve some central outdoor spaces for quiet study rather than events. State your view and respond to at least one likely concern about your position.",
-    minimumWords: 100,
-    recommendedWords: 150,
-    maximumCharacters: 3_000,
-    targetTerms: ["quiet study", "outdoor space", "events"],
-    sampleResponse: "Universities should reserve a small number of central outdoor areas for quiet study. Students who live in crowded housing often need a place between classes where they can read without buying something or booking a room. Event organisers may worry that this reduces flexible space, so the quiet designation could apply during weekday study hours while evenings remain available for scheduled activities. Clear signs and nearby event alternatives would make the rule practical without turning the whole campus into a silent zone.",
-    explanation: "The response needs a clear position, relevant development, and engagement with a reasonable concern.",
-  }),
+);
+
+const structureExpressionData = [
+  ["The collection of field notes were stored in a locked cabinet.", ["The collection", "of field notes", "were stored", "in a locked cabinet"], 2, "The singular head noun collection requires was stored."],
+  ["Each of the participants have received a copy of the safety guide.", ["Each", "of the participants", "have received", "a copy"], 2, "Each is singular and requires has received."],
+  ["The lecturer explained the process clear enough for the visitors to follow.", ["explained", "the process", "clear enough", "to follow"], 2, "The verb explained must be modified by the adverb clearly."],
+  ["The new policy applies to all students, regardless of where do they live.", ["applies to", "all students", "regardless of", "where do they live"], 3, "An embedded question uses statement order: where they live."],
+  ["Researchers were surprised that the small change had such a strong affect on growth.", ["were surprised", "the small change", "such a strong affect", "on growth"], 2, "The noun needed here is effect, not the verb affect."],
+  ["The archive has fewer space for maps than it had before the renovation.", ["has", "fewer space", "for maps", "than it had"], 1, "Space is uncountable, so less space is required."],
+  ["Having completed the survey, the equipment was returned to the laboratory.", ["Having completed", "the survey", "the equipment", "was returned"], 2, "The opening modifier must describe the people who completed the survey, not the equipment."],
+  ["The committee discussed about the proposal for nearly two hours.", ["The committee", "discussed about", "the proposal", "for nearly"], 1, "Discuss is transitive and does not take about before its object."],
+  ["The number of visitors have increased steadily since the new gallery opened.", ["The number", "of visitors", "have increased", "since"], 2, "The subject the number is singular, so has increased is required."],
+  ["Neither the original map or the revised diagram shows the service entrance.", ["Neither", "the original map", "or", "shows"], 2, "The correlative pair is neither…nor…."],
+  ["The tutor suggested to review the first chapter before attempting the exercise.", ["The tutor", "suggested to review", "the first chapter", "before attempting"], 1, "Suggest is followed by a gerund or a that-clause: suggested reviewing."],
+  ["Many of the pottery fragments was found beside the eastern wall.", ["Many", "of the pottery fragments", "was found", "beside"], 2, "The plural subject fragments requires were found."],
+  ["The workshop is designed for students which need more practice with citations.", ["is designed", "for students", "which need", "with citations"], 2, "Who, not which, refers to people."],
+  ["The river is not only wider than it was last year but also flows more rapid.", ["not only", "wider than", "but also", "more rapid"], 3, "The verb flows needs the adverb more rapidly."],
+  ["If the samples had been labelled correctly, the error would be detected earlier.", ["had been labelled", "correctly", "would be detected", "earlier"], 2, "A past unreal result requires would have been detected."],
+  ["The report contains an useful summary of the interviews conducted last month.", ["contains", "an useful summary", "of the interviews", "conducted"], 1, "Useful begins with a consonant sound and takes a, not an."],
+  ["There is several reasons why the smaller room is better for recording.", ["There is", "several reasons", "why", "is better"], 0, "The plural noun reasons requires there are."],
+  ["The students were asked submitting their consent forms before entering the studio.", ["were asked", "submitting", "their consent forms", "before entering"], 1, "Ask in the passive is followed by an infinitive: were asked to submit."],
+  ["Only after reading both reports the committee understood the source of the difference.", ["Only after", "reading both reports", "the committee understood", "the source"], 2, "The restrictive opening phrase requires inversion: did the committee understand."],
+  ["The machine can measure temperature more accurate than the older device.", ["can measure", "temperature", "more accurate", "than the older device"], 2, "Measure must be modified by the adverb more accurately."],
+] as const;
+
+const structureExpressionItems: PaperBankItem[] = structureExpressionData.map(
+  ([sentence, labels, correct, explanation], index) =>
+    choice({
+      key: `structure-expression-${String(index + 1).padStart(2, "0")}`,
+      prompt: `Which marked part should be changed to make the sentence correct? ${sentence}`,
+      choices: labels,
+      correct,
+      explanation,
+      points: 1,
+    }),
+);
+
+const structureItems: PaperBankItem[] = [
+  ...structureCompletionItems,
+  ...structureExpressionItems,
 ];
 
-const repeatPhrases = [
-  "The revised schedule will be posted outside the laboratory after lunch.",
-  "Please return the borrowed headphones before the media desk closes.",
-  "Our survey included residents from every district along the river.",
-  "The second explanation was clearer because it used a familiar example.",
-  "Visitors can reach the exhibition through the courtyard entrance today.",
-  "A short rehearsal can reveal where a presentation needs a pause.",
-  "The seedlings grew faster once the trays received consistent morning light.",
-] as const;
-
-const speakingRepeatStimuli = repeatPhrases.map((phrase, index) =>
-  audioStimulus(
-    `speaking-repeat-${String(index + 1).padStart(2, "0")}`,
-    `Listen and repeat ${index + 1}`,
-    phrase,
-  ),
-);
-
-const speakingRepeatItems = repeatPhrases.map((phrase, index) =>
-  constructed({
-    key: `speaking-repeat-item-${String(index + 1).padStart(2, "0")}`,
-    stimulusKey: `speaking-repeat-${String(index + 1).padStart(2, "0")}`,
-    mode: "speaking-repeat",
-    prompt: "Listen once, repeat the sentence aloud, then type the words you said.",
-    minimumWords: phrase.split(/\s+/).length,
-    recommendedWords: phrase.split(/\s+/).length,
-    maximumCharacters: 500,
-    preparationSeconds: 0,
-    responseSeconds: 15,
-    targetTerms: [],
-    sampleResponse: phrase,
-    explanation: "This practice score checks word coverage and order in the submitted transcript. It does not assess pronunciation or delivery.",
-  }),
-);
-
-const interviewPrompts = [
-  {
-    key: "speaking-interview-01",
-    prompt: "Describe a place where you can concentrate well. What features of that place help you focus?",
-    targets: ["place", "focus"],
-    sample: "I concentrate best at a desk near the back of the library. The area is quiet, but it is not completely silent, so small sounds do not distract me. Natural light and a clear desk also help me stay focused for a longer period.",
-  },
-  {
-    key: "speaking-interview-02",
-    prompt: "Tell us about a time you changed your plan after receiving useful advice. What changed?",
-    targets: ["advice", "changed"],
-    sample: "I planned to put every research result on one presentation slide. A classmate advised me to show only the main comparison. I removed two charts and explained the remaining one more carefully, which made the presentation easier to follow.",
-  },
-  {
-    key: "speaking-interview-03",
-    prompt: "Do you prefer learning a new skill alone first or beginning with a group? Explain your preference.",
-    targets: ["learning", "group"],
-    sample: "I prefer beginning with a small group because I can see how other people approach the same task. Their questions often reveal steps that I missed. After the first session, I like to practise alone so I can work at my own pace.",
-  },
-  {
-    key: "speaking-interview-04",
-    prompt: "What is one small change that could make a shared campus space easier to use? Why would it help?",
-    targets: ["shared space", "help"],
-    sample: "A simple booking display outside group rooms would make them easier to use. Students could see when a room becomes available without opening several web pages, and people inside would know when the next group is expected.",
-  },
-] as const;
-
-const interviewStimuli = interviewPrompts.map((entry, index) =>
-  audioStimulus(
-    `speaking-interview-prompt-${index + 1}`,
-    `Interview prompt ${index + 1}`,
-    entry.prompt,
-  ),
-);
-
-const speakingInterviewItems = interviewPrompts.map((entry, index) =>
-  constructed({
-    key: entry.key,
-    stimulusKey: `speaking-interview-prompt-${index + 1}`,
-    mode: "speaking-interview",
-    prompt: entry.prompt,
-    minimumWords: 25,
-    recommendedWords: 45,
-    maximumCharacters: 1_500,
-    preparationSeconds: 20,
-    responseSeconds: 60,
-    targetTerms: entry.targets,
-    sampleResponse: entry.sample,
-    explanation: "The practice rubric checks completion, task coverage, development, and lexical range in the submitted transcript. It does not assess the recording.",
-  }),
-);
-
-const fullReadingSection: IbtBankSection = {
+const fullReadingSection: PaperBankSection = {
   key: "reading",
   skill: "reading",
   title: "Reading",
   instructions: "Complete words in context, read practical texts, and answer questions about original academic passages. You may move between questions until the section ends.",
-  timeLimitSeconds: 1_800,
+  timeLimitSeconds: 3_300,
   stimuli: [...dailyReadingStimuli, ...academicReadingStimuli],
   items: [...wordCompletionItems, ...dailyReadingItems, ...academicReadingItems],
 };
 
-const fullListeningSection: IbtBankSection = {
+const fullListeningSection: PaperBankSection = {
   key: "listening",
   skill: "listening",
   title: "Listening",
   instructions: "Listen to each original prompt, conversation, announcement, or talk and choose the best answer. Transcript support remains available and is recorded on the result.",
-  timeLimitSeconds: 1_740,
+  timeLimitSeconds: 2_100,
   stimuli: [
     ...responseStimuli,
     ...conversationStimuli,
@@ -767,42 +652,32 @@ const fullListeningSection: IbtBankSection = {
   items: [...responseItems, ...conversationItems, ...announcementItems, ...talkItems],
 };
 
-const fullWritingSection: IbtBankSection = {
-  key: "writing",
-  skill: "writing",
-  title: "Writing",
-  instructions: "Build ten sentences, write one practical email, and contribute to one academic discussion. Constructed responses use a limited rule-based practice rubric.",
-  timeLimitSeconds: 1_380,
+const fullStructureSection: PaperBankSection = {
+  key: "structure",
+  skill: "structure",
+  title: "Structure and Written Expression",
+  instructions: "Choose the best completion or identify the part that must change. Every item has one correct answer, and unanswered items receive no credit.",
+  timeLimitSeconds: 1_500,
   stimuli: [],
-  items: writingItems,
+  items: structureItems,
 };
 
-const fullSpeakingSection: IbtBankSection = {
-  key: "speaking",
-  skill: "speaking",
-  title: "Speaking",
-  instructions: "Repeat seven sentences and answer four interview prompts aloud. Recordings stay in the current tab; submit a transcript for the practice estimate.",
-  timeLimitSeconds: 480,
-  stimuli: [...speakingRepeatStimuli, ...interviewStimuli],
-  items: [...speakingRepeatItems, ...speakingInterviewItems],
-};
-
-const fullPractice: IbtBankDefinition = {
-  slug: "four-skill-practice-form-1",
+const fullPractice: PaperBankDefinition = {
+  slug: "paper-practice-form-1",
   kind: "full-practice",
-  adminTitle: "Four-skill practice form 1",
-  title: "English Club Four-Skill Practice Form 1",
-  summary: "A 90-minute four-skill session assembled from 120 reviewed Reading, Listening, Writing, and Speaking tasks shaped around the public 2026 iBT task families.",
-  instructions: "Work independently in section order. Your raw result is exact for the questions delivered in this attempt; the band and 0–120 values are English Club estimates rather than official test scores.",
+  adminTitle: "Paper-based practice form 1",
+  title: "English Club Paper-Based Practice Form 1",
+  summary: "A 115-minute paper-based session with 50 Listening, 40 Structure and Written Expression, and 50 Reading questions drawn from the reviewed bank.",
+  instructions: "Work independently in section order. Your raw correct counts are exact for this attempt. The 310–677 result is a fixed English Club estimate, not an official or ETS-equated score.",
   maxAttemptsPerDay: 2,
-  sections: [fullReadingSection, fullListeningSection, fullWritingSection, fullSpeakingSection],
+  sections: [fullListeningSection, fullStructureSection, fullReadingSection],
 };
 
 function quickSection(
-  source: IbtBankSection,
+  source: PaperBankSection,
   itemIndexes: readonly number[],
   timeLimitSeconds: number,
-): IbtBankSection {
+): PaperBankSection {
   const items = itemIndexes.map((index) => source.items[index]);
   const stimulusKeys = new Set(items.flatMap((item) => item.stimulusKey ?? []));
   return {
@@ -813,19 +688,29 @@ function quickSection(
   };
 }
 
-const quickDefinitions: IbtBankDefinition[] = [
+const quickDefinitions: PaperBankDefinition[] = [
   {
-    slug: "quick-listening-campus-voices",
+    slug: "paper-quick-listening-objective",
     kind: "skill-quiz",
     adminTitle: "Quick Listening: Campus Voices",
     title: "Listening Sprint: Campus Voices",
     summary: "Eight original listening questions across short exchanges, a conversation, and an announcement.",
     instructions: "Listen first, then choose the response or detail that best matches what you heard.",
     maxAttemptsPerDay: 6,
-    sections: [quickSection(fullListeningSection, [0, 1, 2, 3, 20, 21, 22, 32], 420)],
+    sections: [quickSection(fullListeningSection, [0, 1, 2, 3, 20, 21, 22, 32], 480)],
   },
   {
-    slug: "quick-reading-text-in-context",
+    slug: "paper-quick-structure-objective",
+    kind: "skill-quiz",
+    adminTitle: "Quick Structure: Form and Meaning",
+    title: "Structure Sprint: Form and Meaning",
+    summary: "Eight original questions covering sentence completion and written-expression recognition.",
+    instructions: "Choose the form that completes each sentence or identify the part that must change.",
+    maxAttemptsPerDay: 6,
+    sections: [quickSection(fullStructureSection, [0, 2, 5, 9, 20, 24, 31, 38], 480)],
+  },
+  {
+    slug: "paper-quick-reading-objective",
     kind: "skill-quiz",
     adminTitle: "Quick Reading: Text in Context",
     title: "Reading Sprint: Text in Context",
@@ -834,37 +719,17 @@ const quickDefinitions: IbtBankDefinition[] = [
     maxAttemptsPerDay: 6,
     sections: [quickSection(fullReadingSection, [0, 1, 10, 11, 20, 21, 22, 23], 480)],
   },
-  {
-    slug: "quick-writing-sentence-to-discussion",
-    kind: "skill-quiz",
-    adminTitle: "Quick Writing: Sentence to Discussion",
-    title: "Writing Sprint: Sentence to Discussion",
-    summary: "Three sentence-building tasks, one email, and one academic discussion response.",
-    instructions: "Build accurate sentences, then write directly to the purpose and audience of each prompt.",
-    maxAttemptsPerDay: 6,
-    sections: [quickSection(fullWritingSection, [0, 4, 8, 10, 11], 600)],
-  },
-  {
-    slug: "quick-speaking-repeat-and-respond",
-    kind: "skill-quiz",
-    adminTitle: "Quick Speaking: Repeat and Respond",
-    title: "Speaking Sprint: Repeat and Respond",
-    summary: "Two listen-and-repeat prompts and two short interview responses with local rehearsal recording.",
-    instructions: "Speak before typing. The transcript estimate cannot assess pronunciation, intonation, or delivery fluency.",
-    maxAttemptsPerDay: 6,
-    sections: [quickSection(fullSpeakingSection, [0, 5, 7, 9], 300)],
-  },
 ];
 
-export const ibtPracticeBank: readonly IbtBankDefinition[] = [
+export const paperPracticeBank: readonly PaperBankDefinition[] = [
   fullPractice,
   ...quickDefinitions,
 ];
 
-export function inspectIbtPracticeBank() {
+export function inspectPaperPracticeBank() {
   const errors: string[] = [];
   const slugs = new Set<string>();
-  for (const definition of ibtPracticeBank) {
+  for (const definition of paperPracticeBank) {
     if (slugs.has(definition.slug)) errors.push(`duplicate-slug:${definition.slug}`);
     slugs.add(definition.slug);
     const sectionKeys = new Set<string>();
@@ -889,7 +754,7 @@ export function inspectIbtPracticeBank() {
       }
     }
   }
-  const full = ibtPracticeBank.find((definition) => definition.kind === "full-practice");
+  const full = paperPracticeBank.find((definition) => definition.kind === "full-practice");
   const counts = Object.fromEntries(
     (full?.sections ?? []).map((section) => [section.skill, section.items.length]),
   );
@@ -905,5 +770,5 @@ export function inspectIbtPracticeBank() {
       ),
     ]),
   );
-  return { errors, counts, points, definitions: ibtPracticeBank.length };
+  return { errors, counts, points, definitions: paperPracticeBank.length };
 }

@@ -44,6 +44,8 @@ export const assessmentTaskFamilyValidator = v.union(
   v.literal("listen-conversation"),
   v.literal("listen-announcement"),
   v.literal("listen-academic-talk"),
+  v.literal("structure-sentence-completion"),
+  v.literal("structure-written-expression"),
   v.literal("build-sentence"),
   v.literal("write-email"),
   v.literal("academic-discussion"),
@@ -90,6 +92,7 @@ export const scorePolicyValidator = v.union(
   v.literal("feedback-only"),
   v.literal("raw-objective"),
   v.literal("practice-estimate-v1"),
+  v.literal("paper-estimate-v1"),
 );
 
 export const audioReplayPolicyValidator = v.union(
@@ -514,6 +517,14 @@ export const attemptResultValidator = v.object({
       comparableTotal: v.union(v.number(), v.null()),
       confidence: scoreConfidenceValidator,
     }),
+    v.object({
+      model: v.literal("ec-paper-linear-v1"),
+      total: v.number(),
+      minimum: v.literal(310),
+      maximum: v.literal(677),
+      method: v.literal("fixed-linear"),
+      confidence: v.literal("low"),
+    }),
     v.null(),
   ),
   sections: v.array(
@@ -531,6 +542,7 @@ export const attemptResultValidator = v.object({
       bandEstimate: v.union(v.number(), v.null()),
       comparableScoreEstimate: v.union(v.number(), v.null()),
       confidence: v.union(scoreConfidenceValidator, v.null()),
+      paperSectionEstimate: v.union(v.number(), v.null()),
     }),
   ),
   disclaimer: v.string(),

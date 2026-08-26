@@ -191,7 +191,8 @@ function metadataFor(draft: WorkspaceDraft): AssessmentMetadataInput {
     timePolicy: draft.timePolicy === "whole-assessment" ? "per-section" : draft.timePolicy,
     allowResume: true,
     reviewPolicy: "after-submit",
-    scorePolicy: "raw-objective",
+    scorePolicy:
+      draft.scorePolicy === "feedback-only" ? "raw-objective" : draft.scorePolicy,
     defaultTimingMode: draft.defaultTimingMode,
     defaultListeningMode: draft.defaultListeningMode,
     maxAttemptsPerDay: draft.maxAttemptsPerDay,

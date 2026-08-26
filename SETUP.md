@@ -311,11 +311,13 @@ Assessment does not use a local question fallback. The development deployment ma
 
 ```bash
 npm run practice:seed
-npx convex run assessmentSeed:verifyIbtPractice \
-  '{"confirm":"seed-ec-ibt-style-2026-v1"}'
+npx convex run assessmentSeed:verifyPaperPractice \
+  '{"confirm":"seed-ec-paper-level1-v1"}'
+npx convex run assessmentSeed:verifyQuestionBank \
+  '{"confirm":"seed-ec-paper-level1-v1"}'
 ```
 
-The seed is checksum-bound and idempotent. It publishes one fixed 120-task four-skill form, four quick forms, and 52 generated MP3 derivatives under `https://r2.mukhtada.my.id/assessments/`. It is a development operator path, not evidence that the production human-review workflow ran. A production candidate still requires the current validation/provenance check and four current-revision academic, rights, accessibility, and bias approvals.
+The seed is checksum-bound and idempotent. It publishes one 140-question paper form, three eight-item quick forms, and the reviewed/generated Listening derivatives under `https://r2.mukhtada.my.id/assessments/`. The complete form uses `paper-estimate-v1`; quick forms use raw correct counts. This is a development operator path, not evidence that the production human-review workflow ran. A production candidate still requires the current validation/provenance check and four current-revision academic, rights, accessibility, and bias approvals.
 
 The page-copy CMS supports at most 200 entries for one page/locale. The current Practice manifest fits within that contract. A manifest change that would create entry 201 must be split or redesigned before deployment.
 

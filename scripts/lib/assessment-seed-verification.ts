@@ -11,21 +11,20 @@ export type QuestionBankVerification = {
 };
 
 export const FULL_FORM_SKILL_QUOTAS = {
+  listening: 50,
+  structure: 40,
   reading: 50,
-  listening: 47,
-  writing: 12,
-  speaking: 11,
 } as const;
 
 export const FULL_FORM_TASK_COUNT = Object.values(
   FULL_FORM_SKILL_QUOTAS,
 ).reduce((total, count) => total + count, 0);
 
-export const SEEDED_QUESTION_BANK_RECORDS = 145;
-export const SEEDED_RANDOM_SECTIONS = 8;
+export const SEEDED_QUESTION_BANK_RECORDS = 164;
+export const SEEDED_RANDOM_SECTIONS = 6;
 
 /**
- * The seed owns 145 source rows and eight random-bank sections, while the
+ * The paper seed owns 164 source rows and six random-bank sections, while the
  * reusable bank may legitimately contain additional reviewed questions. The
  * release gate therefore verifies the installed floor and each skill quota,
  * rather than requiring the catalogue to remain identical to its first seed.

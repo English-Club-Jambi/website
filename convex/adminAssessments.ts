@@ -202,7 +202,8 @@ function validateVersionMetadata(args: {
   }
   if (
     args.scorePolicy !== "raw-objective" &&
-    args.scorePolicy !== "practice-estimate-v1"
+    args.scorePolicy !== "practice-estimate-v1" &&
+    args.scorePolicy !== "paper-estimate-v1"
   ) {
     throw new ConvexError({ code: "UNSUPPORTED_ASSESSMENT_CONTRACT" as const });
   }
@@ -236,7 +237,7 @@ function profileSupportsScorePolicy(
 ) {
   return (
     (profile === "ec-itp-level-1-aligned-v1" &&
-      scorePolicy === "raw-objective") ||
+      (scorePolicy === "raw-objective" || scorePolicy === "paper-estimate-v1")) ||
     (profile === "ec-ibt-style-2026-v1" &&
       scorePolicy === "practice-estimate-v1")
   );
@@ -1288,7 +1289,14 @@ export const validateDraft = mutation({
       }
     }
     for (const section of sections) {
-      if (definition.profile !== "ec-ibt-style-2026-v1") continue;
+      if (
+        definition.profile !== "ec-ibt-style-2026-v1" &&
+        definition.profile !== "ec-itp-level-1-aligned-v1"
+      ) continue;
+      if (
+        definition.profile === "ec-itp-level-1-aligned-v1" &&
+        version.scorePolicy !== "paper-estimate-v1"
+      ) continue;
       if (!isRandomBankSection(section)) {
         blocking.push("question-pool-delivery:" + section.sectionKey);
         continue;

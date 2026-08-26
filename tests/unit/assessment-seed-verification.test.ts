@@ -9,15 +9,14 @@ function verification(
   overrides: Partial<QuestionBankVerification> = {},
 ): QuestionBankVerification {
   return {
-    total: 145,
-    ready: 145,
-    eligible: 120,
-    randomSections: 8,
+    total: 164,
+    ready: 164,
+    eligible: 140,
+    randomSections: 6,
     bySkill: [
+      { skill: "listening", ready: 58, eligible: 50 },
+      { skill: "structure", ready: 48, eligible: 40 },
       { skill: "reading", ready: 58, eligible: 50 },
-      { skill: "listening", ready: 55, eligible: 47 },
-      { skill: "writing", ready: 17, eligible: 12 },
-      { skill: "speaking", ready: 15, eligible: 11 },
     ],
     ...overrides,
   };
@@ -28,42 +27,40 @@ describe("assessment seed Question Bank verification", () => {
     expect(questionBankVerificationIssues(verification())).toEqual([]);
   });
 
-  it("accepts reviewed capacity above the fixed 120-task form quota", () => {
+  it("accepts reviewed capacity above the fixed 140-task form quota", () => {
     expect(
       questionBankVerificationIssues(
         verification({
-          total: 146,
-          ready: 146,
-          eligible: 121,
+          total: 165,
+          ready: 165,
+          eligible: 141,
           bySkill: [
             { skill: "reading", ready: 59, eligible: 51 },
-            { skill: "listening", ready: 55, eligible: 47 },
-            { skill: "writing", ready: 17, eligible: 12 },
-            { skill: "speaking", ready: 15, eligible: 11 },
+            { skill: "listening", ready: 58, eligible: 50 },
+            { skill: "structure", ready: 48, eligible: 40 },
           ],
         }),
       ),
     ).toEqual([]);
   });
 
-  it("rejects the obsolete four-section expectation", () => {
+  it("rejects the obsolete eight-section expectation", () => {
     expect(
       questionBankVerificationIssues(verification({ randomSections: 4 })),
-    ).toContain("random sections are 4/8");
+    ).toContain("random sections are 4/6");
   });
 
   it("rejects a skill shortage even when another skill masks the total", () => {
     const issues = questionBankVerificationIssues(
       verification({
-        eligible: 120,
+        eligible: 140,
         bySkill: [
           { skill: "reading", ready: 59, eligible: 51 },
-          { skill: "listening", ready: 55, eligible: 46 },
-          { skill: "writing", ready: 17, eligible: 12 },
-          { skill: "speaking", ready: 15, eligible: 11 },
+          { skill: "listening", ready: 58, eligible: 49 },
+          { skill: "structure", ready: 48, eligible: 40 },
         ],
       }),
     );
-    expect(issues).toContain("listening capacity is 46/47");
+    expect(issues).toContain("listening capacity is 49/50");
   });
 });

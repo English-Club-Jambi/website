@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QuestionBankManager } from "@/components/admin/assessments/question-bank-manager";
 
@@ -75,6 +75,16 @@ const baseRow = {
 
 let currentRow: Record<string, unknown> = baseRow;
 
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
+});
+
 function resultForQuery(args: Record<string, unknown> | undefined) {
   if (args?.purpose === "assessment-image") {
     return { page: [], isDone: true, continueCursor: "" };
@@ -102,15 +112,14 @@ function resultForQuery(args: Record<string, unknown> | undefined) {
     };
   }
   return {
-    total: 145,
+    total: 164,
     capped: false,
-    ready: 120,
-    eligible: 120,
+    ready: 164,
+    eligible: 140,
     bySkill: [
+      { skill: "listening", count: 50 },
+      { skill: "structure", count: 40 },
       { skill: "reading", count: 50 },
-      { skill: "listening", count: 47 },
-      { skill: "writing", count: 12 },
-      { skill: "speaking", count: 11 },
     ],
   };
 }
@@ -129,7 +138,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.body.style.overflow = "";
+});
 
 describe("QuestionBankManager", () => {
   it("edits a published-source question directly and keeps format rules explicit", async () => {
@@ -180,6 +192,57 @@ describe("QuestionBankManager", () => {
         fullPracticeEligible: true,
       }),
     );
+  });
+
+  it("offers the same question editor inline and in a focused popup", async () => {
+    const user = userEvent.setup();
+    render(<QuestionBankManager />);
+
+    const inlineEditor = screen.getByLabelText("Selected question editor");
+    expect(
+      within(inlineEditor).getByLabelText("Question prompt"),
+    ).toHaveValue(baseRow.content.prompt);
+
+    const openPopup = within(inlineEditor).getByRole("button", {
+      name: "Open popup",
+    });
+    await user.click(openPopup);
+    const popup = screen.getByRole("dialog", {
+      name: "Edit question in a focused workspace",
+    });
+    expect(
+      within(popup).getByLabelText("Question prompt"),
+    ).toHaveValue(baseRow.content.prompt);
+    expect(within(popup).getByRole("button", {
+      name: "Save question revision",
+    })).toBeEnabled();
+
+    const popupPrompt = within(popup).getByLabelText("Question prompt");
+    await user.clear(popupPrompt);
+    await user.type(popupPrompt, "Which detail best supports the conclusion?");
+    await user.click(
+      within(popup).getByRole("button", { name: "Save question revision" }),
+    );
+    expect(mutationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bankQuestionId: "bank-one",
+        expectedUpdatedAt: 10,
+        content: expect.objectContaining({
+          prompt: "Which detail best supports the conclusion?",
+        }),
+      }),
+    );
+    expect(
+      within(popup).getByText(
+        "Question revision saved. Existing attempts still use their pinned revision.",
+      ),
+    ).toBeVisible();
+
+    await user.click(
+      within(popup).getByRole("button", { name: "Close question popup" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(openPopup).toHaveFocus();
   });
 
   it("reveals the compact reviewed-audio picker when authoring Listening", async () => {
@@ -280,7 +343,9 @@ describe("QuestionBankManager", () => {
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(editor).getByText("English Club ITP Level 1", { exact: true }),
+      within(editor).getByText("English Club paper-based Level 1 practice", {
+        exact: true,
+      }),
     ).toBeVisible();
   });
 

@@ -22,20 +22,20 @@ The repository now contains two major product lanes beyond the public organisati
 
 ### English Club Assessment Lab
 
-- Public routes cover `/practice`, one full practice briefing, four quick-skill briefings, an owned attempt, and an owned result. Public navigation calls the area `Practice`.
-- The current form has 120 original tasks across Reading, Listening, Writing, and Speaking. It is fixed rather than adaptive. Legacy ITP-shaped records remain `raw-objective`; the four-skill profile uses only `practice-estimate-v1`.
-- Exact practice points come from the published bank. Any band or 0-120 value is an uncalibrated English Club estimate for that fixed form. The product makes no ETS affiliation, equivalence, official score, exact prediction, CEFR, certificate, placement, or admission claim.
+- Public routes cover `/practice`, one full paper-form briefing, three quick-skill briefings, an owned attempt, and an owned result. Public navigation calls the area `Practice`.
+- The active form has 140 original items: Listening 50/35 minutes, Structure and Written Expression 40/25 minutes, and Reading 50/55 minutes. Speaking is absent. Earlier four-skill definitions are retired without deleting historical attempts or results.
+- Exact raw counts come from the immutable attempt manifest. Only the complete form receives `ec-paper-linear-v1`: section values 31–68, 31–68, and 31–67, then a total constrained to 310–677. The UI states that this is a fixed English Club estimate rather than ETS equating, an official score, exact prediction, certificate, placement, or admission evidence.
 - The Home programme quiz has four local questions grounded in Activities copy and creates no identity. Persisted practice creates/reuses Anonymous Convex Auth only after Start.
 - Every attempt is bound to `identity.tokenIdentifier`. `resolveMine` normalizes a string route ID before typed lookup and gives malformed, missing, and cross-owner IDs the same unavailable result.
 - Player projections omit answer keys. Submission is allowed only from the final eligible section. Results report exact bank outcomes with section, time, mode, and estimate limits; answer review is cursor-paginated at 20.
 - The authoring backend separates definitions, immutable versions, validation/provenance checks, four approval types, sections, stimuli, items, answer keys, attempts, responses, and immutable result revisions.
-- Practice Builder now treats the installed full form and four skill sprints as a fixed catalogue. The admin has no creation entry point: each format controls a versioned allowed Question Bank pool, fixed skill quotas, and aggregate privacy-safe learner flag signals. Questions and order are pinned when a learner starts.
+- Practice Builder treats the installed full form and three section sprints as a fixed catalogue. It exposes 50/40/50 capacity, paper scoring facts, Listening/Structure/Reading selectors, versioned Question Bank rules, and aggregate privacy-safe learner flag signals. Questions and order are pinned when a learner starts.
 - Public Assessment media must be explicit `public`, ready, correct-purpose, same-version media. Confidential sources require a separate private R2 bucket, distinct credentials, checksum verification, and publisher-only public derivative.
 
 ### Integration gates still open
 
 - Real editor and publisher identities have not yet exercised the negative permission matrix against the cloud deployment. The same matrix is green in isolated Convex tests.
-- The development-only four-skill seed has published one full form and four quick forms from the typed original bank. It bypasses the human review workflow by design and cannot be promoted as production approval. Production content must still pass the current validation/provenance check plus all four current-revision academic, rights, accessibility, and bias approvals.
+- The development-only paper seed has published one 140-item form and three quick forms from the typed original bank. The second run inserted no definitions, bank rows, or media ledgers. It bypasses the human review workflow by design and cannot be promoted as production approval. Production content must still pass the current validation/provenance check plus all four current-revision academic, rights, accessibility, and bias approvals.
 - The private Assessment R2 bucket is **not configured**. Its exact CORS, SHA-256 PUT/`HeadObject`, 180-second preview, and public derivative path remain unverified.
 - Production retention periods for contact, attempts/results, audit events, and private media remain an organizational decision.
 
@@ -44,13 +44,24 @@ The repository now contains two major product lanes beyond the public organisati
 - The missing `adminUsers:bootstrapState` runtime contract was removed from the client and backend surface, generated bindings were refreshed, and `/admin` returned HTTP 200 without console or page errors.
 - Manual testing exposed two setup defects: Convex surfaced its internal `InvalidAccountId` code for an unknown email, and the first allowlist row was accidentally bound to the literal `TOKEN_DARI_UI`. The client now emits one non-enumerating sign-in message, has no sign-up mode, and the internal provisioning path can repair only that exact sole placeholder while recording an audit event.
 - The development deployment now has one internally provisioned active owner with a stable Auth-user binding. A real browser completed sign-in, sign-out, and a second sign-in without setup controls, console errors, or role loss. The earlier misspelled Password identity remains unprivileged and was not deleted implicitly.
-- The current Convex function/schema bundle was pushed only to development deployment `perfect-greyhound-270`. Direct Admin and Assessment queries resolve. The public development catalogue returns one full form and four quick forms from the explicit dev-only original-bank seed.
+- The current Convex function/schema bundle was pushed only to development deployment `perfect-greyhound-270`. Direct Admin and Assessment queries resolve. The active development catalogue now returns one complete paper form and three quick forms from the explicit dev-only original bank; the former four-skill catalogue is retired without deleting historical attempts.
 - Public R2 returned `{ "ok": true }`; the custom domain serves reviewed derivatives. The separate confidential Assessment bucket remains deliberately unavailable rather than falling back to public storage.
 - Four browser-native admin confirmations were replaced by one reusable async rounded-neobrutal modal shared with Assessment. A first browser run found a native-dialog Tab escape; focus containment was repaired and rerun clean.
 - Real-phone LAN access had returned HTML while Next.js denied JavaScript chunks with HTTP 403. The exact-host development allowlist now includes detected LAN IPv4 addresses and optional validated hosts. Public and authenticated Admin touch traces pass at Pixel 7 and 320 px without failed Next assets.
 - The Journal mobile archive now aligns metadata above a title-and-thumbnail row. The former 50.47 px disconnect is 12 px, and the title and image begin on the same horizontal line.
 - Final static and behavior gates passed after the fixed-format revision: TypeScript, ESLint, 162 unit tests, 63 Convex tests, an effective 155 browser cases with 73 intentional project/credential skips, Convex development sync, and an isolated production build. The focused admin harness is Axe-clean at desktop, Pixel 7, and 320 px.
 - Port 3987 remained live throughout the closeout and returned HTTP 200 for Home and Admin.
+
+### 26 August paper-format migration and Question Bank repair
+
+- Replaced the active four-skill form with a versioned paper-format practice: Listening 50 in 35 minutes, Structure and Written Expression 40 in 25 minutes, and Reading 50 in 55 minutes. Speaking remains only in immutable historical records.
+- Added the transparent `ec-paper-linear-v1` estimate. Complete-form section estimates are bounded to 31–68, 31–68, and 31–67, and the rounded total is always 310–677. This is an English Club fixed-linear estimate, not ETS equating or an official score.
+- Kept quick practice deliberately simpler: each Listening, Structure, or Reading sprint reports exact correct answers out of 8 and a percentage. A one-section sprint never calls the complete-form paper estimator.
+- Published one 140-item form and three 8-item quick forms on development deployment `perfect-greyhound-270`. A second seed run was idempotent, and all attempt manifests remain random, skill-scoped, fingerprint-deduplicated, and immutable after Start.
+- Fixed the reported quick-submit `PAPER_SCORE_INPUT_INVALID` path by selecting the paper estimator only for an exact 50/40/50 complete-form manifest. Desktop, Pixel 7, and 320 px browser runs submit Reading quick practice without console or save errors.
+- Fixed `ASSESSMENT_DATA_LIMIT_EXCEEDED` in Practice Format by applying the bounded 200-row ceiling after the indexed active-profile and ready-status scope. A Convex regression adds more than 200 historical rows and still returns the exact 140 active questions.
+- Added a reusable Question Bank workspace dialog while preserving inline editing. Both modes render the same editor and selected cloud record; saving advances the revision and remounts the other mode to avoid stale conflict state. Focus containment, Escape/close, scroll lock, and trigger-focus return are covered by focused tests.
+- Final focused verification after these repairs: TypeScript and ESLint passed; 50 unit files with 193 tests passed; 10 Convex files with 73 tests passed; the isolated production build passed; and the existing port 3987 remained HTTP 200.
 
 ## 25 August public and Member baseline
 
@@ -218,7 +229,9 @@ No public production deployment was performed.
 - Removed the obsolete real-cloud admin screenshot and added capture-time identity masking to five admin E2E suites. All 33 remaining admin evidence PNGs passed full-image OCR plus a 400 percent footer-crop check with no email pattern.
 - The final public-media browser review found no pending-file request, horizontal overflow, or WCAG A/AA violation on Home, Activities, About, or Journal. The supporting prompt, hash, recovery, and R2 ledger is in `docs/PUBLIC-MEDIA-RELEASE-AUDIT.md`.
 
-## 26 August 2026 — Skill-scoped Live Practice randomization follow-up
+## 26 August 2026 — Superseded four-skill randomization baseline
+
+This record captures the boundary that was proven before the paper-format migration. The active catalogue and current verification figures are recorded in the paper migration entry above; the former Writing and Speaking routes are no longer public formats.
 
 - Hardened random selection so each section can draw only ready Question Bank rows with the same skill and a task family valid for that skill. The selector also enforces the section quota and unique content fingerprints before returning a plan.
 - Added a second boundary check before immutable attempt rows are inserted. A cross-skill bank row now fails the start mutation instead of entering a learner manifest.

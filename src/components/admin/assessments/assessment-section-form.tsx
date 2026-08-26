@@ -73,8 +73,6 @@ export function AssessmentSectionForm({
               { value: "listening", label: "Listening" },
               { value: "structure", label: "Structure and written expression" },
               { value: "reading", label: "Reading" },
-              { value: "writing", label: "Writing" },
-              { value: "speaking", label: "Speaking" },
             ]}
             onValueChange={(value) => setSkill(value as AssessmentSectionInput["skill"])}
           />

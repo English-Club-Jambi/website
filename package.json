@@ -22,7 +22,7 @@
     "admin:provision": "node scripts/admin-provision.mjs",
     "r2:check": "convex run r2:checkConnection '{}'",
     "r2:upload-reviewed": "node scripts/r2-upload-reviewed.mjs",
-    "practice:seed": "node --experimental-strip-types --env-file=.env.local scripts/seed-ibt-practice.ts",
+    "practice:seed": "node --experimental-strip-types --env-file=.env.local scripts/seed-paper-practice.ts",
     "members:seed:dev": "node --experimental-strip-types --env-file=.env.local scripts/seed-development-data.ts --members-only",
     "data:seed:dev": "npm run practice:seed && node --experimental-strip-types --env-file=.env.local scripts/seed-development-data.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"

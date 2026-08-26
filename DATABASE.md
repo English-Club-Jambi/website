@@ -118,7 +118,7 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 | `assessmentVersions` | Immutable-version candidate with timing, resume, review, score policy, mode, attempt-limit, revision, checksum, and publication data | Published projection uses one reviewed revision; profile and score policy must be a supported pair |
 | `assessmentVersionChecks` | Validation run tied to a content revision, with blocking/warning counts and report JSON | A stale check cannot approve a newer revision |
 | `assessmentVersionApprovals` | Academic, rights, accessibility, and bias review decision by reviewer and revision | All four current-revision approvals must pass; original-content/provenance is enforced by validation and the content ledger |
-| `assessmentSections` | Ordered Listening, Structure, Reading, Writing, or Speaking section with timer/replay policy and item count | Public order is stable and must match the definition profile |
+| `assessmentSections` | Ordered skill section with timer/replay policy, fixed or random-bank delivery, and item count | The active paper profile permits Listening, Structure, and Reading in that order; historical versions retain their original skills |
 | `assessmentStimuli` | Passage, audio, image, transcript, alt text, provenance, and optional media link | Protected/private media never resolves publicly |
 | `assessmentItems` | Ordered prompt and choices linked to version/section/stimulus | Bounded to 200 per version |
 | `assessmentAnswerKeys` | Correct answer and scoring data | Never included in a pre-submit public DTO |
@@ -126,9 +126,9 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 | `assessmentVersionQuestionRules` | Optional allow/disable override for one bank question in one format version | A rule change increments the working content revision and makes earlier checks/approvals stale; published rules never change in place |
 | `assessmentQuestionFlagSignals` | Aggregate current/total learner flag counts and editorial review state per format/question | Admin projections omit participant, attempt, response, and answer-key data; a later flag reopens review |
 
-Full-form validation follows the definition profile. Legacy `ec-itp-level-1-aligned-v1` uses 50 Listening, 40 Structure & Written Expression, and 50 Reading items with `raw-objective`. The current `ec-ibt-style-2026-v1` uses 50 Reading, 47 Listening, 12 Writing, and 11 Speaking tasks with `practice-estimate-v1`. Cross-paired profile and score-policy values fail server validation.
+Full-form validation follows the definition profile. The active `ec-itp-level-1-aligned-v1` full form requires 50 Listening, 40 Structure and Written Expression, and 50 Reading items, section limits of 35/25/55 minutes, random-bank delivery, and `paper-estimate-v1`. Its three quick definitions use one matching eight-item section and `raw-objective`. Cross-paired profile, policy, quota, or timing values fail server validation.
 
-The four-skill bank is fixed rather than adaptive. Its weighted practice points and external-scale values are deterministic but uncalibrated. They are English Club estimates for this bank, not official, equivalent, certificate, admission, or predicted TOEFL results.
+`ec-paper-linear-v1` stores optional section estimates and one total constrained to 310–677. The conversion is deterministic but uncalibrated; official ETS forms use statistical equating. Historical `ec-ibt-style-2026-v1` records stay immutable and render through their original result fields.
 
 The authoring lifecycle is:
 

@@ -104,7 +104,7 @@ async function createRandomPractice(
     const definitionId = await ctx.db.insert("assessmentDefinitions", {
       slug,
       kind: "full-practice",
-      profile: "ec-ibt-style-2026-v1",
+      profile: "ec-itp-level-1-aligned-v1",
       adminTitle: `${skill} bank practice`,
       nextVersion: 2,
       visibility: "published",
@@ -124,7 +124,7 @@ async function createRandomPractice(
       timePolicy: "untimed",
       allowResume: true,
       reviewPolicy: "after-submit",
-      scorePolicy: "practice-estimate-v1",
+      scorePolicy: "raw-objective",
       defaultTimingMode: "untimed",
       defaultListeningMode: "audio-primary",
       maxAttemptsPerDay: 20,
@@ -149,7 +149,7 @@ async function createRandomPractice(
       instructions: "Use the supplied material and choose one answer.",
       itemCount: 1,
       deliveryMode: "random-bank",
-      bankProfile: "ec-ibt-style-2026-v1",
+      bankProfile: "ec-itp-level-1-aligned-v1",
       bankSelectionContract: 1,
     });
     return { definitionId, versionId };
@@ -324,15 +324,14 @@ describe("Question Bank audio and copy-on-write content", () => {
       ready: 2,
       eligible: 1,
       bySkill: [
-        { skill: "reading", count: 0 },
         { skill: "listening", count: 1 },
-        { skill: "writing", count: 0 },
-        { skill: "speaking", count: 0 },
+        { skill: "structure", count: 0 },
+        { skill: "reading", count: 0 },
       ],
     });
     await expect(
       t.query(internal.assessmentSeed.verifyQuestionBank, {
-        confirm: "seed-ec-ibt-style-2026-v1",
+        confirm: "seed-ec-paper-level1-v1",
       }),
     ).resolves.toMatchObject({ eligible: 1 });
 
@@ -460,7 +459,7 @@ describe("Question Bank audio and copy-on-write content", () => {
       const definitionId = await ctx.db.insert("assessmentDefinitions", {
         slug: "published-reading-source",
         kind: "skill-quiz",
-        profile: "ec-ibt-style-2026-v1",
+        profile: "ec-itp-level-1-aligned-v1",
         adminTitle: "Published Reading Source",
         nextVersion: 2,
         visibility: "published",
@@ -480,7 +479,7 @@ describe("Question Bank audio and copy-on-write content", () => {
         timePolicy: "untimed",
         allowResume: true,
         reviewPolicy: "after-submit",
-        scorePolicy: "practice-estimate-v1",
+        scorePolicy: "raw-objective",
         defaultTimingMode: "untimed",
         defaultListeningMode: "transcript-supported",
         maxAttemptsPerDay: 20,
@@ -544,7 +543,7 @@ describe("Question Bank audio and copy-on-write content", () => {
         taskFamily: "read-daily-life",
         difficulty: "foundational",
         status: "ready",
-        profile: "ec-ibt-style-2026-v1",
+        profile: "ec-itp-level-1-aligned-v1",
         fullPracticeEligible: false,
         origin: "assessment-source",
         illustrationMediaId: illustrationA,
@@ -564,10 +563,9 @@ describe("Question Bank audio and copy-on-write content", () => {
       ready: 1,
       eligible: 1,
       bySkill: [
-        { skill: "reading", count: 1 },
         { skill: "listening", count: 0 },
-        { skill: "writing", count: 0 },
-        { skill: "speaking", count: 0 },
+        { skill: "structure", count: 0 },
+        { skill: "reading", count: 1 },
       ],
     });
     const practice = await createRandomPractice(
@@ -606,10 +604,9 @@ describe("Question Bank audio and copy-on-write content", () => {
     ).resolves.toMatchObject({
       eligible: 1,
       bySkill: [
-        { skill: "reading", count: 1 },
         { skill: "listening", count: 0 },
-        { skill: "writing", count: 0 },
-        { skill: "speaking", count: 0 },
+        { skill: "structure", count: 0 },
+        { skill: "reading", count: 1 },
       ],
     });
 
@@ -796,7 +793,7 @@ describe("Question Bank audio and copy-on-write content", () => {
         instructions: "Read and answer.",
         itemCount: 1,
         deliveryMode: "random-bank",
-        bankProfile: "ec-ibt-style-2026-v1",
+        bankProfile: "ec-itp-level-1-aligned-v1",
         bankSelectionContract: 1,
       });
       return versionId;
@@ -1225,6 +1222,7 @@ describe("Question Bank audio and copy-on-write content", () => {
     });
 
     const page = await owner.query(api.adminAssessmentQuestionBank.listPage, {
+      profile: "ec-ibt-style-2026-v1",
       status: "paused",
       paginationOpts: { cursor: null, numItems: 20, maximumRowsRead: 20 },
     });
@@ -1258,6 +1256,7 @@ describe("Question Bank audio and copy-on-write content", () => {
       const refreshed = await owner.query(
         api.adminAssessmentQuestionBank.listPage,
         {
+          profile: "ec-ibt-style-2026-v1",
           status: "paused",
           skill: row.skill,
           paginationOpts: { cursor: null, numItems: 20, maximumRowsRead: 20 },
@@ -1277,6 +1276,7 @@ describe("Question Bank audio and copy-on-write content", () => {
     const currentReading = await owner.query(
       api.adminAssessmentQuestionBank.listPage,
       {
+        profile: "ec-ibt-style-2026-v1",
         status: "paused",
         skill: "reading",
         paginationOpts: { cursor: null, numItems: 20, maximumRowsRead: 20 },

@@ -287,8 +287,7 @@ async function projectBankRow(
 const authoredSkillValidator = v.union(
   v.literal("reading"),
   v.literal("listening"),
-  v.literal("writing"),
-  v.literal("speaking"),
+  v.literal("structure"),
 );
 
 async function createAuthoringLedgerVersion(
@@ -309,7 +308,7 @@ async function createAuthoringLedgerVersion(
     timePolicy: "untimed",
     allowResume: true,
     reviewPolicy: "after-submit",
-    scorePolicy: "practice-estimate-v1",
+    scorePolicy: "paper-estimate-v1",
     defaultTimingMode: "untimed",
     defaultListeningMode: "transcript-supported",
     maxAttemptsPerDay: 20,
@@ -319,10 +318,11 @@ async function createAuthoringLedgerVersion(
     updatedAt: now,
   });
   const definitions = [
-    { skill: "reading", title: "Reading" },
     { skill: "listening", title: "Listening" },
-    { skill: "writing", title: "Writing" },
-    { skill: "speaking", title: "Speaking" },
+    { skill: "structure", title: "Structure and Written Expression" },
+    { skill: "reading", title: "Reading" },
+    { skill: "writing", title: "Legacy Writing" },
+    { skill: "speaking", title: "Legacy Speaking" },
   ] as const;
   const sections = new Map<
     (typeof definitions)[number]["skill"],
@@ -362,7 +362,7 @@ async function createAuthoringLedgerVersion(
 async function getAuthoringLedgerSection(
   ctx: MutationCtx,
   actorId: Id<"adminUsers">,
-  skill: "reading" | "listening" | "writing" | "speaking",
+  skill: "listening" | "structure" | "reading" | "writing" | "speaking",
   now: number,
 ) {
   let definition = await ctx.db
@@ -375,7 +375,7 @@ async function getAuthoringLedgerSection(
     const definitionId = await ctx.db.insert("assessmentDefinitions", {
       slug: QUESTION_BANK_AUTHORING_LEDGER_SLUG,
       kind: "skill-quiz",
-      profile: "ec-ibt-style-2026-v1",
+      profile: "ec-itp-level-1-aligned-v1",
       adminTitle: "Question Bank authoring ledger",
       internalOnly: true,
       nextVersion: 1,
@@ -390,7 +390,7 @@ async function getAuthoringLedgerSection(
   if (
     definition === null ||
     definition.internalOnly !== true ||
-    definition.profile !== "ec-ibt-style-2026-v1"
+    definition.profile !== "ec-itp-level-1-aligned-v1"
   ) {
     throw new ConvexError({ code: "QUESTION_BANK_LEDGER_INVALID" as const });
   }
@@ -408,8 +408,8 @@ async function getAuthoringLedgerSection(
       .withIndex("by_version_id_and_order", (q) =>
         q.eq("versionId", version._id),
       )
-      .take(5);
-    if (sections.length > 4) {
+      .take(6);
+    if (sections.length > 5) {
       throw new ConvexError({ code: "QUESTION_BANK_LEDGER_INVALID" as const });
     }
     const section = sections.find((candidate) => candidate.skill === skill) ?? null;
@@ -730,7 +730,7 @@ function fingerprintValuesForContent(content: BankEditableContent) {
 async function validateQuestionMedia(
   ctx: MutationCtx,
   args: {
-    skill: "reading" | "listening" | "writing" | "speaking";
+    skill: "listening" | "structure" | "reading" | "writing" | "speaking";
     illustrationMediaId: Id<"mediaAssets"> | undefined;
     audioMediaId: Id<"mediaAssets"> | undefined;
   },
@@ -762,7 +762,7 @@ async function insertAuthoringSource(
   ctx: MutationCtx,
   args: {
     actorId: Id<"adminUsers">;
-    skill: "reading" | "listening" | "writing" | "speaking";
+    skill: "listening" | "structure" | "reading" | "writing" | "speaking";
     sourceKey: string;
     prompt: string;
     options: Array<{ key: string; label: string }>;
@@ -861,7 +861,7 @@ async function insertEditableContentSource(
   ctx: MutationCtx,
   args: {
     actorId: Id<"adminUsers">;
-    skill: "reading" | "listening" | "writing" | "speaking";
+    skill: "listening" | "structure" | "reading" | "writing" | "speaking";
     sourceKey: string;
     content: BankEditableContent;
     previousKey: Doc<"assessmentAnswerKeys">;
@@ -1161,7 +1161,7 @@ export const createQuestion = mutation({
       taskFamily: args.taskFamily,
       difficulty: args.difficulty,
       status: "paused",
-      profile: "ec-ibt-style-2026-v1",
+      profile: "ec-itp-level-1-aligned-v1",
       fullPracticeEligible: false,
       origin: "bank-authored",
       illustrationMediaId: args.illustrationMediaId ?? undefined,
@@ -1219,10 +1219,7 @@ export const updateContent = mutation({
         currentUpdatedAt: row.updatedAt,
       };
     }
-    if (
-      row.skill === "structure" ||
-      !isTaskFamilyForSkill(row.skill, row.taskFamily)
-    ) {
+    if (!isTaskFamilyForSkill(row.skill, row.taskFamily)) {
       throw new ConvexError({ code: "QUESTION_BANK_SKILL_INVALID" as const });
     }
     const [previousItem, previousKey] = await Promise.all([
@@ -1319,6 +1316,7 @@ export const updateContent = mutation({
 
 export const listPage = query({
   args: {
+    profile: v.optional(assessmentProfileValidator),
     skill: v.optional(assessmentSkillValidator),
     status: assessmentQuestionBankStatusValidator,
     difficulty: v.optional(assessmentQuestionDifficultyValidator),
@@ -1327,6 +1325,7 @@ export const listPage = query({
   returns: paginationResultValidator(bankRowValidator),
   handler: async (ctx, args) => {
     await requireAdmin(ctx, "assessment:read");
+    const profile = args.profile ?? "ec-itp-level-1-aligned-v1";
     if (
       args.paginationOpts.numItems !== 20 ||
       (args.paginationOpts.maximumRowsRead !== undefined &&
@@ -1338,33 +1337,42 @@ export const listPage = query({
       args.skill === undefined && args.difficulty === undefined
         ? await ctx.db
             .query("assessmentQuestionBank")
-            .withIndex("by_status_and_updated_at", (q) =>
-              q.eq("status", args.status),
+            .withIndex("by_profile_and_status_and_updated_at", (q) =>
+              q
+                .eq("profile", profile)
+                .eq("status", args.status),
             )
             .order("desc")
             .paginate({ ...args.paginationOpts, maximumRowsRead: 20 })
         : args.skill === undefined && args.difficulty !== undefined
           ? await ctx.db
               .query("assessmentQuestionBank")
-              .withIndex("by_status_and_difficulty_and_updated_at", (q) =>
-                q.eq("status", args.status).eq("difficulty", args.difficulty!),
+              .withIndex("by_profile_status_difficulty_and_updated_at", (q) =>
+                q
+                  .eq("profile", profile)
+                  .eq("status", args.status)
+                  .eq("difficulty", args.difficulty!),
               )
               .order("desc")
               .paginate({ ...args.paginationOpts, maximumRowsRead: 20 })
           : args.skill !== undefined && args.difficulty === undefined
             ? await ctx.db
                 .query("assessmentQuestionBank")
-                .withIndex("by_skill_and_status_and_updated_at", (q) =>
-                  q.eq("skill", args.skill!).eq("status", args.status),
+                .withIndex("by_profile_skill_status_and_updated_at", (q) =>
+                  q
+                    .eq("profile", profile)
+                    .eq("skill", args.skill!)
+                    .eq("status", args.status),
                 )
                 .order("desc")
                 .paginate({ ...args.paginationOpts, maximumRowsRead: 20 })
             : await ctx.db
                 .query("assessmentQuestionBank")
                 .withIndex(
-                  "by_skill_and_status_and_difficulty_and_updated_at",
+                  "by_profile_skill_status_difficulty_and_updated_at",
                   (q) =>
                     q
+                      .eq("profile", profile)
                       .eq("skill", args.skill!)
                       .eq("status", args.status)
                       .eq("difficulty", args.difficulty!),
@@ -1392,16 +1400,32 @@ export const getSummary = query({
   }),
   handler: async (ctx) => {
     await requireAdmin(ctx, "assessment:read");
-    const rows = await ctx.db.query("assessmentQuestionBank").take(201);
-    const capped = rows.length > 200;
-    const visibleRows = rows.slice(0, 200);
+    const skills = ["listening", "structure", "reading"] as const;
+    const rows: Array<Doc<"assessmentQuestionBank">> = [];
+    for (const skill of skills) {
+      const skillRows = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_profile_and_status_and_skill", (q) =>
+          q
+            .eq("profile", "ec-itp-level-1-aligned-v1")
+            .eq("status", "ready")
+            .eq("skill", skill),
+        )
+        .take(201);
+      if (skillRows.length > 200) {
+        throw new ConvexError({ code: "QUESTION_BANK_POOL_LIMIT" as const });
+      }
+      rows.push(...skillRows);
+    }
+    const capped = false;
+    const visibleRows = rows;
     const selectableByFingerprint = new Map<
       string,
       Doc<"assessmentQuestionBank">
     >();
     for (const row of visibleRows) {
       if (
-        row.profile === "ec-ibt-style-2026-v1" &&
+        row.profile === "ec-itp-level-1-aligned-v1" &&
         !selectableByFingerprint.has(row.contentFingerprint) &&
         (await questionBankRowIsReadyForSelection(ctx, row))
       ) {
@@ -1409,7 +1433,6 @@ export const getSummary = query({
       }
     }
     const selectableRows = [...selectableByFingerprint.values()];
-    const skills = ["reading", "listening", "writing", "speaking"] as const;
     const bySkill = skills.map((skill) => ({
       skill,
       count: selectableRows.filter((row) => row.skill === skill).length,

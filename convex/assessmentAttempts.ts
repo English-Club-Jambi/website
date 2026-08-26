@@ -1101,6 +1101,7 @@ export const getResult = query({
         comparableScoreEstimate:
           sectionResult.comparableScoreEstimate ?? null,
         confidence: sectionResult.estimateConfidence ?? null,
+        paperSectionEstimate: sectionResult.paperSectionEstimate ?? null,
       });
     }
     sections.sort((left, right) => left.order - right.order);
@@ -1116,7 +1117,9 @@ export const getResult = query({
     const disclaimer =
       result.scoringModel === "ec-ibt-style-v1"
         ? "The raw result is exact for the original questions delivered in this attempt. The band and 0–120 values are English Club estimates, not an official ETS score, an exact test prediction, a certificate, or evidence for admission."
-        : "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.";
+        : result.scoringModel === "ec-paper-linear-v1"
+          ? "The raw correct counts are exact for the original questions delivered in this attempt. The 310–677 value uses a fixed English Club linear estimate. Official ETS results use form-specific statistical equating and may differ. This is not an official score, certificate, or admission evidence."
+          : "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.";
 
     return {
       status: result.status,
@@ -1140,7 +1143,17 @@ export const getResult = query({
               comparableTotal: result.comparableTotalEstimate ?? null,
               confidence: result.estimateConfidence ?? "low",
             }
-          : null,
+          : result.scoringModel === "ec-paper-linear-v1" &&
+              result.paperTotalEstimate !== undefined
+            ? {
+                model: result.scoringModel,
+                total: result.paperTotalEstimate,
+                minimum: 310 as const,
+                maximum: 677 as const,
+                method: "fixed-linear" as const,
+                confidence: "low" as const,
+              }
+            : null,
       sections,
       disclaimer,
     };

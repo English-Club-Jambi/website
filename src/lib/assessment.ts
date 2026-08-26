@@ -95,17 +95,23 @@ async function findPublishedAssessment(
 }
 
 export function getFullPracticeAssessment() {
-  return findPublishedAssessment((entry) => entry.kind === "full-practice");
+  return findPublishedAssessment(
+    (entry) =>
+      entry.kind === "full-practice" &&
+      entry.skills.length === 3 &&
+      (["listening", "structure", "reading"] as const).every((skill) =>
+        entry.skills.includes(skill),
+      ),
+  );
 }
 
 const backendSkillByRoute: Record<
   PracticeSkill,
-  "listening" | "reading" | "writing" | "speaking"
+  "listening" | "structure" | "reading"
 > = {
   listening: "listening",
+  structure: "structure",
   reading: "reading",
-  writing: "writing",
-  speaking: "speaking",
 };
 
 export function getQuickPracticeAssessment(skill: PracticeSkill) {
