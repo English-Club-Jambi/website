@@ -42,10 +42,6 @@ test.describe("seeded four-skill practice flow", () => {
   test("starts the public full-practice live session from its bank-backed manifest", async ({
     page,
   }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "desktop-chromium",
-      "One live full-practice manifest is sufficient.",
-    );
     const browserErrors: string[] = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     page.on("console", (message) => {
@@ -53,10 +49,19 @@ test.describe("seeded four-skill practice flow", () => {
     });
 
     await page.goto("/practice/full");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Start practice" }).click();
+    const acknowledgement = page.getByRole("checkbox");
+    const start = page.getByRole("button", { name: "Start practice" });
+    if (testInfo.project.name === "desktop-chromium") {
+      await acknowledgement.check();
+      await start.click();
+    } else {
+      await acknowledgement.tap();
+      await start.tap();
+    }
     await page.waitForURL(/\/practice\/attempt\//);
-    await page.getByRole("button", { name: "Begin section" }).click();
+    const begin = page.getByRole("button", { name: "Begin section" });
+    if (testInfo.project.name === "desktop-chromium") await begin.click();
+    else await begin.tap();
 
     await expect(page.getByText("QUESTION 1 OF 50")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Question list" })).toBeVisible();
@@ -68,6 +73,17 @@ test.describe("seeded four-skill practice flow", () => {
     ).toBeVisible();
     expect(browserErrors).toEqual([]);
 
+    const geometry = await page.evaluate(() => ({
+      viewportWidth: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      mainRight:
+        document.querySelector("main")?.getBoundingClientRect().right ?? 0,
+    }));
+    expect(geometry.documentWidth).toBeLessThanOrEqual(
+      geometry.viewportWidth + 1,
+    );
+    expect(geometry.mainRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+
     const accessibility = await new AxeBuilder({ page }).include("main").analyze();
     expect(
       accessibility.violations.filter(
@@ -77,8 +93,7 @@ test.describe("seeded four-skill practice flow", () => {
     ).toEqual([]);
 
     await page.screenshot({
-      path: "docs/evidence/practice-full-bank-live-desktop-chromium.png",
-      fullPage: true,
+      path: `docs/evidence/practice-full-bank-live-${testInfo.project.name}.png`,
       animations: "disabled",
     });
   });
@@ -87,7 +102,10 @@ test.describe("seeded four-skill practice flow", () => {
     page,
   }, testInfo) => {
     test.skip(!runIllustratedQuestion, "Requires the illustrated Question Bank record.");
-    test.setTimeout(120_000);
+    // A full form can require up to 50 authenticated Convex moves before the
+    // illustrated item appears. Mobile emulation is intentionally slower, so
+    // keep this proof independent from the product's section timer.
+    test.setTimeout(300_000);
     const illustrationAlt =
       "Four learners exchanging ideas around a table in a bright room";
     let found = false;
@@ -181,9 +199,11 @@ test.describe("seeded four-skill practice flow", () => {
       if ((await available.count()) > 0) {
         while ((await available.count()) > 0) await available.first().click();
       } else if ((await textarea.count()) > 0) {
-        await textarea.fill(
-          "I would explain the change clearly, give the practical reason, and offer one next step so everyone can respond with the same information.",
-        );
+        const writingResponse =
+          "I would explain the change clearly, give the practical reason, and offer one next step so everyone can respond with the same information.";
+        await textarea.pressSequentially(writingResponse);
+        await expect(textarea).toBeFocused();
+        await expect(textarea).toHaveValue(writingResponse);
       } else if ((await radio.count()) > 0) {
         await radio.first().check();
       } else {
@@ -224,23 +244,150 @@ test.describe("seeded four-skill practice flow", () => {
     });
   });
 
-  test("serves reviewed Listening audio from the R2 custom domain", async ({
+  test("keeps the Writing response focused after every character at each supported width", async ({
     page,
   }, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile-chromium", "Mobile audio evidence only.");
-    await page.goto("/practice/quick/listening");
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Start practice" }).click();
-    await page.waitForURL(/\/practice\/attempt\//);
-    await page.getByRole("button", { name: "Begin section" }).click();
+    test.setTimeout(120_000);
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
 
-    const audio = page.locator('audio[src^="https://r2.mukhtada.my.id/assessments/"]');
+    await page.goto("/practice/quick/writing");
+    const acknowledgement = page.getByRole("checkbox");
+    const start = page.getByRole("button", { name: "Start practice" });
+    if (testInfo.project.name === "desktop-chromium") {
+      await acknowledgement.check();
+      await start.click();
+    } else {
+      await acknowledgement.tap();
+      await start.tap();
+    }
+    await page.waitForURL(/\/practice\/attempt\//);
+    const begin = page.getByRole("button", { name: "Begin section" });
+    if (testInfo.project.name === "desktop-chromium") await begin.click();
+    else await begin.tap();
+
+    const textarea = page.getByRole("textbox", { name: "Your response" });
+    let found = false;
+    for (let question = 1; question <= 5; question += 1) {
+      await expect(page.getByText(`QUESTION ${question} OF 5`)).toBeVisible();
+      if (await textarea.isVisible().catch(() => false)) {
+        found = true;
+        break;
+      }
+      if (question < 5) {
+        const next = page.getByRole("button", { name: "Next", exact: true });
+        if (testInfo.project.name === "desktop-chromium") await next.click();
+        else await next.tap();
+      }
+    }
+    expect(found).toBe(true);
+
+    if (testInfo.project.name === "desktop-chromium") await textarea.click();
+    else await textarea.tap();
+    const response = "Clear notes keep us ready.";
+    for (const character of response) {
+      await page.keyboard.type(character);
+      await expect(textarea).toBeFocused();
+    }
+    await expect(textarea).toHaveValue(response);
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+
+    const geometry = await textarea.evaluate((field) => {
+      const box = field.getBoundingClientRect();
+      return {
+        fieldLeft: box.left,
+        fieldRight: box.right,
+        viewportWidth: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(geometry.fieldLeft).toBeGreaterThanOrEqual(0);
+    expect(geometry.fieldRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+    expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+
+    await page.screenshot({
+      path: `docs/evidence/practice-writing-focus-${testInfo.project.name}.png`,
+      animations: "disabled",
+    });
+
+    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      accessibility.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    expect(browserErrors).toEqual([]);
+
+  });
+
+  test("serves one pinned Question Bank recording without duplicating legacy audio", async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+
+    await page.goto("/practice/quick/listening");
+    const acknowledgement = page.getByRole("checkbox");
+    const start = page.getByRole("button", { name: "Start practice" });
+    if (testInfo.project.name === "desktop-chromium") {
+      await acknowledgement.check();
+      await start.click();
+    } else {
+      await acknowledgement.tap();
+      await start.tap();
+    }
+    await page.waitForURL(/\/practice\/attempt\//);
+    const begin = page.getByRole("button", { name: "Begin section" });
+    if (testInfo.project.name === "desktop-chromium") await begin.click();
+    else await begin.tap();
+
+    const audio = page.locator('main audio[src^="https://r2.mukhtada.my.id/"]');
     await expect(audio).toBeVisible();
+    await expect(audio).toHaveCount(1);
     const source = await audio.getAttribute("src");
     expect(source).not.toBeNull();
-    const response = await page.request.get(source!);
-    expect(response.ok()).toBe(true);
+    const response = await page.request.get(source!, {
+      headers: { Range: "bytes=0-1023" },
+    });
+    expect([200, 206]).toContain(response.status());
     expect(response.headers()["content-type"]).toContain("audio/mpeg");
+    expect((await response.body()).byteLength).toBeGreaterThan(0);
+    await expect
+      .poll(
+        async () =>
+          await audio.evaluate(
+            (element) => {
+              const media = element as HTMLAudioElement;
+              return (
+                media.readyState >= HTMLMediaElement.HAVE_METADATA &&
+                Number.isFinite(media.duration) &&
+                media.duration > 0
+              );
+            },
+          ),
+        { timeout: 20_000 },
+      )
+      .toBe(true);
+
+    const delivery = await audio.evaluate((element) => ({
+      isQuestionLevel: element.closest("section[aria-label]") !== null,
+      audioCount: document.querySelectorAll("main audio").length,
+      right: element.getBoundingClientRect().right,
+      viewportWidth: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+    }));
+    expect(delivery.isQuestionLevel).toBe(true);
+    expect(delivery.audioCount).toBe(1);
+    expect(delivery.right).toBeLessThanOrEqual(delivery.viewportWidth + 1);
+    expect(delivery.documentWidth).toBeLessThanOrEqual(delivery.viewportWidth + 1);
 
     const lastAnswer = page.getByRole("radio").last();
     const questionActions = page.getByRole("navigation", { name: "Question list" });
@@ -254,16 +401,19 @@ test.describe("seeded four-skill practice flow", () => {
       actionsBox?.y ?? 0,
     );
 
-    const overflow = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
     await page.screenshot({
-      path: "docs/evidence/practice-listening-question-mobile-chromium.png",
-      fullPage: true,
+      path: `docs/evidence/practice-bank-audio-live-${testInfo.project.name}.png`,
       animations: "disabled",
     });
+
+    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+    expect(
+      accessibility.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    expect(browserErrors).toEqual([]);
   });
 
   test("keeps a word-completion control inline at every supported width", async ({

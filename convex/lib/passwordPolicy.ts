@@ -19,15 +19,17 @@ export function normalizePasswordDisplayName(value: unknown) {
 }
 
 export function assertPasswordRequirements(password: string) {
+  const utf8Bytes = new TextEncoder().encode(password).byteLength;
   if (
     password.length < 12 ||
     password.length > 128 ||
+    utf8Bytes > 72 ||
     !/[a-z]/.test(password) ||
     !/[A-Z]/.test(password) ||
     !/[0-9]/.test(password)
   ) {
     throw new Error(
-      "Password must be 12–128 characters and include upper-case, lower-case, and numeric characters.",
+      "Password must be 12–128 characters, fit bcrypt's 72-byte limit, and include upper-case, lower-case, and numeric characters.",
     );
   }
 }

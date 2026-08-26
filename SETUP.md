@@ -127,7 +127,7 @@ Convex Auth providers in this project:
 - Password: administrator identity.
 - Anonymous: owned Practice attempts, created only after Start.
 
-Password sign-in is browser-facing. Password account creation is internal-only, normalizes and validates email, and requires 12–128 characters with upper-case, lower-case, and numeric characters. Identity creation and CMS authorization happen in one deployment-operator command.
+Password sign-in is browser-facing. Password account creation is internal-only, normalizes and validates email, and requires 12–128 characters, at most 72 UTF-8 bytes, with upper-case, lower-case, and numeric characters. Identity creation and CMS authorization happen in one deployment-operator command.
 
 ## 6. Internal administrator provisioning
 
@@ -152,6 +152,20 @@ npm run admin:provision -- \
 
 `--generate-password` prints the generated password once after a successful run. Store it in a password manager. The password does not expire automatically; do not put it in shell arguments, source, Markdown, or Git.
 
+To replace the password of an already bound, active administrator, use the explicit reset mode. It verifies the existing Auth account and active Admin binding before changing only the credential and invalidating old sessions:
+
+```bash
+npm run admin:provision -- \
+  --name "Reviewed administrator" \
+  --email "admin@example.com" \
+  --role owner \
+  --generate-password \
+  --reset-password \
+  --credentials-file .auth-keys.json
+```
+
+`--reset-password` is the only normal operator command that changes an existing password. It overwrites the named ignored credential file only after the cloud reset succeeds.
+
 If an earlier operator action created the Password account but failed before it could bind the sole legacy placeholder owner, recover that exact account instead of attempting a second sign-up:
 
 ```bash
@@ -166,12 +180,17 @@ npm run admin:provision -- \
 
 This recovery is intentionally narrow: the email must already identify a Password account, the legacy deployment must contain exactly one active unbound owner with the exact supplied token, and the requested role must remain `owner`. The account is bound first, then its password is rotated and prior sessions are invalidated. Do not use `--recover-existing` for normal account creation.
 
-The Password provider stores a one-way password hash on the Auth account. The
-password itself has no application-level expiry and is never rotated during sign-in,
-session refresh, deployment, or normal CMS work. Only the explicit
-`--recover-existing` operator command replaces it. Session tokens do expire and may
-be invalidated without changing the password. Use a separate development-only admin
-for automated browser checks so QA never changes a human administrator's credential.
+The Password provider stores a salted bcrypt hash with cost 10 in the internal
+`authAccounts.secret` field. Existing Scrypt hashes remain verifiable only for a
+bounded compatibility migration; the next explicit reset writes bcrypt. The raw hash
+is never copied into an application or debug table. Operators can run
+`adminUsers:inspectPasswordCredential` to see only `hashStored`, algorithm, cost, and
+whether an expiration field exists. The password itself has no application-level
+expiry and is never rotated during sign-in, session refresh, deployment, or normal
+CMS work. Only explicit `--reset-password`, legacy `--recover-existing`, or a future
+reviewed reset flow replaces it. Session tokens do expire and may be invalidated
+without changing the password. Use a separate development-only admin for automated
+browser checks so QA never changes a human administrator's credential.
 
 3. Open `/admin` and sign in with that issued account.
 4. Confirm the owner workspace appears, sign out, sign in again, and verify the stable Auth-account binding survives the new session.

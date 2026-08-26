@@ -77,10 +77,11 @@ Stimulus selectors use `adminMedia.listAssessmentPage` with the exact assessment
 - Destructive changes use a labelled modal confirmation, Escape/cancel handling, pending lock, and focus return.
 - Layout contracts cover 1120, 760, and 360 px breakpoints plus reduced motion.
 - Fixed-format UI result: 3 files, 10 tests passed.
-- Integrated unit result: 45 files, 163 tests passed.
-- Integrated backend result: 8 files, 63 tests passed.
+- Final integrated unit result: 57 files, 252 tests passed.
+- Integrated backend result: 9 files, 70 tests passed.
 - Next route generation and full TypeScript check passed.
-- Fixed-format visual harness: desktop, Pixel 7, and 320 px; no horizontal overflow; controls are at least 44 px; Axe returned zero violations; reduced motion enabled.
+- The production build generated every current public, Practice, and Admin route.
+- Final Playwright result: 189 passed, 42 intentional project/credential/mutation skips, 0 failed. The fixed-format harness and live cloud flow covered desktop, Pixel 7, and 320 px; no horizontal overflow; controls are at least 44 px; exercised Axe checks returned no serious or critical findings; reduced motion remained operable.
 
 Evidence:
 
@@ -88,4 +89,4 @@ Evidence:
 - `docs/evidence/admin/assessment-workspace-mobile-chromium.png`
 - `docs/evidence/admin/assessment-workspace-narrow-chromium.png`
 
-The visual harness is deliberately authenticated but data-isolated. It proves the admin layout without requiring a real administrator identity or writing test content to Convex Cloud.
+The visual harness remains data-isolated. Separate authenticated cloud coverage proves Question Bank authoring, the reviewed R2 media path, and the public random manifest without weakening admin permissions.

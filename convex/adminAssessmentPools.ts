@@ -20,6 +20,7 @@ import {
 import {
   isRandomBankSection,
   listEligibleBankQuestionsForSection,
+  questionBankRowIsReadyForSelection,
 } from "./lib/assessmentQuestionBank";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
 
@@ -118,8 +119,9 @@ function allowedByDefault(
   definition: Doc<"assessmentDefinitions">,
   question: Doc<"assessmentQuestionBank">,
 ) {
+  if (question.status !== "ready") return false;
   return definition.kind === "full-practice"
-    ? question.fullPracticeEligible
+    ? true
     : question.sourceDefinitionId === definition._id;
 }
 
@@ -255,7 +257,13 @@ export const getOverview = query({
     const signalByQuestion = new Map(
       signals.map((signal) => [signal.bankQuestionId, signal]),
     );
-    const exactAllowed = new Set<Id<"assessmentQuestionBank">>();
+    const readyForSelectionIds = new Set<Id<"assessmentQuestionBank">>();
+    for (const candidate of candidates) {
+      if (await questionBankRowIsReadyForSelection(ctx, candidate)) {
+        readyForSelectionIds.add(candidate._id);
+      }
+    }
+    const effectivelyAllowedFingerprints = new Set<string>();
     for (const section of sections) {
       if (!isRandomBankSection(section)) continue;
       try {
@@ -263,7 +271,9 @@ export const getOverview = query({
           ctx,
           section,
         );
-        for (const row of eligible) exactAllowed.add(row._id);
+        for (const row of eligible) {
+          effectivelyAllowedFingerprints.add(row.contentFingerprint);
+        }
       } catch {
         // Validation reports the exact pool failure. The admin view remains usable.
       }
@@ -283,8 +293,26 @@ export const getOverview = query({
       }
     }
 
+    const rowsByFingerprint = new Map<
+      string,
+      Array<Doc<"assessmentQuestionBank">>
+    >();
+    const orderedCandidates = [...candidates].sort(
+      (left, right) =>
+        Number(readyForSelectionIds.has(right._id)) -
+          Number(readyForSelectionIds.has(left._id)) ||
+        left._creationTime - right._creationTime ||
+        String(left._id).localeCompare(String(right._id)),
+    );
+    for (const row of orderedCandidates) {
+      const group = rowsByFingerprint.get(row.contentFingerprint) ?? [];
+      group.push(row);
+      rowsByFingerprint.set(row.contentFingerprint, group);
+    }
+
     const questions: PoolQuestionView[] = [];
-    for (const row of candidates) {
+    for (const group of rowsByFingerprint.values()) {
+      const row = group[0];
       const item = await ctx.db.get("assessmentItems", row.sourceItemId);
       if (
         item === null ||
@@ -295,8 +323,19 @@ export const getOverview = query({
           code: "QUESTION_BANK_SOURCE_MISSING" as const,
         });
       }
-      const rule = ruleByQuestion.get(row._id);
-      const signal = signalByQuestion.get(row._id);
+      const groupRules = group
+        .map((candidate) => ruleByQuestion.get(candidate._id))
+        .filter((rule) => rule !== undefined);
+      const ruleState = groupRules.some((rule) => !rule.allowed)
+        ? ("disabled" as const)
+        : groupRules.some((rule) => rule.allowed)
+          ? ("allowed" as const)
+          : ("inherit" as const);
+      const groupSignals = group
+        .map((candidate) => signalByQuestion.get(candidate._id))
+        .filter((signal) => signal !== undefined)
+        .sort((left, right) => right.lastFlaggedAt - left.lastFlaggedAt);
+      const latestSignal = groupSignals[0];
       questions.push({
         bankQuestionId: row._id,
         skill: row.skill,
@@ -308,23 +347,30 @@ export const getOverview = query({
         sourceTitle:
           sourceTitleById.get(String(row.sourceDefinitionId)) ??
           "Published Question Bank source",
-        allowedByDefault: allowedByDefault(definition, row),
-        ruleState:
-          rule === undefined
-            ? ("inherit" as const)
-            : rule.allowed
-              ? ("allowed" as const)
-              : ("disabled" as const),
-        effectiveAllowed: exactAllowed.has(row._id),
+        allowedByDefault: group.some(
+          (candidate) =>
+            readyForSelectionIds.has(candidate._id) &&
+            allowedByDefault(definition, candidate),
+        ),
+        ruleState,
+        effectiveAllowed: effectivelyAllowedFingerprints.has(
+          row.contentFingerprint,
+        ),
         flagSignal:
-          signal === undefined
+          latestSignal === undefined
             ? null
             : {
-                activeCount: signal.activeFlagCount,
-                totalEvents: signal.totalFlagEvents,
-                lastFlaggedAt: signal.lastFlaggedAt,
-                reviewStatus: signal.reviewStatus,
-                reviewedAt: signal.reviewedAt ?? null,
+                activeCount: groupSignals.reduce(
+                  (count, signal) => count + signal.activeFlagCount,
+                  0,
+                ),
+                totalEvents: groupSignals.reduce(
+                  (count, signal) => count + signal.totalFlagEvents,
+                  0,
+                ),
+                lastFlaggedAt: latestSignal.lastFlaggedAt,
+                reviewStatus: latestSignal.reviewStatus,
+                reviewedAt: latestSignal.reviewedAt ?? null,
               },
       });
     }
@@ -407,11 +453,37 @@ export const setQuestionAllowed = mutation({
       "assessmentQuestionBank",
       args.bankQuestionId,
     );
-    if (
-      question === null ||
-      question.profile !== definition.profile ||
-      (args.allowed && question.status !== "ready")
-    ) {
+    if (question === null || question.profile !== definition.profile) {
+      throw new ConvexError({ code: "QUESTION_BANK_NOT_AVAILABLE" as const });
+    }
+    const duplicateRows = await ctx.db
+      .query("assessmentQuestionBank")
+      .withIndex("by_content_fingerprint", (q) =>
+        q.eq("contentFingerprint", question.contentFingerprint),
+      )
+      .take(201);
+    if (duplicateRows.length > 200) {
+      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+    }
+    const questionGroup = duplicateRows
+      .filter(
+        (candidate) =>
+          candidate.profile === definition.profile &&
+          candidate.skill === question.skill,
+      )
+      .sort(
+        (left, right) =>
+          Number(right.status === "ready") - Number(left.status === "ready") ||
+          left._creationTime - right._creationTime ||
+          String(left._id).localeCompare(String(right._id)),
+      );
+    const readyQuestionGroup: Array<Doc<"assessmentQuestionBank">> = [];
+    for (const candidate of questionGroup) {
+      if (await questionBankRowIsReadyForSelection(ctx, candidate)) {
+        readyQuestionGroup.push(candidate);
+      }
+    }
+    if (questionGroup.length === 0 || (args.allowed && readyQuestionGroup.length === 0)) {
       throw new ConvexError({ code: "QUESTION_BANK_NOT_AVAILABLE" as const });
     }
     const sections = await ctx.db
@@ -433,17 +505,36 @@ export const setQuestionAllowed = mutation({
     if (!poolConfiguration.hasRandomBankSection) {
       throw new ConvexError({ code: "QUESTION_BANK_SKILL_NOT_USED" as const });
     }
-    const existing = await ctx.db
+    const allRules = await ctx.db
       .query("assessmentVersionQuestionRules")
-      .withIndex("by_version_id_and_bank_question_id", (q) =>
-        q
-          .eq("versionId", version._id)
-          .eq("bankQuestionId", question._id),
+      .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+        q.eq("versionId", version._id),
       )
-      .unique();
-    const inherited = allowedByDefault(definition, question);
-    const current = existing?.allowed ?? inherited;
-    const ruleChanged = current !== args.allowed;
+      .take(201);
+    if (allRules.length > 200) {
+      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+    }
+    const groupIds = new Set(questionGroup.map((candidate) => candidate._id));
+    const existingRules = allRules.filter((rule) =>
+      groupIds.has(rule.bankQuestionId),
+    );
+    const inherited = readyQuestionGroup.some((candidate) =>
+      allowedByDefault(definition, candidate),
+    );
+    const current = existingRules.some((rule) => !rule.allowed)
+      ? false
+      : existingRules.some((rule) => rule.allowed)
+        ? true
+        : inherited;
+    const representative = readyQuestionGroup[0] ?? questionGroup[0];
+    const canonicalRule = existingRules.length === 1 ? existingRules[0] : null;
+    const needsCanonicalization =
+      args.allowed === inherited
+        ? existingRules.length > 0
+        : canonicalRule === null ||
+          canonicalRule.bankQuestionId !== representative._id ||
+          canonicalRule.allowed !== args.allowed;
+    const ruleChanged = current !== args.allowed || needsCanonicalization;
     if (!ruleChanged && poolConfiguration.repairedCount === 0) {
       return {
         ok: true as const,
@@ -453,23 +544,16 @@ export const setQuestionAllowed = mutation({
     }
     const now = Date.now();
     if (ruleChanged) {
-      if (args.allowed === inherited) {
-        if (existing !== null) {
-          await ctx.db.delete("assessmentVersionQuestionRules", existing._id);
-        }
-      } else if (existing === null) {
+      for (const existingRule of existingRules) {
+        await ctx.db.delete("assessmentVersionQuestionRules", existingRule._id);
+      }
+      if (args.allowed !== inherited) {
         await ctx.db.insert("assessmentVersionQuestionRules", {
           versionId: version._id,
-          bankQuestionId: question._id,
+          bankQuestionId: representative._id,
           allowed: args.allowed,
           updatedBy: actor._id,
           createdAt: now,
-          updatedAt: now,
-        });
-      } else {
-        await ctx.db.patch("assessmentVersionQuestionRules", existing._id, {
-          allowed: args.allowed,
-          updatedBy: actor._id,
           updatedAt: now,
         });
       }
@@ -525,35 +609,71 @@ export const reviewFlagSignal = mutation({
   ),
   handler: async (ctx, args) => {
     const actor = await requireAdmin(ctx, "assessment:review");
-    const signal = await ctx.db
-      .query("assessmentQuestionFlagSignals")
-      .withIndex("by_definition_id_and_bank_question_id", (q) =>
-        q
-          .eq("definitionId", args.definitionId)
-          .eq("bankQuestionId", args.bankQuestionId),
-      )
-      .unique();
-    if (signal === null) {
+    const [definition, question] = await Promise.all([
+      ctx.db.get("assessmentDefinitions", args.definitionId),
+      ctx.db.get("assessmentQuestionBank", args.bankQuestionId),
+    ]);
+    if (
+      definition === null ||
+      question === null ||
+      question.profile !== definition.profile
+    ) {
       throw new ConvexError({ code: "QUESTION_FLAG_NOT_FOUND" as const });
     }
-    if (signal.lastFlaggedAt !== args.expectedLastFlaggedAt) {
+    const [duplicateRows, definitionSignals] = await Promise.all([
+      ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_content_fingerprint", (q) =>
+          q.eq("contentFingerprint", question.contentFingerprint),
+        )
+        .take(201),
+      ctx.db
+        .query("assessmentQuestionFlagSignals")
+        .withIndex("by_definition_id_and_last_flagged_at", (q) =>
+          q.eq("definitionId", args.definitionId),
+        )
+        .order("desc")
+        .take(201),
+    ]);
+    if (duplicateRows.length > 200 || definitionSignals.length > 200) {
+      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+    }
+    const groupIds = new Set(
+      duplicateRows
+        .filter(
+          (candidate) =>
+            candidate.profile === definition.profile &&
+            candidate.skill === question.skill,
+        )
+        .map((candidate) => candidate._id),
+    );
+    const signals = definitionSignals.filter((signal) =>
+      groupIds.has(signal.bankQuestionId),
+    );
+    const latestSignal = signals[0];
+    if (latestSignal === undefined) {
+      throw new ConvexError({ code: "QUESTION_FLAG_NOT_FOUND" as const });
+    }
+    if (latestSignal.lastFlaggedAt !== args.expectedLastFlaggedAt) {
       return {
         ok: false as const,
         code: "conflict" as const,
-        currentLastFlaggedAt: signal.lastFlaggedAt,
+        currentLastFlaggedAt: latestSignal.lastFlaggedAt,
       };
     }
     const reviewedAt = Date.now();
-    await ctx.db.patch("assessmentQuestionFlagSignals", signal._id, {
-      reviewStatus: args.decision,
-      reviewedBy: actor._id,
-      reviewedAt,
-    });
+    for (const signal of signals) {
+      await ctx.db.patch("assessmentQuestionFlagSignals", signal._id, {
+        reviewStatus: args.decision,
+        reviewedBy: actor._id,
+        reviewedAt,
+      });
+    }
     await writeAuditEvent(ctx, {
       area: "assessment",
       action: "review",
       resourceType: "assessment-question-flag",
-      resourceId: signal._id,
+      resourceId: latestSignal._id,
       summary: "Question flag signal marked " + args.decision,
       actorId: actor._id,
     });

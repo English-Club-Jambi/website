@@ -25,6 +25,7 @@ import {
   deliveredItemAt,
   listDeliveredSectionItems,
   prepareRandomSelectionPlans,
+  resolveReadyQuestionAudio,
 } from "./lib/assessmentQuestionBank";
 import { updateQuestionFlagSignal } from "./lib/assessmentQuestionSignals";
 import {
@@ -36,6 +37,7 @@ import {
   sameResponsePayload,
 } from "./lib/assessmentModel";
 import {
+  projectReadyQuestionAudio,
   projectReadyQuestionIllustration,
   publicAssessmentR2UrlForMedia,
 } from "./lib/media";
@@ -350,12 +352,25 @@ export const start = mutation({
       const selection = randomSelectionPlans.get(section._id) ?? [];
       for (let order = 0; order < selection.length; order += 1) {
         const bankQuestion = selection[order];
+        const sourceItem = await ctx.db.get(
+          "assessmentItems",
+          bankQuestion.sourceItemId,
+        );
+        const pinnedAudio = await resolveReadyQuestionAudio(
+          ctx,
+          bankQuestion,
+          sourceItem,
+        );
+        if (bankQuestion.skill === "listening" && pinnedAudio === null) {
+          throw new ConvexError({ code: "QUESTION_BANK_AUDIO_REQUIRED" as const });
+        }
         await ctx.db.insert("assessmentAttemptItems", {
           attemptId,
           sectionId: section._id,
           bankQuestionId: bankQuestion._id,
           itemId: bankQuestion.sourceItemId,
           illustrationMediaId: bankQuestion.illustrationMediaId,
+          audioMediaId: pinnedAudio?.mediaId,
           order,
           selectedAt: now,
           selectionContract: 1,
@@ -596,10 +611,11 @@ export const getPlayer = query({
     );
     if (delivered === null) return null;
     const { item } = delivered;
-    const illustration = await projectReadyQuestionIllustration(
-      ctx,
-      delivered.illustrationMediaId,
-    );
+    const [illustration, pinnedAudio] = await Promise.all([
+      projectReadyQuestionIllustration(ctx, delivered.illustrationMediaId),
+      projectReadyQuestionAudio(ctx, delivered.audioMediaId),
+    ]);
+    let audio = pinnedAudio;
     const response = await ctx.db
       .query("assessmentResponses")
       .withIndex("by_attempt_id_and_item_id", (q) =>
@@ -636,7 +652,16 @@ export const getPlayer = query({
         stimulusRow.sectionId === item.sectionId
       ) {
         let mediaUrl: string | null = null;
-        if (stimulusRow.mediaId !== undefined) {
+        if (stimulusRow.kind === "audio") {
+          if (audio === null) {
+            audio = await projectReadyQuestionAudio(
+              ctx,
+              stimulusRow.mediaId,
+              stimulusRow.versionId,
+            );
+          }
+          mediaUrl = audio?.publicUrl ?? null;
+        } else if (stimulusRow.mediaId !== undefined) {
           const media = await ctx.db.get("mediaAssets", stimulusRow.mediaId);
           mediaUrl = publicAssessmentR2UrlForMedia(
             media,
@@ -676,6 +701,7 @@ export const getPlayer = query({
       },
       item: publicItemFromDoc(item),
       illustration,
+      audio,
       stimulus,
       response: response === null ? null : publicResponseFromDoc(response),
       flagged: response?.flagged ?? false,

@@ -120,15 +120,24 @@ npm run admin:provision
 
 The terminal prompts for the profile and hides password input. Automation may use `--generate-password`; the generated password is shown once after success and must go directly into a password manager. The script invokes only `internal.adminProvisioning.provisionPasswordAdmin`, which creates or explicitly recovers the Password account and binds the corresponding Auth user to an active `adminUsers` row. The first administrator must be an owner.
 
+For an already bound active administrator, `--reset-password` calls only
+`internal.adminProvisioning.resetPasswordAdmin`. It verifies the existing Password
+account and active Admin binding, replaces the hash, invalidates prior sessions, and
+does not change the administrator role or authorization record.
+
 The narrow `--repair-placeholder <exact-value>` option can rebind a sole active legacy owner only when its token identifier exactly matches, it has no Auth user binding, and the requested role remains owner. It cannot replace an arbitrary or multi-admin deployment.
 
 `--recover-existing` is only for an interrupted operator flow that already created the named Password account. It must be combined with the exact guarded placeholder repair in that migration case. Recovery binds the verified Auth user first, rotates the password second, and invalidates existing sessions last; normal provisioning must not set this flag.
 
-A provisioned Password credential is persistent. Convex Auth keeps a one-way hash
-on `authAccounts`; the application has no password-expiry timer and normal sign-in or
-session refresh never rotates it. Expiring or invalidating an `authSession` does not
-change the Password account secret. Run automated QA with a separate
-development-only administrator rather than recovering a human operator account.
+A provisioned Password credential is persistent. New and explicitly reset credentials
+use salted bcrypt cost 10 in `authAccounts.secret`; a compatibility verifier accepts
+the earlier Scrypt format until those accounts are deliberately reset. The application
+has no password-expiry timer and normal sign-in or session refresh never rewrites the
+hash. Expiring or invalidating an `authSession` does not change the Password account
+secret. The internal `adminUsers:inspectPasswordCredential` diagnostic returns only
+presence, algorithm, cost, creation time, and expiration-field status—never the hash.
+Run automated QA with a separate development-only administrator rather than
+recovering a human operator account.
 
 ## API contract
 
@@ -139,6 +148,8 @@ development-only administrator rather than recovering a human operator account.
 | `api.adminUsers.whoAmI` | signed or unsigned caller | returns only the caller's identity |
 | `api.adminUsers.me` | signed caller | active admin record or `null` |
 | `internal.adminProvisioning.provisionPasswordAdmin` | deployment operator only | creates/verifies Password identity and binds reviewed role |
+| `internal.adminProvisioning.resetPasswordAdmin` | deployment operator only | resets one active bound admin credential and invalidates existing sessions |
+| `internal.adminUsers.inspectPasswordCredential` | deployment operator only | reports non-secret credential metadata for diagnosis |
 | `internal.adminUsers.bindProvisionedPasswordAccount` | internal action only | verifies exact account/user/issuer before insert or guarded repair |
 | `internal.adminUsers.bootstrapOwner` | legacy internal seam | retained for migration/tests; not the account workflow |
 | `api.adminUsers.listPage` | owner | cursor page of exactly 20 |
@@ -228,8 +239,8 @@ No data backfill is required before the first deployment. Do not make the option
 Completed without starting, stopping, or restarting port 3987:
 
 - `npm run typecheck` and `npm run lint` pass across the integrated repository.
-- `npm test` passes 226 tests across 53 files.
-- `npm run test:backend` passes 63 tests across eight files.
+- `npm test` passes 252 tests across 57 files.
+- `npm run test:backend` passes 70 tests across nine files.
 - The final full E2E run passed 172 cases and intentionally skipped 55 project-specific cases. Its only miss was a Contact server-action response exceeding the former five-second expectation under shared-cloud load; the bounded 20-second repair passed on desktop, Pixel 7, and 320 px, bringing the effective verified set to 173 with no unresolved failure.
 - Two consecutive isolated default Turbopack production builds compile, type-check, and generate all 26 static routes; `/admin` and `/admin/activity` remain dynamic routes as intended.
 - `npx convex codegen --dry-run --typecheck=enable` passes against the selected development deployment.

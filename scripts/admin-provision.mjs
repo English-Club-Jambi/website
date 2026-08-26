@@ -15,7 +15,11 @@ function parseArgs(values) {
       throw new Error(`Unexpected argument: ${value}`);
     }
     const key = value.slice(2);
-    if (key === "generate-password" || key === "recover-existing") {
+    if (
+      key === "generate-password" ||
+      key === "recover-existing" ||
+      key === "reset-password"
+    ) {
       parsed.set(key, true);
       continue;
     }
@@ -79,13 +83,13 @@ function createPassword() {
   return `${randomBytes(24).toString("base64url")}Aa7!`;
 }
 
-function runConvex(args, password) {
+function runConvex(functionName, args, password) {
   const convexBinary = fileURLToPath(
     new URL("../node_modules/.bin/convex", import.meta.url),
   );
   const result = spawnSync(
     convexBinary,
-    ["run", "adminProvisioning:provisionPasswordAdmin", JSON.stringify(args)],
+    ["run", functionName, JSON.stringify(args)],
     {
       cwd: process.cwd(),
       encoding: "utf8",
@@ -122,27 +126,45 @@ async function main() {
   if (!supportedRoles.has(role)) {
     throw new Error("Role must be editor, publisher, or owner.");
   }
+  if (flags.has("reset-password") && flags.has("recover-existing")) {
+    throw new Error("Choose either --reset-password or --recover-existing.");
+  }
+  if (flags.has("reset-password") && flags.has("repair-placeholder")) {
+    throw new Error("--repair-placeholder is not valid with --reset-password.");
+  }
 
   const generatedPassword = flags.has("generate-password");
   const password = generatedPassword
     ? createPassword()
     : await promptHidden("Password: ");
 
-  runConvex(
-    {
-      displayName: name,
-      email,
+  if (flags.has("reset-password")) {
+    runConvex(
+      "adminProvisioning:resetPasswordAdmin",
+      { email, password },
       password,
-      role,
-      ...(flags.has("recover-existing") ? { recoverExistingAccount: true } : {}),
-      ...(flags.has("repair-placeholder")
-        ? {
-            replaceSoleLegacyTokenIdentifier: flags.get("repair-placeholder"),
-          }
-        : {}),
-    },
-    password,
-  );
+    );
+  } else {
+    runConvex(
+      "adminProvisioning:provisionPasswordAdmin",
+      {
+        displayName: name,
+        email,
+        password,
+        role,
+        ...(flags.has("recover-existing")
+          ? { recoverExistingAccount: true }
+          : {}),
+        ...(flags.has("repair-placeholder")
+          ? {
+              replaceSoleLegacyTokenIdentifier:
+                flags.get("repair-placeholder"),
+            }
+          : {}),
+      },
+      password,
+    );
+  }
 
   const credentials = `${JSON.stringify(
     { email: String(email).trim().toLowerCase(), password, role },
@@ -154,7 +176,7 @@ async function main() {
   if (credentialsFile !== undefined) {
     await writeFile(credentialsFile, credentials, {
       encoding: "utf8",
-      flag: "wx",
+      flag: flags.has("reset-password") ? "w" : "wx",
       mode: 0o600,
     });
     await chmod(credentialsFile, 0o600);

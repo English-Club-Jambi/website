@@ -60,10 +60,10 @@ Implementation commit: `9846874 fix: load legacy journal posts in editor`.
 - [x] Store only the password hash in Convex Auth; do not store a recoverable plaintext password in the database.
 - [x] Confirm Password accounts have no application-level expiry or automatic rotation.
 - [x] Prove the new credential directly against `auth:signIn` without exposing its value.
-- [x] Prove two independent browser sign-ins with the same unchanged password.
+- [x] Prove two independent browser sign-ins with the same newly reset and frozen password.
 - [x] Keep the local handoff credential file ignored by Git and mode `0600`.
 - [x] Provision a separate development-only QA owner so later automation never rotates the human owner's password.
-- [x] Hand the unchanged owner password to the user without rotating it; repeat it in the final committed handoff.
+- [x] Hand the frozen owner password to the user without rotating it again; repeat it in the final committed handoff.
 
 ## Member administration
 

@@ -21,7 +21,7 @@ function responseErrorMessage(value: unknown) {
   ) {
     return value.error;
   }
-  return "The image upload could not be completed. Try again.";
+  return "The media upload could not be completed. Try again.";
 }
 
 export async function relayAdminMediaUpload({

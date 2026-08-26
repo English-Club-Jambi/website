@@ -190,7 +190,7 @@ Convex Auth config enables two providers:
 - `Password` for named administrators;
 - `Anonymous` for owned Assessment attempts.
 
-Password sign-in is browser-facing; Password identity creation is internal-only. The internal provisioning action validates a normalized email and a 12–128-character password containing upper-case, lower-case, and numeric characters, creates or verifies the Password account through Convex Auth, and binds its Auth user record to `adminUsers` in one operator workflow.
+Password sign-in is browser-facing; Password identity creation is internal-only. The internal provisioning action validates a normalized email and a 12–128-character password that fits bcrypt's 72-byte limit and contains upper-case, lower-case, and numeric characters, creates or verifies the Password account through Convex Auth, and binds its Auth user record to `adminUsers` in one operator workflow. New or explicitly reset credentials are salted bcrypt cost 10 hashes in `authAccounts.secret`; legacy Scrypt hashes are read only for compatibility until explicit reset. Password accounts have no application-level expiry field, and normal sign-in does not rewrite their hash.
 
 The first-owner sequence is:
 

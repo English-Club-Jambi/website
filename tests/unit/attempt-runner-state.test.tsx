@@ -9,6 +9,16 @@ const mocks = vi.hoisted(() => ({
   queryNames: [] as string[],
   transcriptEnabled: false,
   itemCount: 1,
+  playerMode: "listening" as "listening" | "writing",
+  audioMode: "generated" as "generated" | "legacy" | "top-level",
+  illustrationVisible: false,
+  saveResponse: vi.fn(
+    async (args: { expectedClientRevision: number }) => ({
+      ok: true as const,
+      revision: args.expectedClientRevision + 1,
+      savedAt: Date.now(),
+    }),
+  ),
   move: vi.fn(async (args: { expectedRevision: number }) => ({
     ok: true as const,
     revision: args.expectedRevision + 1,
@@ -85,6 +95,7 @@ vi.mock("convex/react", async (importOriginal) => {
         };
       }
       if (name === "assessmentAttempts:getPlayer") {
+        const writing = mocks.playerMode === "writing";
         return {
           attemptId: "assessmentattempt00000000001",
           status: "in-progress",
@@ -95,32 +106,70 @@ vi.mock("convex/react", async (importOriginal) => {
           responseRevision: 0,
           section: {
             id: "assessmentsection000000000001",
-            title: "Listening",
-            skill: "listening",
+            title: writing ? "Writing" : "Listening",
+            skill: writing ? "writing" : "listening",
             order: 0,
             totalSections: 3,
-            instructions: "Listen and choose.",
+            instructions: writing ? "Write a clear response." : "Listen and choose.",
           },
-          item: {
-            id: "assessmentitem00000000000001",
-            type: "single-choice",
-            prompt: "What does the speaker plan to do?",
-            required: true,
-            options: [
-              { key: "a", label: "Meet the group" },
-              { key: "b", label: "Leave the room" },
-            ],
-          },
-          illustration: null,
-          stimulus: {
-            id: "assessmentstimulus0000000001",
-            kind: "audio",
-            title: "Conversation",
-            body: null,
-            mediaUrl: null,
-            transcript: mocks.transcriptEnabled ? "Let us meet the group after class." : null,
-            alt: null,
-          },
+          item: writing
+            ? {
+                id: "assessmentitem00000000000001",
+                type: "constructed-response",
+                prompt: "Explain one practical way to welcome a new member.",
+                required: true,
+                responseMode: "writing",
+                minimumWords: 20,
+                recommendedWords: 45,
+                maximumCharacters: 1_500,
+              }
+            : {
+                id: "assessmentitem00000000000001",
+                type: "single-choice",
+                prompt: "What does the speaker plan to do?",
+                required: true,
+                options: [
+                  { key: "a", label: "Meet the group" },
+                  { key: "b", label: "Leave the room" },
+                ],
+              },
+          illustration: mocks.illustrationVisible
+            ? {
+                mediaId: "media00000000000000000000001",
+                publicUrl:
+                  "https://r2.mukhtada.my.id/assessments/question-illustration.webp",
+                alt: "Learners comparing notes around a table",
+                width: 1_200,
+                height: 800,
+              }
+            : null,
+          audio:
+            !writing && mocks.audioMode === "top-level"
+              ? {
+                  mediaId: "media00000000000000000000002",
+                  publicUrl:
+                    "https://r2.mukhtada.my.id/assessments/question-recording.mp3",
+                  contentType: "audio/mpeg",
+                  durationMs: 8_200,
+                  description: "Question recording",
+                }
+              : null,
+          stimulus: writing
+            ? null
+            : {
+                id: "assessmentstimulus0000000001",
+                kind: "audio",
+                title: "Conversation",
+                body: null,
+                mediaUrl:
+                  mocks.audioMode === "legacy" || mocks.audioMode === "top-level"
+                    ? "https://r2.mukhtada.my.id/assessments/legacy-stimulus.mp3"
+                    : null,
+                transcript: mocks.transcriptEnabled
+                  ? "Let us meet the group after class."
+                  : null,
+                alt: null,
+              },
           response: null,
           flagged: false,
           itemStates: [
@@ -154,6 +203,9 @@ vi.mock("convex/react", async (importOriginal) => {
       if (name === "assessmentAttempts:move") {
         return mocks.move;
       }
+      if (name === "assessmentAttempts:saveResponse") {
+        return mocks.saveResponse;
+      }
       return vi.fn(async () => ({ ok: true, revision: 4, savedAt: Date.now() }));
     },
   };
@@ -173,8 +225,12 @@ afterEach(() => {
   mocks.queryNames.length = 0;
   mocks.transcriptEnabled = false;
   mocks.itemCount = 1;
+  mocks.playerMode = "listening";
+  mocks.audioMode = "generated";
+  mocks.illustrationVisible = false;
   mocks.enableTranscript.mockClear();
   mocks.move.mockClear();
+  mocks.saveResponse.mockClear();
 });
 
 function Runner() {
@@ -259,5 +315,68 @@ describe("AttemptRunner reactive boundaries", () => {
       3,
       4,
     ]);
+  });
+
+  it("keeps the Writing field focused while a complete sentence is autosaved", async () => {
+    mocks.playerMode = "writing";
+    const user = userEvent.setup();
+    render(<Runner />);
+    const response = screen.getByRole("textbox", { name: copy.responseLabel });
+    const sentence =
+      "I would greet the new member, explain the activity, and invite one easy first response.";
+
+    await user.click(response);
+    await user.type(response, sentence);
+
+    expect(response).toHaveFocus();
+    expect(response).toHaveValue(sentence);
+    await waitFor(() => expect(mocks.saveResponse).toHaveBeenCalledTimes(1));
+    expect(mocks.saveResponse.mock.calls[0]?.[0]).toMatchObject({
+      expectedClientRevision: 0,
+      response: { kind: "text", text: sentence },
+    });
+    await waitFor(() =>
+      expect(screen.getByText(copy.saved, { exact: true })).toBeVisible(),
+    );
+  });
+
+  it("renders one pinned Question Bank recording and suppresses the legacy stimulus duplicate", () => {
+    mocks.audioMode = "top-level";
+    const { container } = render(<Runner />);
+
+    const audio = container.querySelectorAll("audio");
+    expect(audio).toHaveLength(1);
+    expect(audio[0]).toHaveAttribute(
+      "src",
+      "https://r2.mukhtada.my.id/assessments/question-recording.mp3",
+    );
+    expect(container.innerHTML).not.toContain("legacy-stimulus.mp3");
+    expect(screen.getByText("Question recording")).toBeVisible();
+  });
+
+  it("retains the legacy stimulus audio fallback when a manifest has no pinned recording", () => {
+    mocks.audioMode = "legacy";
+    const { container } = render(<Runner />);
+
+    const audio = container.querySelectorAll("audio");
+    expect(audio).toHaveLength(1);
+    expect(audio[0]).toHaveAttribute(
+      "src",
+      "https://r2.mukhtada.my.id/assessments/legacy-stimulus.mp3",
+    );
+  });
+
+  it("renders an optional Question Bank illustration only when the manifest pins it", () => {
+    const first = render(<Runner />);
+    expect(
+      screen.queryByRole("img", { name: "Learners comparing notes around a table" }),
+    ).toBeNull();
+    first.unmount();
+
+    mocks.illustrationVisible = true;
+    render(<Runner />);
+    expect(
+      screen.getByRole("img", { name: "Learners comparing notes around a table" }),
+    ).toBeVisible();
   });
 });

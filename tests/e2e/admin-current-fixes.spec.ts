@@ -345,6 +345,14 @@ test.describe("current administration fixes", () => {
 
     await signIn(page);
     await page.goto("/admin/journal");
+    await activate(
+      page.getByRole("combobox", { name: "Status" }),
+      testInfo.project.name,
+    );
+    await activate(
+      page.getByRole("option", { name: "Published" }),
+      testInfo.project.name,
+    );
     await page
       .getByRole("link", {
         name: "Edit Leeds the Way: Bridging England and Indonesia",

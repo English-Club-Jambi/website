@@ -6,6 +6,10 @@ import {
   assertPasswordRequirements,
   normalizePasswordEmail,
 } from "./lib/passwordPolicy";
+import {
+  hashPasswordSecret,
+  verifyPasswordSecret,
+} from "./lib/passwordCrypto";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -22,6 +26,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       },
       validatePasswordRequirements(password) {
         assertPasswordRequirements(password);
+      },
+      crypto: {
+        hashSecret: hashPasswordSecret,
+        verifySecret: verifyPasswordSecret,
       },
     }),
   ],

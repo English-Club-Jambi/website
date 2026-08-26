@@ -1,5 +1,6 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { MAX_ASSESSMENT_AUDIO_DURATION_MS } from "./assessmentMedia";
 
 type MediaReadCtx = Pick<QueryCtx | MutationCtx, "db">;
 
@@ -129,4 +130,52 @@ export async function projectReadyQuestionIllustration(
     return null;
   }
   return toReadyMediaProjection(asset);
+}
+
+function publicMediaObjectKeyIsSafe(objectKey: string) {
+  const segments = objectKey.split("/");
+  return (
+    objectKey.length >= 3 &&
+    objectKey.length <= 1_024 &&
+    segments.length >= 2 &&
+    segments.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        !/[\u0000-\u001f\u007f]/.test(segment),
+    )
+  );
+}
+
+export async function projectReadyQuestionAudio(
+  ctx: MediaReadCtx,
+  mediaId: Id<"mediaAssets"> | undefined,
+  expectedAssessmentVersionId?: Id<"assessmentVersions">,
+) {
+  if (mediaId === undefined) return null;
+  const asset = await ctx.db.get("mediaAssets", mediaId);
+  if (
+    asset === null ||
+    asset.status !== "ready" ||
+    (asset.access ?? "public") !== "public" ||
+    asset.purpose !== "assessment-audio" ||
+    !asset.contentType.startsWith("audio/") ||
+    asset.durationMs === undefined ||
+    !Number.isInteger(asset.durationMs) ||
+    asset.durationMs < 1 ||
+    asset.durationMs > MAX_ASSESSMENT_AUDIO_DURATION_MS ||
+    (expectedAssessmentVersionId !== undefined &&
+      asset.assessmentVersionId !== expectedAssessmentVersionId) ||
+    !publicMediaObjectKeyIsSafe(asset.objectKey)
+  ) {
+    return null;
+  }
+  return {
+    mediaId: asset._id,
+    publicUrl: publicR2UrlForKey(asset.objectKey),
+    contentType: asset.contentType,
+    durationMs: asset.durationMs,
+    description: asset.alt,
+  };
 }

@@ -1,7 +1,9 @@
 import { ConvexError } from "convex/values";
 
+import { isTaskFamilyForSkill } from "../../content/assessment-task-families";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { projectReadyQuestionAudio } from "./media";
 
 type AssessmentReadCtx = Pick<QueryCtx | MutationCtx, "db">;
 type QuestionBankMutationCtx = Pick<MutationCtx, "db">;
@@ -34,6 +36,7 @@ export type DeliveredAssessmentItem = {
   targetSectionId: Id<"assessmentSections">;
   bankQuestionId?: Id<"assessmentQuestionBank">;
   illustrationMediaId?: Id<"mediaAssets">;
+  audioMediaId?: Id<"mediaAssets">;
 };
 
 const taskFamilyByPrefix: ReadonlyArray<
@@ -178,7 +181,8 @@ export function questionBankSourceIsReady(
     item.sectionId !== row.sourceSectionId ||
     answerKey.versionId !== row.sourceVersionId ||
     version.definitionId !== definition._id ||
-    definition._id !== row.sourceDefinitionId
+    definition._id !== row.sourceDefinitionId ||
+    definition.profile !== row.profile
   ) {
     return false;
   }
@@ -193,6 +197,84 @@ export function questionBankSourceIsReady(
     version.status === "published" &&
     definition.visibility === "published" &&
     definition.publishedVersionId === version._id
+  );
+}
+
+export async function resolveReadyQuestionAudio(
+  ctx: AssessmentReadCtx,
+  row: Doc<"assessmentQuestionBank">,
+  sourceItem?: Doc<"assessmentItems"> | null,
+) {
+  if (row.skill !== "listening") return null;
+  const item =
+    sourceItem === undefined
+      ? await ctx.db.get("assessmentItems", row.sourceItemId)
+      : sourceItem;
+  if (
+    item === null ||
+    item._id !== row.sourceItemId ||
+    item.versionId !== row.sourceVersionId ||
+    item.sectionId !== row.sourceSectionId
+  ) {
+    return null;
+  }
+  if (row.audioMediaId !== undefined) {
+    return await projectReadyQuestionAudio(ctx, row.audioMediaId);
+  }
+  if (item.stimulusId === undefined) return null;
+  const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
+  if (
+    stimulus === null ||
+    stimulus.kind !== "audio" ||
+    stimulus.versionId !== item.versionId ||
+    stimulus.sectionId !== item.sectionId
+  ) {
+    return null;
+  }
+  return await projectReadyQuestionAudio(
+    ctx,
+    stimulus.mediaId,
+    item.versionId,
+  );
+}
+
+/**
+ * Applies the source-integrity gate shared by catalogue capacity, Practice
+ * Format previews, and live random delivery. The legacy
+ * `fullPracticeEligible` field is intentionally not part of this decision;
+ * version-level rules own format overrides.
+ */
+export async function questionBankRowIsReadyForSelection(
+  ctx: AssessmentReadCtx,
+  row: Doc<"assessmentQuestionBank">,
+) {
+  if (
+    row.status !== "ready" ||
+    !isTaskFamilyForSkill(row.skill, row.taskFamily)
+  ) {
+    return false;
+  }
+  const [item, answerKey, version, definition, sourceSection] = await Promise.all([
+    ctx.db.get("assessmentItems", row.sourceItemId),
+    ctx.db
+      .query("assessmentAnswerKeys")
+      .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+      .unique(),
+    ctx.db.get("assessmentVersions", row.sourceVersionId),
+    ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+    ctx.db.get("assessmentSections", row.sourceSectionId),
+  ]);
+  if (
+    !questionBankSourceIsReady(row, item, answerKey, version, definition) ||
+    sourceSection === null ||
+    sourceSection.versionId !== row.sourceVersionId ||
+    sourceSection.skill !== row.skill
+  ) {
+    return false;
+  }
+  return (
+    row.skill !== "listening" ||
+    (await resolveReadyQuestionAudio(ctx, row, item)) !== null
   );
 }
 
@@ -225,6 +307,7 @@ export async function deliveredItemAt(
       targetSectionId: section._id,
       bankQuestionId: selection.bankQuestionId,
       illustrationMediaId: selection.illustrationMediaId,
+      audioMediaId: selection.audioMediaId,
     };
   }
 
@@ -268,6 +351,7 @@ export async function listDeliveredSectionItems(
         targetSectionId: section._id,
         bankQuestionId: selection.bankQuestionId,
         illustrationMediaId: selection.illustrationMediaId,
+        audioMediaId: selection.audioMediaId,
       });
     }
     return result;
@@ -365,74 +449,46 @@ export async function listEligibleBankQuestionsForSection(
   if (rows.length > 200 || rules.length > 200) {
     throw new ConvexError({ code: "QUESTION_BANK_POOL_LIMIT" as const });
   }
-  const ruleByQuestion = new Map(
-    rules.map((rule) => [rule.bankQuestionId, rule.allowed]),
+  const ruleQuestions = await Promise.all(
+    rules.map(async (rule) => ({
+      rule,
+      question: await ctx.db.get("assessmentQuestionBank", rule.bankQuestionId),
+    })),
   );
+  const ruleByFingerprint = new Map<string, boolean>();
+  for (const { rule, question } of ruleQuestions) {
+    if (
+      question === null ||
+      question.profile !== section.bankProfile ||
+      question.skill !== section.skill
+    ) {
+      continue;
+    }
+    const current = ruleByFingerprint.get(question.contentFingerprint);
+    // A disable wins over an allow for the same logical question. This keeps a
+    // duplicate source row from leaking content that an administrator disabled.
+    ruleByFingerprint.set(
+      question.contentFingerprint,
+      current === false || rule.allowed === false ? false : true,
+    );
+  }
   const eligible: Array<Doc<"assessmentQuestionBank">> = [];
   const fingerprints = new Set<string>();
-  for (const row of rows) {
+  const orderedRows = [...rows].sort(
+    (left, right) =>
+      left._creationTime - right._creationTime ||
+      String(left._id).localeCompare(String(right._id)),
+  );
+  for (const row of orderedRows) {
     const allowedByDefault =
       definition.kind === "full-practice"
-        ? row.fullPracticeEligible
+        ? true
         : row.sourceDefinitionId === definition._id;
-    if (!(ruleByQuestion.get(row._id) ?? allowedByDefault)) continue;
+    if (!(ruleByFingerprint.get(row.contentFingerprint) ?? allowedByDefault)) {
+      continue;
+    }
     if (fingerprints.has(row.contentFingerprint)) continue;
-    const [item, answerKey] = await Promise.all([
-      ctx.db.get("assessmentItems", row.sourceItemId),
-      ctx.db
-        .query("assessmentAnswerKeys")
-        .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
-        .unique(),
-    ]);
-    if (
-      item === null ||
-      answerKey === null ||
-      item.versionId !== row.sourceVersionId ||
-      item.sectionId !== row.sourceSectionId ||
-      answerKey.versionId !== row.sourceVersionId
-    ) {
-      continue;
-    }
-    const [sourceVersion, sourceDefinition] = await Promise.all([
-      ctx.db.get("assessmentVersions", row.sourceVersionId),
-      ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
-    ]);
-    if (
-      !questionBankSourceIsReady(
-        row,
-        item,
-        answerKey,
-        sourceVersion,
-        sourceDefinition,
-      )
-    ) {
-      continue;
-    }
-    if (item.stimulusId !== undefined) {
-      const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
-      if (
-        stimulus === null ||
-        stimulus.versionId !== item.versionId ||
-        stimulus.sectionId !== item.sectionId
-      ) {
-        continue;
-      }
-      if (stimulus.kind === "audio") {
-        const media =
-          stimulus.mediaId === undefined
-            ? null
-            : await ctx.db.get("mediaAssets", stimulus.mediaId);
-        if (
-          media === null ||
-          media.status !== "ready" ||
-          media.access !== "public" ||
-          media.purpose !== "assessment-audio" ||
-          media.assessmentVersionId !== item.versionId
-        ) {
-          continue;
-        }
-      }
-    }
+    if (!(await questionBankRowIsReadyForSelection(ctx, row))) continue;
     fingerprints.add(row.contentFingerprint);
     eligible.push(row);
   }

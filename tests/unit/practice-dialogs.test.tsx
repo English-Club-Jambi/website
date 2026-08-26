@@ -49,6 +49,7 @@ const player = {
     ],
   },
   illustration: null,
+  audio: null,
   stimulus: null,
   response: null,
   flagged: false,

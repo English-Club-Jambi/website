@@ -1983,6 +1983,19 @@
   object-fit: cover;
 }
 
+.mediaAudioPreview {
+  width: 100%;
+  display: grid;
+  gap: 0.85rem;
+  place-items: center;
+  padding: 1rem;
+}
+
+.mediaAudioPreview audio {
+  width: 100%;
+  min-width: 0;
+}
+
 .mediaCopy {
   min-width: 0;
   display: grid;

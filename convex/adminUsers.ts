@@ -18,6 +18,7 @@ import {
   requireAdmin,
   writeAuditEvent,
 } from "./lib/adminAuth";
+import { inspectPasswordHash } from "./lib/passwordCrypto";
 import { adminRoleValidator, adminStatusValidator } from "./validators";
 
 const adminViewValidator = v.object({
@@ -40,6 +41,20 @@ const identityViewValidator = v.union(
     email: v.optional(v.string()),
   }),
 );
+
+const passwordCredentialDiagnosticsValidator = v.object({
+  accountExists: v.boolean(),
+  hashStored: v.boolean(),
+  algorithm: v.union(
+    v.null(),
+    v.literal("bcrypt"),
+    v.literal("legacy-scrypt"),
+    v.literal("unknown"),
+  ),
+  bcryptCost: v.optional(v.number()),
+  accountCreatedAt: v.optional(v.number()),
+  expirationFieldPresent: v.boolean(),
+});
 
 function cleanLine(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -148,6 +163,50 @@ export const getActiveForIdentity = internalQuery({
     return admin === null || admin.status !== "active"
       ? null
       : toAdminView(admin);
+  },
+});
+
+export const inspectPasswordCredential = internalQuery({
+  args: { email: v.string() },
+  returns: passwordCredentialDiagnosticsValidator,
+  handler: async (ctx, args) => {
+    const email = normalizeEmail(args.email);
+    if (email === undefined) {
+      throw new Error("Enter a valid email address.");
+    }
+    const account = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", email),
+      )
+      .unique();
+    if (account === null) {
+      return {
+        accountExists: false,
+        hashStored: false,
+        algorithm: null,
+        expirationFieldPresent: false,
+      };
+    }
+
+    const secret = account.secret ?? "";
+    const inspection =
+      secret.length === 0
+        ? { algorithm: "unknown" as const }
+        : inspectPasswordHash(secret);
+    return {
+      accountExists: true,
+      hashStored: secret.length > 0,
+      algorithm: inspection.algorithm,
+      ...(inspection.bcryptCost === undefined
+        ? {}
+        : { bcryptCost: inspection.bcryptCost }),
+      accountCreatedAt: account._creationTime,
+      expirationFieldPresent: Object.prototype.hasOwnProperty.call(
+        account,
+        "expirationTime",
+      ),
+    };
   },
 });
 

@@ -23,6 +23,20 @@ const provisionedAdminValidator = v.object({
   role: adminRoleValidator,
 });
 
+const resetAdminPasswordValidator = v.object({
+  adminUserId: v.id("adminUsers"),
+  authUserId: v.id("users"),
+  email: v.string(),
+  role: adminRoleValidator,
+});
+
+type ResetAdminPasswordResult = {
+  adminUserId: Id<"adminUsers">;
+  authUserId: Id<"users">;
+  email: string;
+  role: "editor" | "publisher" | "owner";
+};
+
 export const provisionPasswordAdmin = internalAction({
   args: {
     displayName: v.string(),
@@ -33,7 +47,7 @@ export const provisionPasswordAdmin = internalAction({
     recoverExistingAccount: v.optional(v.boolean()),
   },
   returns: provisionedAdminValidator,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ResetAdminPasswordResult> => {
     const displayName = normalizePasswordDisplayName(args.displayName);
     const email = normalizePasswordEmail(args.email);
     assertPasswordRequirements(args.password);
@@ -85,6 +99,52 @@ export const provisionPasswordAdmin = internalAction({
       authUserId: user._id,
       email,
       role: args.role,
+    };
+  },
+});
+
+export const resetPasswordAdmin = internalAction({
+  args: {
+    email: v.string(),
+    password: v.string(),
+  },
+  returns: resetAdminPasswordValidator,
+  handler: async (ctx, args): Promise<ResetAdminPasswordResult> => {
+    const email = normalizePasswordEmail(args.email);
+    assertPasswordRequirements(args.password);
+
+    const { user } = await retrieveAccount(ctx, {
+      provider: "password",
+      account: { id: email },
+    });
+    const admin: null | {
+      _id: Id<"adminUsers">;
+      role: "editor" | "publisher" | "owner";
+    } = await ctx.runQuery(
+      internal.adminUsers.getActiveForIdentity,
+      {
+        tokenIdentifier: `${env.CONVEX_SITE_URL}|${user._id}`,
+        subject: `${user._id}|operator-password-reset`,
+        issuer: env.CONVEX_SITE_URL,
+      },
+    );
+    if (admin === null) {
+      throw new Error(
+        "Password reset requires an active provisioned administrator.",
+      );
+    }
+
+    await modifyAccountCredentials(ctx, {
+      provider: "password",
+      account: { id: email, secret: args.password },
+    });
+    await invalidateSessions(ctx, { userId: user._id });
+
+    return {
+      adminUserId: admin._id,
+      authUserId: user._id,
+      email,
+      role: admin.role,
     };
   },
 });

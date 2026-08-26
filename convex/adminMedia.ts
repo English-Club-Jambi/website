@@ -14,6 +14,7 @@ import {
 } from "./_generated/server";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
 import { publicR2UrlForKey } from "./lib/media";
+import { MAX_ASSESSMENT_AUDIO_DURATION_MS } from "./lib/assessmentMedia";
 import {
   mediaContentTypeValidator,
   mediaPurposeValidator,
@@ -97,6 +98,7 @@ export const createPending = internalMutation({
     byteSize: v.number(),
     originalName: v.string(),
     alt: v.string(),
+    durationMs: v.optional(v.number()),
     uploadedBy: v.id("adminUsers"),
   },
   returns: v.id("mediaAssets"),
@@ -112,6 +114,7 @@ export const createPending = internalMutation({
     return await ctx.db.insert("mediaAssets", {
       ...args,
       status: "pending",
+      access: "public",
       createdAt: now,
       updatedAt: now,
     });
@@ -121,8 +124,9 @@ export const createPending = internalMutation({
 export const markReady = internalMutation({
   args: {
     mediaId: v.id("mediaAssets"),
-    width: v.number(),
-    height: v.number(),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
     actorId: v.id("adminUsers"),
   },
   returns: v.string(),
@@ -131,11 +135,30 @@ export const markReady = internalMutation({
     if (media === null || media.status !== "pending") {
       throw new Error("Pending media asset was not found.");
     }
-    if (
+    const isAudio =
+      media.purpose === "assessment-audio" &&
+      media.contentType.startsWith("audio/");
+    if (isAudio) {
+      if (
+        args.width !== undefined ||
+        args.height !== undefined ||
+        args.durationMs === undefined ||
+        args.durationMs !== media.durationMs ||
+        !Number.isInteger(args.durationMs) ||
+        args.durationMs < 1 ||
+        args.durationMs > MAX_ASSESSMENT_AUDIO_DURATION_MS
+      ) {
+        throw new Error("Audio duration is invalid.");
+      }
+    } else if (
+      media.contentType.startsWith("audio/") ||
+      args.durationMs !== undefined ||
       !Number.isInteger(args.width) ||
+      args.width === undefined ||
       args.width < 1 ||
       args.width > 12_000 ||
       !Number.isInteger(args.height) ||
+      args.height === undefined ||
       args.height < 1 ||
       args.height > 12_000
     ) {
@@ -144,8 +167,9 @@ export const markReady = internalMutation({
     const now = Date.now();
     await ctx.db.patch("mediaAssets", media._id, {
       status: "ready",
-      width: args.width,
-      height: args.height,
+      ...(isAudio
+        ? { durationMs: args.durationMs }
+        : { width: args.width, height: args.height }),
       verifiedAt: now,
       updatedAt: now,
     });

@@ -1,0 +1,359 @@
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { QuestionBankManager } from "@/components/admin/assessments/question-bank-manager";
+
+const useQueryMock = vi.fn();
+const mutationMock = vi.fn();
+
+vi.mock("convex/react", async () => {
+  const actual =
+    await vi.importActual<typeof import("convex/react")>("convex/react");
+  return {
+    ...actual,
+    useQuery: (...args: unknown[]) => useQueryMock(...args),
+    useMutation: () => mutationMock,
+    useAction: () => mutationMock,
+  };
+});
+
+vi.mock("@/components/admin/admin-session", () => ({
+  useAdminSession: () => ({ role: "owner" }),
+}));
+
+const choiceOptions = [
+  { key: "a", label: "Before the workshop" },
+  { key: "b", label: "After the workshop" },
+  { key: "c", label: "During lunch" },
+  { key: "d", label: "The next morning" },
+];
+
+const baseRow = {
+  bankQuestionId: "bank-one",
+  bankKey: "seed/bank-one",
+  skill: "reading",
+  taskFamily: "read-daily-life",
+  difficulty: "developing",
+  status: "ready",
+  profile: "ec-ibt-style-2026-v1",
+  fullPracticeEligible: false,
+  origin: "assessment-source",
+  illustration: null,
+  audio: null,
+  content: {
+    type: "single-choice",
+    prompt: "When should members meet outside the language room?",
+    explanation: "The notice schedules the meeting after the workshop.",
+    options: choiceOptions,
+    correctChoiceKey: "b",
+  },
+  tags: ["campus-life", "original-question"],
+  prompt: "When should members meet outside the language room?",
+  itemType: "single-choice",
+  options: choiceOptions,
+  correctChoiceKey: "b",
+  explanation: "The notice schedules the meeting after the workshop.",
+  points: 1,
+  sourceDefinitionId: "definition-one",
+  sourceVersionId: "version-one",
+  sourceSectionId: "section-one",
+  sourceItemId: "item-one",
+  sourceTitle: "Quick Reading source",
+  sourceVisibility: "published",
+  usageCount: 3,
+  usageCountCapped: false,
+  seedBatch: "development",
+  updatedAt: 10,
+} as const;
+
+let currentRow: Record<string, unknown> = baseRow;
+
+function resultForQuery(args: Record<string, unknown> | undefined) {
+  if (args?.purpose === "assessment-image") {
+    return { page: [], isDone: true, continueCursor: "" };
+  }
+  if (args?.purpose === "assessment-audio") {
+    return {
+      page: [
+        {
+          _id: "audio-one",
+          publicUrl: "https://r2.mukhtada.my.id/audio/question-one.mp3",
+          alt: "Two students arrange a study meeting after class",
+          durationMs: 31_000,
+          originalName: "after-class-meeting.mp3",
+        },
+      ],
+      isDone: true,
+      continueCursor: "",
+    };
+  }
+  if (args?.status) {
+    return {
+      page: [currentRow],
+      isDone: true,
+      continueCursor: "",
+    };
+  }
+  return {
+    total: 145,
+    capped: false,
+    ready: 120,
+    eligible: 120,
+    bySkill: [
+      { skill: "reading", count: 50 },
+      { skill: "listening", count: 47 },
+      { skill: "writing", count: 12 },
+      { skill: "speaking", count: 11 },
+    ],
+  };
+}
+
+beforeEach(() => {
+  currentRow = baseRow;
+  useQueryMock.mockImplementation(
+    (_reference: unknown, args: Record<string, unknown> | undefined) =>
+      resultForQuery(args),
+  );
+  mutationMock.mockReset();
+  mutationMock.mockResolvedValue({
+    ok: true,
+    updatedAt: 11,
+    sourceItemId: "item-two",
+  });
+});
+
+afterEach(cleanup);
+
+describe("QuestionBankManager", () => {
+  it("edits a published-source question directly and keeps format rules explicit", async () => {
+    const user = userEvent.setup();
+    render(<QuestionBankManager />);
+
+    expect(
+      screen.getByText("Ready questions are allowed by default."),
+    ).toBeVisible();
+    expect(screen.getByText("Format default", { exact: true })).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Edit source" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Available to full practice"),
+    ).not.toBeInTheDocument();
+
+    const editor = screen.getByLabelText("Selected question editor");
+    const prompt = within(editor).getByLabelText("Question prompt");
+    await user.clear(prompt);
+    await user.type(prompt, "When does the conversation circle begin?");
+    await user.click(within(editor).getAllByLabelText("Correct answer")[2]);
+    await user.click(
+      within(editor).getByRole("button", { name: "Save question revision" }),
+    );
+
+    expect(mutationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bankQuestionId: "bank-one",
+        expectedUpdatedAt: 10,
+        content: expect.objectContaining({
+          type: "single-choice",
+          prompt: "When does the conversation circle begin?",
+          correctChoiceKey: "c",
+        }),
+        illustrationMediaId: null,
+        audioMediaId: null,
+      }),
+    );
+
+    await user.click(
+      within(editor).getByRole("button", { name: "Save review settings" }),
+    );
+    expect(mutationMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        expectedUpdatedAt: 11,
+        status: "ready",
+        fullPracticeEligible: true,
+      }),
+    );
+  });
+
+  it("reveals the compact reviewed-audio picker when authoring Listening", async () => {
+    const user = userEvent.setup();
+    render(<QuestionBankManager />);
+
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    const builder = screen.getByRole("form", {
+      name: "Author a bank question",
+    });
+    const skillSelect = Array.from(builder.querySelectorAll("select")).find(
+      (select) =>
+        Array.from(select.options).some(
+          (option) => option.value === "listening",
+        ),
+    );
+    expect(skillSelect).toBeDefined();
+    fireEvent.change(skillSelect!, { target: { value: "listening" } });
+
+    expect(
+      within(builder).getByRole("combobox", { name: "Reviewed recording" }),
+    ).toBeVisible();
+    expect(within(builder).getByText(/No recording selected/)).toBeVisible();
+
+    const audioSelect = Array.from(builder.querySelectorAll("select")).find(
+      (select) =>
+        Array.from(select.options).some(
+          (option) => option.value === "audio-one",
+        ),
+    );
+    expect(audioSelect).toBeDefined();
+    fireEvent.change(audioSelect!, { target: { value: "audio-one" } });
+    expect(
+      within(builder).getByLabelText("Preview after-class-meeting.mp3"),
+    ).toHaveAttribute(
+      "src",
+      "https://r2.mukhtada.my.id/audio/question-one.mp3",
+    );
+  });
+
+  it("keeps projected Listening audio available when it is outside the newest asset page", () => {
+    currentRow = {
+      ...baseRow,
+      skill: "listening",
+      taskFamily: "listen-conversation",
+      audio: {
+        mediaId: "audio-attached",
+        publicUrl:
+          "https://r2.mukhtada.my.id/assessment-audio/campus%20briefing.mp3",
+        contentType: "audio/mpeg",
+        durationMs: 42_000,
+        description: "A coordinator briefs members before the weekly circle",
+      },
+    };
+    render(<QuestionBankManager />);
+
+    const editor = screen.getByLabelText("Selected question editor");
+    expect(
+      within(editor).getByRole("combobox", { name: "Reviewed recording" }),
+    ).toHaveTextContent("campus briefing.mp3");
+    expect(
+      within(editor).getByLabelText("Preview campus briefing.mp3"),
+    ).toHaveAttribute(
+      "src",
+      "https://r2.mukhtada.my.id/assessment-audio/campus%20briefing.mp3",
+    );
+    expect(
+      within(editor).queryByText(
+        "The uploaded recording is being added to the reviewed library.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps an older projected illustration visible and labels its actual profile", () => {
+    currentRow = {
+      ...baseRow,
+      profile: "ec-itp-level-1-aligned-v1",
+      illustration: {
+        mediaId: "image-attached",
+        publicUrl:
+          "https://r2.mukhtada.my.id/assessment-images/wetland%20map.webp",
+        alt: "A wetland map marking the seasonal bird route",
+        width: 1_200,
+        height: 800,
+      },
+    };
+    render(<QuestionBankManager />);
+
+    const editor = screen.getByLabelText("Selected question editor");
+    expect(
+      within(editor).getByRole("button", { name: "wetland map.webp" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(editor).queryByText(
+        "The uploaded illustration is being added to the reviewed library.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      within(editor).getByText("English Club ITP Level 1", { exact: true }),
+    ).toBeVisible();
+  });
+
+  it.each([
+    {
+      type: "multiple-select",
+      label: "Choose every keyed response",
+      content: {
+        type: "multiple-select",
+        prompt: "Which details support the announcement?",
+        explanation: null,
+        options: choiceOptions,
+        selectionMin: 2,
+        selectionMax: 2,
+        correctChoiceKeys: ["a", "d"],
+      },
+    },
+    {
+      type: "cloze-select",
+      label: "Blank count stays fixed",
+      content: {
+        type: "cloze-select",
+        prompt: "Complete the sentence.",
+        explanation: null,
+        stemParts: ["The club meets ", " every Thursday."],
+        gaps: [{ key: "gap-one", options: choiceOptions }],
+        correctGapAnswers: [{ gapKey: "gap-one", choiceKey: "b" }],
+      },
+    },
+    {
+      type: "sentence-build",
+      label: "Token count stays fixed",
+      content: {
+        type: "sentence-build",
+        prompt: "Build the sentence.",
+        explanation: null,
+        tokens: choiceOptions,
+        acceptedTokenOrders: [["a", "b", "c", "d"]],
+      },
+    },
+    {
+      type: "constructed-response",
+      label: "Private scoring guide",
+      content: {
+        type: "constructed-response",
+        prompt: "Write a short response to the club coordinator.",
+        explanation: null,
+        responseMode: "writing",
+        minimumWords: 40,
+        recommendedWords: 80,
+        maximumCharacters: 2_000,
+        preparationSeconds: null,
+        responseSeconds: null,
+        rubric: {
+          maxPoints: 4,
+          minimumWords: 40,
+          targetTerms: ["meeting", "Thursday"],
+          sampleResponse: "I can join the meeting on Thursday after class.",
+        },
+      },
+    },
+  ])("opens safe direct controls for $type", ({ content, label }) => {
+    currentRow = {
+      ...baseRow,
+      content,
+      itemType: content.type,
+      prompt: content.prompt,
+      options: "options" in content ? content.options : [],
+      correctChoiceKey: null,
+    };
+    render(<QuestionBankManager />);
+
+    expect(screen.getByText(label)).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Save question revision" }),
+    ).toBeEnabled();
+  });
+});

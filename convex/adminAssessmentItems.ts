@@ -380,6 +380,7 @@ export const saveSingleChoice = mutation({
         fullPracticeEligible: bankEntry?.fullPracticeEligible ?? false,
         origin: bankEntry?.origin ?? ("assessment-source" as const),
         illustrationMediaId: bankEntry?.illustrationMediaId,
+        audioMediaId: bankEntry?.audioMediaId,
         contentFingerprint: questionContentFingerprint(
           section.skill,
           itemValues.prompt,

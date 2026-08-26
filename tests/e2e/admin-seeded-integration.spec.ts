@@ -8,14 +8,15 @@ type AdminCredentials = {
 };
 
 const credentialPath = process.env.ADMIN_TOUCH_CREDENTIALS_PATH;
-const seedIllustratedQuestion =
-  process.env.SEED_ILLUSTRATED_QUESTION === "1";
+const seedIllustratedQuestion = process.env.SEED_ILLUSTRATED_QUESTION === "1";
 
 function credentials(): AdminCredentials {
   if (!credentialPath) {
     throw new Error("ADMIN_TOUCH_CREDENTIALS_PATH is required.");
   }
-  const value = JSON.parse(readFileSync(credentialPath, "utf8")) as Partial<AdminCredentials>;
+  const value = JSON.parse(
+    readFileSync(credentialPath, "utf8"),
+  ) as Partial<AdminCredentials>;
   if (typeof value.email !== "string" || typeof value.password !== "string") {
     throw new Error("The credential file is invalid.");
   }
@@ -29,7 +30,10 @@ test.describe("seeded public and admin integration", () => {
   test("shows the same cloud records in management and public views", async ({
     page,
   }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop-chromium", "One integrated cloud read is sufficient.");
+    test.skip(
+      testInfo.project.name !== "desktop-chromium",
+      "One integrated cloud read is sufficient.",
+    );
     const clientErrors: string[] = [];
     page.on("pageerror", (error) => clientErrors.push(error.message));
     page.on("console", (message) => {
@@ -45,42 +49,66 @@ test.describe("seeded public and admin integration", () => {
     await page.getByLabel("Email address").fill(account.email);
     await page.getByLabel("Password").fill(account.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { name: /Welcome back,/ })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: /Welcome back,/ }),
+    ).toBeVisible({
       timeout: 20_000,
     });
 
     await page.goto("/admin/assessments/questions");
-    await expect(page.getByRole("heading", { name: "Question Bank" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Question Bank" }),
+    ).toBeVisible();
     const capacity = page
       .getByText("Full-practice capacity")
       .locator("xpath=ancestor::section");
-    const readingCapacity = await capacity
-      .getByText("Reading", { exact: true })
-      .locator("..")
-      .textContent();
-    const readyReadingCount = Number(readingCapacity?.match(/(\d+)\s*\/\s*50/)?.[1]);
-    expect(readyReadingCount).toBeGreaterThanOrEqual(50);
-    await expect(capacity).toContainText(/47\s*\/\s*47/);
-    await expect(capacity).toContainText(/12\s*\/\s*12/);
-    await expect(capacity).toContainText(/11\s*\/\s*11/);
+    for (const [skill, required] of [
+      ["Reading", 50],
+      ["Listening", 47],
+      ["Writing", 12],
+      ["Speaking", 11],
+    ] as const) {
+      const capacityText = await capacity
+        .getByText(skill, { exact: true })
+        .locator("..")
+        .textContent();
+      const readyCount = Number(
+        capacityText?.match(new RegExp(`(\\d+)\\s*\\/\\s*${required}`))?.[1],
+      );
+      expect(readyCount).toBeGreaterThanOrEqual(required);
+    }
     const bankList = page.getByRole("list", { name: "Question bank entries" });
     await expect(bankList).toBeVisible();
-    await expect(bankList.getByRole("listitem")).toHaveCount(20);
-    await bankList.getByRole("listitem").nth(1).getByRole("button").click();
-    await expect(page.getByLabel("Tags")).toHaveValue(/original-question/);
-    await expect(page.getByLabel("Tags")).toHaveValue(/source-ets-2026-blueprint/);
+    const bankRows = bankList.getByRole("listitem");
+    await expect(bankRows).toHaveCount(20);
+    const tags = page.getByLabel("Tags");
+    let foundSeededQuestion = false;
+    for (let index = 0; index < (await bankRows.count()); index += 1) {
+      await bankRows.nth(index).getByRole("button").click();
+      const value = await tags.inputValue();
+      if (
+        value.includes("original-question") &&
+        value.includes("source-ets-2026-blueprint")
+      ) {
+        foundSeededQuestion = true;
+        break;
+      }
+    }
+    expect(foundSeededQuestion).toBe(true);
 
     const taskFamily = page.getByRole("combobox", { name: "Task family" });
     await taskFamily.click();
     const taskFamilyList = page.getByRole("listbox");
     for (const group of ["Reading", "Listening", "Writing", "Speaking"]) {
-      await expect(taskFamilyList.getByText(group, { exact: true })).toBeVisible();
+      await expect(
+        taskFamilyList.getByText(group, { exact: true }),
+      ).toBeVisible();
     }
     const optionStates = await taskFamilyList
       .getByRole("option")
       .evaluateAll((options) =>
         options.map((option) => option.hasAttribute("data-disabled")),
-      );
+    );
     expect(optionStates).toContain(true);
     expect(optionStates).toContain(false);
     await page.screenshot({
@@ -88,6 +116,13 @@ test.describe("seeded public and admin integration", () => {
       animations: "disabled",
     });
     await page.keyboard.press("Escape");
+    const directEditor = page.getByLabel("Selected question editor");
+    await expect(
+      directEditor.getByRole("button", { name: "Save question revision" }),
+    ).toBeVisible();
+    await expect(
+      directEditor.getByRole("link", { name: "Edit source" }),
+    ).toHaveCount(0);
 
     await page.screenshot({
       path: "docs/evidence/admin/question-bank-seeded-desktop-chromium.png",
@@ -95,16 +130,42 @@ test.describe("seeded public and admin integration", () => {
       animations: "disabled",
     });
 
+    await page.getByRole("combobox", { name: "Skill" }).click();
+    await page.getByRole("option", { name: "Listening" }).click();
+    const listeningEditor = page.getByLabel("Selected question editor");
+    await expect(
+      listeningEditor.getByRole("combobox", { name: "Reviewed recording" }),
+    ).toBeVisible();
+    const audioPreview = listeningEditor.locator("audio");
+    await expect(audioPreview).toHaveCount(1);
+    await expect(audioPreview).toHaveAttribute(
+      "src",
+      /^https:\/\/r2\.mukhtada\.my\.id\//,
+    );
+    await page.screenshot({
+      path: "docs/evidence/admin/question-bank-listening-editor-desktop-chromium.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+
     await page.goto("/admin/members");
     await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
-    await expect(page.getByText("Matching / loaded").locator("..")).toContainText("15 / 15");
-    await expect(page.getByRole("button", { name: /Nabila Maheswari/ })).toBeVisible();
+    await expect(
+      page.getByText("Matching / loaded").locator(".."),
+    ).toContainText("15 / 15");
+    await expect(
+      page.getByRole("button", { name: /Nabila Maheswari/ }),
+    ).toBeVisible();
 
     await page.goto("/members");
     await expect(page.getByText("15 members", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Nabila Maheswari" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Nabila Maheswari" }),
+    ).toBeVisible();
 
     await page.goto("/admin/journal");
+    await page.getByRole("combobox", { name: "Status" }).click();
+    await page.getByRole("option", { name: "Published" }).click();
     await expect(
       page.getByText("A room made for trying again", { exact: true }),
     ).toBeVisible();
@@ -124,25 +185,44 @@ test.describe("seeded public and admin integration", () => {
 
     await page.goto("/admin/programs");
     await expect(page.getByRole("heading", { name: "Programs" })).toBeVisible();
-    await expect(page.getByText("Loaded records").locator("..")).toContainText("6");
+    await expect(page.getByText("Loaded records").locator("..")).toContainText(
+      "6",
+    );
     await expect(
-      page.getByRole("button", { name: /Sharing Session with University of Leeds/ }),
+      page.getByRole("button", {
+        name: /Sharing Session with University of Leeds/,
+      }),
     ).toBeVisible();
 
     await page.goto("/programs");
     await expect(
-      page.getByRole("button", { name: /Sharing Session with University of Leeds/ }),
+      page.getByRole("button", {
+        name: /Sharing Session with University of Leeds/,
+      }),
     ).toBeVisible();
-    await expect(page.getByText("20 August 2025", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("20 August 2025", { exact: true }),
+    ).toBeVisible();
 
     await page.goto("/admin/appearance");
-    await expect(page.getByRole("group", { name: "Colour schemes" })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Colour schemes" }),
+    ).toBeVisible();
     await expect(page.getByText("4 schemes", { exact: true })).toBeVisible();
-    for (const scheme of ["Relay Cobalt", "Field Notes", "After Class", "Tide Room"]) {
-      await expect(page.getByRole("button", { name: new RegExp(scheme) })).toBeVisible();
+    for (const scheme of [
+      "Relay Cobalt",
+      "Field Notes",
+      "After Class",
+      "Tide Room",
+    ]) {
+      await expect(
+        page.getByRole("button", { name: new RegExp(scheme) }),
+      ).toBeVisible();
     }
 
-    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+    const accessibility = await new AxeBuilder({ page })
+      .include("main")
+      .analyze();
     expect(
       accessibility.violations.filter(
         (violation) =>
@@ -157,7 +237,7 @@ test.describe("seeded public and admin integration", () => {
     expect(clientErrors).toEqual([]);
   });
 
-  test("opens a reusable question builder with optional R2 illustration controls", async ({
+  test("opens a reusable question builder with reviewed R2 image and audio controls", async ({
     page,
   }, testInfo) => {
     const clientErrors: string[] = [];
@@ -174,7 +254,9 @@ test.describe("seeded public and admin integration", () => {
     await page.getByLabel("Email address").fill(account.email);
     await page.getByLabel("Password").fill(account.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { name: /Welcome back,/ })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: /Welcome back,/ }),
+    ).toBeVisible({
       timeout: 20_000,
     });
 
@@ -183,34 +265,61 @@ test.describe("seeded public and admin integration", () => {
     const builder = page.getByRole("form", { name: "Author a bank question" });
     await expect(builder).toBeVisible();
     await expect(builder.getByLabel("Question prompt")).toBeVisible();
-    await expect(builder.getByRole("button", { name: "No illustration" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await expect(builder.getByRole("button", { name: "Upload to R2" })).toBeDisabled();
+    await expect(
+      builder.getByRole("button", { name: "No illustration" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      builder.getByRole("button", { name: "Upload to R2" }),
+    ).toBeDisabled();
 
     await builder.getByRole("combobox", { name: "Task family" }).click();
     const taskFamilyList = page.getByRole("listbox");
     for (const group of ["Reading", "Listening", "Writing", "Speaking"]) {
-      await expect(taskFamilyList.getByText(group, { exact: true })).toBeVisible();
+      await expect(
+        taskFamilyList.getByText(group, { exact: true }),
+      ).toBeVisible();
     }
+    await page.keyboard.press("Escape");
+
+    await builder.getByRole("combobox", { name: "Skill" }).click();
+    await page.getByRole("option", { name: "Listening" }).click();
+    await expect(
+      builder.getByRole("combobox", { name: "Reviewed recording" }),
+    ).toBeVisible();
+    await expect(builder.getByLabel("Audio file")).toHaveAttribute(
+      "accept",
+      "audio/mpeg,audio/mp4,audio/ogg,audio/webm",
+    );
+    await expect(
+      builder.getByRole("button", { name: "Upload audio to R2" }),
+    ).toBeDisabled();
+    await builder.getByRole("combobox", { name: "Reviewed recording" }).click();
+    expect(await page.getByRole("option").count()).toBeGreaterThan(1);
     await page.keyboard.press("Escape");
 
     const targets = await builder.getByRole("button").evaluateAll((buttons) =>
       buttons.map((button) => {
         const box = button.getBoundingClientRect();
-        return { width: box.width, height: box.height, label: button.textContent };
+        return {
+          width: box.width,
+          height: box.height,
+          label: button.textContent,
+        };
       }),
     );
-    expect(targets.filter((target) => target.width > 0 && target.height > 0).every(
-      (target) => target.height >= 44,
-    )).toBe(true);
+    expect(
+      targets
+        .filter((target) => target.width > 0 && target.height > 0)
+        .every((target) => target.height >= 44),
+    ).toBe(true);
     const width = await page.evaluate(() => ({
       client: document.documentElement.clientWidth,
       scroll: document.documentElement.scrollWidth,
     }));
     expect(width.scroll).toBeLessThanOrEqual(width.client + 1);
-    const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+    const accessibility = await new AxeBuilder({ page })
+      .include("main")
+      .analyze();
     expect(
       accessibility.violations.filter(
         (violation) =>
@@ -228,11 +337,15 @@ test.describe("seeded public and admin integration", () => {
   test("authors and activates one illustrated development question through the admin UI", async ({
     page,
   }, testInfo) => {
-    test.skip(!seedIllustratedQuestion, "Explicit illustrated-question seed only.");
+    test.skip(
+      !seedIllustratedQuestion,
+      "Explicit illustrated-question seed only.",
+    );
     test.skip(testInfo.project.name !== "desktop-chromium", "Seed once.");
     test.setTimeout(90_000);
     const account = credentials();
-    const prompt = "Which caption best describes the scene in the illustration?";
+    const prompt =
+      "Which caption best describes the scene in the illustration?";
     await page.goto("/admin");
     await expect(page.locator("html")).toHaveAttribute(
       "data-admin-hydrated",
@@ -241,28 +354,38 @@ test.describe("seeded public and admin integration", () => {
     await page.getByLabel("Email address").fill(account.email);
     await page.getByLabel("Password").fill(account.password);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { name: /Welcome back,/ })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: /Welcome back,/ }),
+    ).toBeVisible({
       timeout: 20_000,
     });
     await page.goto("/admin/assessments/questions");
     const bankList = page.getByRole("list", { name: "Question bank entries" });
     await expect(bankList).toBeVisible({ timeout: 20_000 });
-    if (await bankList.getByText(prompt, { exact: true }).isVisible().catch(() => false)) {
+    if (
+      await bankList
+        .getByText(prompt, { exact: true })
+        .isVisible()
+        .catch(() => false)
+    ) {
       await bankList.getByText(prompt, { exact: true }).click();
       const selectedImage = page
-        .getByLabel("Selected question settings")
+        .getByLabel("Selected question editor")
         .locator('button[aria-pressed="true"] img');
       const selectedSource = await selectedImage.getAttribute("src");
       const selectedPublicUrl = selectedSource
-        ? new URL(selectedSource, "http://127.0.0.1:3987").searchParams.get("url") ??
-          selectedSource
+        ? (new URL(selectedSource, "http://127.0.0.1:3987").searchParams.get(
+            "url",
+          ) ?? selectedSource)
         : null;
       if (selectedPublicUrl !== null) {
         await page.goto("/admin/media");
         await page
           .getByRole("combobox", { name: "Purpose", exact: true })
           .click();
-        await page.getByRole("option", { name: "Question illustration" }).click();
+        await page
+          .getByRole("option", { name: "Question illustration" })
+          .click();
         const duplicateCards = page.locator("article").filter({
           hasText: "conversation-hero-placeholder.webp",
         });
@@ -272,7 +395,9 @@ test.describe("seeded public and admin integration", () => {
           const card = duplicateCards.nth(index);
           const source = await card.locator("img").getAttribute("src");
           const publicUrl = source
-            ? new URL(source, "http://127.0.0.1:3987").searchParams.get("url") ?? source
+            ? (new URL(source, "http://127.0.0.1:3987").searchParams.get(
+                "url",
+              ) ?? source)
             : null;
           if (publicUrl !== null && publicUrl !== selectedPublicUrl) {
             await card.getByRole("button", { name: "Archive asset" }).click();
@@ -310,22 +435,24 @@ test.describe("seeded public and admin integration", () => {
     await builder.getByRole("combobox", { name: "Task family" }).click();
     await page.getByRole("option", { name: "Read in daily life" }).click();
     await builder.getByLabel("Question prompt").fill(prompt);
-    await builder.getByLabel("Answer A").fill(
-      "A small group exchanges ideas around a table.",
-    );
-    await builder.getByLabel("Answer B").fill(
-      "A lecturer addresses a crowded auditorium.",
-    );
-    await builder.getByLabel("Answer C").fill(
-      "One student studies alone in a library aisle.",
-    );
-    await builder.getByLabel("Answer D").fill(
-      "Several travellers wait beside a station platform.",
-    );
+    await builder
+      .getByLabel("Answer A")
+      .fill("A small group exchanges ideas around a table.");
+    await builder
+      .getByLabel("Answer B")
+      .fill("A lecturer addresses a crowded auditorium.");
+    await builder
+      .getByLabel("Answer C")
+      .fill("One student studies alone in a library aisle.");
+    await builder
+      .getByLabel("Answer D")
+      .fill("Several travellers wait beside a station platform.");
     await builder.getByLabel("Tags").fill("visual-reading, group-discussion");
-    await builder.getByLabel("Answer note").fill(
-      "The people are seated together, facing one another, and taking turns in a shared discussion.",
-    );
+    await builder
+      .getByLabel("Answer note")
+      .fill(
+        "The people are seated together, facing one another, and taking turns in a shared discussion.",
+      );
     await builder
       .getByLabel("Image file")
       .setInputFiles("public/images/conversation-hero-placeholder.webp");
@@ -338,17 +465,20 @@ test.describe("seeded public and admin integration", () => {
         hasText: "conversation-hero-placeholder",
       }),
     ).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
-    await builder.getByRole("button", { name: "Create paused question" }).click();
+    await builder
+      .getByRole("button", { name: "Create paused question" })
+      .click();
 
-    await expect(page.getByRole("form", { name: "Author a bank question" })).toBeHidden({
+    await expect(
+      page.getByRole("form", { name: "Author a bank question" }),
+    ).toBeHidden({
       timeout: 20_000,
     });
     await expect(bankList.getByText(prompt, { exact: true })).toBeVisible();
-    const editor = page.getByLabel("Selected question settings");
+    const editor = page.getByLabel("Selected question editor");
     await editor.getByRole("combobox", { name: "Status" }).click();
     await page.getByRole("option", { name: "Ready for selection" }).click();
-    await editor.getByLabel("Available to full practice").check();
-    await editor.getByRole("button", { name: "Save bank settings" }).click();
+    await editor.getByRole("button", { name: "Save review settings" }).click();
     await page.getByRole("combobox", { name: "Selection status" }).click();
     await page.getByRole("option", { name: "Ready for selection" }).click();
     await expect(bankList.getByText(prompt, { exact: true })).toBeVisible({

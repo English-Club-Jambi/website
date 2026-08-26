@@ -19,8 +19,8 @@ The words “draft” and “assessment definition” are implementation languag
 
 ## Current evidence
 
-- assessmentQuestionBank already records skill, task family, difficulty, source, global status, and full-practice eligibility.
-- A random-bank section currently selects ready questions by profile, skill, and global eligibility.
+- `assessmentQuestionBank` records skill, task family, difficulty, source, global status, and a legacy `fullPracticeEligible` compatibility field. That field is no longer an effective-pool gate.
+- A random-bank section selects source-valid ready questions by profile and skill. Listening rows additionally require a ready public assessment-audio asset. Duplicate source rows are treated as one logical question by content fingerprint.
 - assessmentAttemptItems stores the selected bank question, delivered item, order, timestamp, and selection contract when Start succeeds. The draw does not rerun during that attempt.
 - A learner flag currently means “mark this question for my own review”. It is saved on assessmentResponses and contributes to the section’s flagged count. It is not an error report and has no reason field.
 - Assessment versions already have a mutable working revision, immutable publication, automated validation, four current-revision human approvals, and conflict checks.
@@ -36,8 +36,9 @@ A Practice Format working revision may explicitly allow or disable a Question Ba
 - A rule change increments contentRevision, clears validation/checksum state, and makes prior approvals stale.
 - “Allow” never bypasses a paused or archived global bank record, a missing source item/key, a mismatched profile/skill, or private/unreviewed media.
 - An inherited rule follows the canonical default:
-  - Full practice inherits fullPracticeEligible.
+  - Full practice inherits every compatible ready Question Bank entry.
   - A quick skill format inherits questions authored for that canonical definition.
+- Per-version rules store only explicit overrides. A disable applies to the logical content fingerprint, so a duplicate source row cannot leak the same question back into a live attempt.
 - A working revision may temporarily have too few allowed questions. Validation blocks publication until every skill pool meets its section quota.
 
 ### Flag signal
@@ -103,10 +104,12 @@ The interface labels this accurately: a flag is a revisit signal, not proof that
 
 - The catalogue and its compatibility route expose no Create Practice Format action. The server rejects `adminAssessments.create` unless an operator deliberately enables the undocumented internal maintenance mode.
 - The selected development deployment remains `perfect-greyhound-270`. It exposes one full format and four skill sprints; the Question Bank verification reports 146 ready records and eight random-bank sections.
-- Backend regression: 8 files, 63 tests passed.
-- Unit regression: 45 files, 163 tests passed.
+- The full form still draws exactly 120 tasks in its 50/47/12/11 quotas. Question Bank capacity may exceed 120 as reviewed questions are added; the seed gate checks every skill quota as a minimum instead of requiring the reusable catalogue to remain identical to its initial seed.
+- Re-running the idempotent practice seed preserves a reviewed copy-on-write edit to a seeded bank row. That exception requires the original seed batch identity and a valid source in the internal Question Bank authoring ledger; an untrusted bank-key collision still aborts atomically.
+- Backend regression: 9 files, 70 tests passed.
+- Unit regression: 57 files, 252 tests passed.
 - Responsive Practice Builder harness: desktop, Pixel 7, and 320 px passed with no overflow, minimum 44 px controls, reduced motion, and zero Axe violations.
-- Final credential-enabled browser regression: 172 cases passed directly and 55 project-specific cases skipped. One Contact server-action expectation exceeded its former five-second wait under the shared cloud load; after a bounded 20-second wait, that case passed on desktop, Pixel 7, and 320 px. Effective result: 173 passed, 55 intentional skips, zero unresolved failures.
+- Final credential-enabled browser regression: the 231-case matrix passed 189 cases and intentionally skipped 42 project/credential/mutation-specific cases, with zero failures.
 - Full ESLint, TypeScript, diff checks, and an isolated Next 16 production build passed. Port 3987 remained live throughout.
 
 ## Rejected approaches

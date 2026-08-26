@@ -7,6 +7,11 @@ import { join } from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { publicAssessmentDerivativeKey } from "../convex/lib/assessmentMedia.ts";
+import {
+  FULL_FORM_TASK_COUNT,
+  questionBankVerificationIssues,
+  type QuestionBankVerification,
+} from "./lib/assessment-seed-verification.ts";
 
 const confirm = "seed-ec-ibt-style-2026-v1";
 const publicDomain = "https://r2.mukhtada.my.id";
@@ -262,23 +267,18 @@ async function main() {
         `${entry.slug}: ${entry.items} items; audio ${entry.audioReady}/${entry.audioTotal}; ${sections}`,
       );
     }
-    const bankVerification = convexRun<{
-      total: number;
-      ready: number;
-      eligible: number;
-      randomSections: number;
-      bySkill: Array<{ skill: string; ready: number; eligible: number }>;
-    }>("assessmentSeed:verifyQuestionBank", { confirm });
-    if (
-      bankVerification.total !== 145 ||
-      bankVerification.ready !== 145 ||
-      bankVerification.eligible !== 120 ||
-      bankVerification.randomSections !== 4
-    ) {
-      throw new Error("Question-bank verification failed.");
+    const bankVerification = convexRun<QuestionBankVerification>(
+      "assessmentSeed:verifyQuestionBank",
+      { confirm },
+    );
+    const bankIssues = questionBankVerificationIssues(bankVerification);
+    if (bankIssues.length > 0) {
+      throw new Error(
+        `Question-bank verification failed: ${bankIssues.join("; ")}.`,
+      );
     }
     console.log(
-      `Verified ${bankVerification.total} bank records; ${bankVerification.eligible} eligible for the randomized full form.`,
+      `Verified ${bankVerification.total} bank records; randomized full-form capacity ${bankVerification.eligible}/${FULL_FORM_TASK_COUNT}.`,
     );
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });

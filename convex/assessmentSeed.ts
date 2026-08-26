@@ -15,6 +15,8 @@ import { publicAssessmentDerivativeKey } from "./lib/assessmentMedia";
 import {
   difficultyForPosition,
   normalizeBankPrompt,
+  questionBankRowIsReadyForSelection,
+  questionBankSourceIsReady,
   taskFamilyForItemKey,
 } from "./lib/assessmentQuestionBank";
 
@@ -39,6 +41,41 @@ const preparedDefinitionValidator = v.object({
 
 function checksumForSlug(slug: string) {
   return `${IBT_PRACTICE_BANK_CHECKSUM}:${slug}`;
+}
+
+async function isTrustedSeedCopyOnWrite(
+  ctx: MutationCtx,
+  row: Doc<"assessmentQuestionBank">,
+  expected: {
+    bankKey: string;
+    skill: Doc<"assessmentSections">["skill"];
+  },
+) {
+  if (
+    row.bankKey !== expected.bankKey ||
+    row.seedBatch !== IBT_PRACTICE_BANK_CHECKSUM ||
+    row.profile !== "ec-ibt-style-2026-v1" ||
+    row.skill !== expected.skill ||
+    row.origin !== "bank-authored"
+  ) {
+    return false;
+  }
+  const [item, answerKey, version, definition, section] = await Promise.all([
+    ctx.db.get("assessmentItems", row.sourceItemId),
+    ctx.db
+      .query("assessmentAnswerKeys")
+      .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+      .unique(),
+    ctx.db.get("assessmentVersions", row.sourceVersionId),
+    ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+    ctx.db.get("assessmentSections", row.sourceSectionId),
+  ]);
+  return (
+    questionBankSourceIsReady(row, item, answerKey, version, definition) &&
+    section !== null &&
+    section.versionId === row.sourceVersionId &&
+    section.skill === row.skill
+  );
 }
 
 async function requireSeedAuthor(ctx: MutationCtx) {
@@ -489,7 +526,6 @@ export const seedQuestionBank = internalMutation({
     const author = await requireSeedAuthor(ctx);
     let inserted = 0;
     let existingCount = 0;
-    let eligible = 0;
     let randomSections = 0;
     const now = Date.now();
     for (const source of ibtPracticeBank) {
@@ -579,15 +615,25 @@ export const seedQuestionBank = internalMutation({
             .withIndex("by_bank_key", (q) => q.eq("bankKey", bankKey))
             .unique();
           if (existing !== null) {
-            if (
+            const sourceWasRevised =
               existing.sourceItemId !== item._id ||
               existing.sourceVersionId !== version._id ||
-              existing.sourceSectionId !== section._id
+              existing.sourceSectionId !== section._id;
+            const seedIdentityMatches =
+              existing.seedBatch === IBT_PRACTICE_BANK_CHECKSUM &&
+              existing.profile === "ec-ibt-style-2026-v1" &&
+              existing.skill === section.skill;
+            if (
+              !seedIdentityMatches ||
+              (sourceWasRevised &&
+                !(await isTrustedSeedCopyOnWrite(ctx, existing, {
+                  bankKey,
+                  skill: section.skill,
+                })))
             ) {
               throw new ConvexError({ code: "QUESTION_BANK_SEED_COLLISION" as const });
             }
             existingCount += 1;
-            eligible += existing.fullPracticeEligible ? 1 : 0;
             continue;
           }
           const taskFamily = taskFamilyForItemKey(item.itemKey);
@@ -627,10 +673,23 @@ export const seedQuestionBank = internalMutation({
             updatedAt: now,
           });
           inserted += 1;
-          eligible += fullPracticeEligible ? 1 : 0;
         }
       }
     }
+    const bankRows = await ctx.db.query("assessmentQuestionBank").take(201);
+    if (bankRows.length > 200) {
+      throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
+    }
+    const selectableFingerprints = new Set<string>();
+    for (const row of bankRows) {
+      if (
+        row.profile === "ec-ibt-style-2026-v1" &&
+        (await questionBankRowIsReadyForSelection(ctx, row))
+      ) {
+        selectableFingerprints.add(row.contentFingerprint);
+      }
+    }
+    const eligible = selectableFingerprints.size;
     if (inserted > 0) {
       await ctx.db.insert("cmsAuditEvents", {
         area: "assessment",
@@ -889,25 +948,32 @@ export const verifyQuestionBank = internalQuery({
           section.bankSelectionContract === 1,
       ).length;
     }
+    const selectableByFingerprint = new Map<
+      string,
+      Doc<"assessmentQuestionBank">
+    >();
+    for (const row of rows) {
+      if (
+        row.profile === "ec-ibt-style-2026-v1" &&
+        !selectableByFingerprint.has(row.contentFingerprint) &&
+        (await questionBankRowIsReadyForSelection(ctx, row))
+      ) {
+        selectableByFingerprint.set(row.contentFingerprint, row);
+      }
+    }
+    const selectableRows = [...selectableByFingerprint.values()];
     const skills = ["reading", "listening", "writing", "speaking"] as const;
     return {
       total: rows.length,
       ready: rows.filter((row) => row.status === "ready").length,
-      eligible: rows.filter(
-        (row) => row.status === "ready" && row.fullPracticeEligible,
-      ).length,
+      eligible: selectableRows.length,
       randomSections,
       bySkill: skills.map((skill) => ({
         skill,
         ready: rows.filter(
           (row) => row.skill === skill && row.status === "ready",
         ).length,
-        eligible: rows.filter(
-          (row) =>
-            row.skill === skill &&
-            row.status === "ready" &&
-            row.fullPracticeEligible,
-        ).length,
+        eligible: selectableRows.filter((row) => row.skill === skill).length,
       })),
     };
   },

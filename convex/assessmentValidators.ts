@@ -432,6 +432,14 @@ export const publicStimulusValidator = v.object({
   alt: v.union(v.string(), v.null()),
 });
 
+export const questionAudioValidator = v.object({
+  mediaId: v.id("mediaAssets"),
+  publicUrl: v.string(),
+  contentType: v.string(),
+  durationMs: v.number(),
+  description: v.string(),
+});
+
 export const attemptPlayerValidator = v.object({
   attemptId: v.id("assessmentAttempts"),
   status: attemptStatusValidator,
@@ -459,6 +467,7 @@ export const attemptPlayerValidator = v.object({
     }),
     v.null(),
   ),
+  audio: v.union(questionAudioValidator, v.null()),
   stimulus: v.union(publicStimulusValidator, v.null()),
   response: v.union(assessmentResponseInputValidator, v.null()),
   flagged: v.boolean(),

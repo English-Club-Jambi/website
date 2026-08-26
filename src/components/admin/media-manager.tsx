@@ -4,6 +4,7 @@ import {
   ArchiveBoxIcon,
   ArrowUpTrayIcon,
   PhotoIcon,
+  SpeakerWaveIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
 import { useMutation, usePaginatedQuery } from "convex/react";
@@ -42,6 +43,7 @@ const purposeOptions = [
   { value: "page-image", label: "Page image" },
   { value: "brand", label: "Brand asset" },
   { value: "assessment-image", label: "Question illustration" },
+  { value: "assessment-audio", label: "Listening question audio" },
 ] as const;
 
 const uploadPurposeOptions = purposeOptions.slice(1);
@@ -55,6 +57,11 @@ const mediaStatusOptions = [
 function formatBytes(value: number) {
   if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(value / 1024))} KB`;
+}
+
+function formatDuration(durationMs: number) {
+  const seconds = Math.round(durationMs / 1_000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 function statusTone(status: MediaStatus) {
@@ -76,7 +83,7 @@ function MediaUploadForm() {
     event.preventDefault();
     const formElement = event.currentTarget;
     if (!file) {
-      setError("Choose an image before uploading.");
+      setError("Choose a file before uploading.");
       return;
     }
     setPending(true);
@@ -84,7 +91,11 @@ function MediaUploadForm() {
     setError("");
     try {
       const result = await uploadMedia({ file, alt, purpose });
-      setMessage(`Verified ${file.name} at ${result.width} by ${result.height} pixels.`);
+      setMessage(
+        "durationMs" in result
+          ? `Verified ${file.name} at ${formatDuration(result.durationMs)}.`
+          : `Verified ${file.name} at ${result.width} by ${result.height} pixels.`,
+      );
       setFile(null);
       setAlt("");
       formElement.reset();
@@ -100,28 +111,42 @@ function MediaUploadForm() {
       <div className={styles.formGridWide}>
         <div className={styles.spanFour}>
           <SelectField
-            label="Image purpose"
+            label="Media purpose"
             value={purpose}
             options={uploadPurposeOptions}
             onValueChange={(next) => setPurpose(next as AdminMediaPurpose)}
           />
         </div>
         <label className={`${styles.field} ${styles.spanFour}`}>
-          <span>Image file</span>
+          <span>Media file</span>
           <input
             type="file"
-            accept={purpose === "member-photo" ? "image/avif,image/webp" : "image/avif,image/jpeg,image/png,image/webp"}
+            accept={
+              purpose === "assessment-audio"
+                ? "audio/mpeg,audio/mp4,audio/ogg,audio/webm"
+                : purpose === "member-photo"
+                  ? "image/avif,image/webp"
+                  : "image/avif,image/jpeg,image/png,image/webp"
+            }
             required
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </label>
         <label className={`${styles.field} ${styles.spanFour}`}>
-          <span>Alternative text</span>
+          <span>
+            {purpose === "assessment-audio"
+              ? "Audio description"
+              : "Alternative text"}
+          </span>
           <input
             value={alt}
             minLength={3}
             maxLength={240}
-            placeholder="Describe the visible action"
+            placeholder={
+              purpose === "assessment-audio"
+                ? "Name the recording and its listening context"
+                : "Describe the visible action"
+            }
             required
             onChange={(event) => setAlt(event.target.value)}
           />
@@ -129,10 +154,10 @@ function MediaUploadForm() {
       </div>
       {error ? <AdminError>{error}</AdminError> : null}
       <footer className={styles.formFooter}>
-        <p>{message || "The file transfers to Cloudflare R2, then Convex verifies its type, size, and dimensions."}</p>
+        <p>{message || "The file transfers to Cloudflare R2, then Convex verifies its type, size, and media metadata."}</p>
         <button className={styles.primaryButton} type="submit" disabled={pending}>
           <ArrowUpTrayIcon aria-hidden width={18} height={18} />
-          {pending ? "Uploading and verifying…" : "Upload image"}
+          {pending ? "Uploading and verifying…" : "Upload media"}
         </button>
       </footer>
     </form>
@@ -171,7 +196,14 @@ function MediaAsset({ asset }: { asset: MediaRecord }) {
   return (
     <article className={styles.mediaAsset}>
       <div className={styles.mediaPreview}>
-        {asset.publicUrl && asset.width && asset.height ? (
+        {asset.publicUrl && asset.purpose === "assessment-audio" ? (
+          <div className={styles.mediaAudioPreview}>
+            <SpeakerWaveIcon aria-hidden width={28} height={28} />
+            <audio controls preload="metadata" src={asset.publicUrl}>
+              Audio playback is not available in this browser.
+            </audio>
+          </div>
+        ) : asset.publicUrl && asset.width && asset.height ? (
           <Image
             src={asset.publicUrl}
             alt={asset.alt}
@@ -193,6 +225,7 @@ function MediaAsset({ asset }: { asset: MediaRecord }) {
           <div><dt>Purpose</dt><dd>{asset.purpose}</dd></div>
           <div><dt>Size</dt><dd>{formatBytes(asset.byteSize)}</dd></div>
           {asset.width && asset.height ? <div><dt>Pixels</dt><dd>{asset.width} x {asset.height}</dd></div> : null}
+          {asset.durationMs ? <div><dt>Length</dt><dd>{formatDuration(asset.durationMs)}</dd></div> : null}
           <div><dt>Updated</dt><dd>{formatAdminDate(asset.updatedAt)}</dd></div>
         </dl>
         {error ? <AdminError>{error}</AdminError> : null}
@@ -221,10 +254,10 @@ export function MediaManager() {
     <>
       <AdminPageHeading
         title="Media library"
-        description="Store approved images in Cloudflare R2 and keep their public URLs on the club's custom media domain."
+        description="Store approved images and Listening audio in Cloudflare R2 and keep their public URLs on the club's custom media domain."
       />
 
-      <AdminSection title="Upload an image" description="Accepted files are AVIF, JPEG, PNG, and WebP up to 10 MB.">
+      <AdminSection title="Upload media" description="Images accept AVIF, JPEG, PNG, and WebP up to 10 MB. Listening audio accepts MP3, M4A, OGG, and WebM up to 25 MB and 15 minutes.">
         <MediaUploadForm />
       </AdminSection>
 

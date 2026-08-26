@@ -1,9 +1,10 @@
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const ACCOUNT_ID_PATTERN = /^[a-f0-9]{32}$/;
 const BUCKET_PATTERN = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
 const OBJECT_KEY_PATTERN =
-  /^(?:brand|images|members|uploads)\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9_-]*\.(?:avif|jpe?g|png|webp)$/;
+  /^(?:brand|images|members|uploads)\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9_-]*\.(?:avif|jpe?g|png|webp|mp3|m4a|ogg|webm)$/;
 const SIGNATURE_PATTERN = /^[a-f0-9]{64}$/;
 
 const allowedContentTypes = {
@@ -11,6 +12,10 @@ const allowedContentTypes = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
+  "audio/mpeg": ".mp3",
+  "audio/mp4": ".m4a",
+  "audio/ogg": ".ogg",
+  "audio/webm": ".webm",
 } as const;
 
 export const runtime = "nodejs";
@@ -217,8 +222,16 @@ export async function POST(request: Request) {
   if (!Number.isInteger(contentLength) || contentLength < 1) {
     return jsonError("A valid upload size is required.", 411);
   }
-  if (contentLength > MAX_IMAGE_BYTES) {
-    return jsonError("Images must be no larger than 10 MB.", 413);
+  const maximumBytes = contentType.startsWith("audio/")
+    ? MAX_AUDIO_BYTES
+    : MAX_IMAGE_BYTES;
+  if (contentLength > maximumBytes) {
+    return jsonError(
+      contentType.startsWith("audio/")
+        ? "Audio must be no larger than 25 MB."
+        : "Images must be no larger than 10 MB.",
+      413,
+    );
   }
 
   if (

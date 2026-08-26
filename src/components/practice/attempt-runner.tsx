@@ -72,6 +72,22 @@ export function QuestionIllustration({
   );
 }
 
+export function QuestionAudio({ audio }: { audio: AttemptPlayer["audio"] | undefined }) {
+  const { copy } = usePracticeContext();
+  if (audio == null) return null;
+  return (
+    <section className={styles.questionAudio} aria-label={audio.description}>
+      <SpeakerWaveIcon width={25} height={25} strokeWidth={1.8} aria-hidden />
+      <div>
+        <p>{audio.description}</p>
+        <audio controls preload="metadata" src={audio.publicUrl}>
+          {copy.audioUnavailable}
+        </audio>
+      </div>
+    </section>
+  );
+}
+
 function useModalBodyLock(open: boolean) {
   useEffect(() => {
     if (!open) return;
@@ -210,7 +226,7 @@ function Stimulus({
         </h2>
       )}
 
-      {stimulus.kind === "audio" ? (
+      {stimulus.kind === "audio" && player.audio == null ? (
         <div className={styles.audioStimulus}>
           <SpeakerWaveIcon width={25} height={25} strokeWidth={1.8} aria-hidden />
           {stimulus.mediaUrl !== null ? (
@@ -476,7 +492,6 @@ function QuestionWorkspace({
     player.response ?? emptyResponseForItem(player.item),
   );
   const [flagged, setFlagged] = useState(player.flagged);
-  const [responseRevision, setResponseRevision] = useState(player.responseRevision);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     player.response === null ? "idle" : "saved",
   );
@@ -488,6 +503,13 @@ function QuestionWorkspace({
   const finishLauncherRef = useRef<HTMLButtonElement>(null);
   const submitRequestRef = useRef(mutationId("practice-submit"));
   const attemptRevisionRef = useRef(player.saveStateVersion);
+  const responseRevisionRef = useRef(player.responseRevision);
+  const pendingSaveRef = useRef<{
+    response: PublicAssessmentResponse;
+    flagged: boolean;
+  } | null>(null);
+  const saveInFlightRef = useRef(false);
+  const saveDelayRef = useRef<number | null>(null);
   const lastSection = player.section.order + 1 === player.section.totalSections;
   const lastQuestion = !player.navigation.canGoNext;
 
@@ -499,36 +521,66 @@ function QuestionWorkspace({
     attemptRevisionRef.current = player.saveStateVersion;
   }, [player.saveStateVersion]);
 
-  async function persist(
+  useEffect(
+    () => () => {
+      if (saveDelayRef.current !== null) {
+        window.clearTimeout(saveDelayRef.current);
+      }
+    },
+    [],
+  );
+
+  async function drainPendingSave() {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
+    try {
+      while (pendingSaveRef.current !== null) {
+        const snapshot = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        const result = await saveResponse({
+          attemptId,
+          itemId: player.item.id,
+          response: snapshot.response,
+          expectedClientRevision: responseRevisionRef.current,
+          mutationId: mutationId("practice-answer"),
+          flagged: snapshot.flagged,
+        });
+        if (!result.ok) {
+          pendingSaveRef.current ??= snapshot;
+          setSaveStatus("error");
+          setError(copy.saveError);
+          return;
+        }
+        responseRevisionRef.current = result.revision;
+      }
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+      setError(copy.saveError);
+    } finally {
+      saveInFlightRef.current = false;
+    }
+  }
+
+  function persist(
     nextResponse: PublicAssessmentResponse,
     nextFlagged: boolean,
   ) {
     setResponse(nextResponse);
     setFlagged(nextFlagged);
+    pendingSaveRef.current = {
+      response: nextResponse,
+      flagged: nextFlagged,
+    };
     setSaveStatus("saving");
     setError(null);
-    try {
-      const result = await saveResponse({
-        attemptId,
-        itemId: player.item.id,
-        response: nextResponse,
-        expectedClientRevision: responseRevision,
-        mutationId: mutationId("practice-answer"),
-        flagged: nextFlagged,
-      });
-      if (!result.ok) {
-        setSaveStatus("error");
-        setError(copy.saveError);
-        return false;
-      }
-      setResponseRevision(result.revision);
-      setSaveStatus("saved");
-      return true;
-    } catch {
-      setSaveStatus("error");
-      setError(copy.saveError);
-      return false;
+    if (saveDelayRef.current !== null) {
+      window.clearTimeout(saveDelayRef.current);
     }
+    saveDelayRef.current = window.setTimeout(() => {
+      saveDelayRef.current = null;
+      void drainPendingSave();
+    }, 220);
   }
 
   async function moveTo(itemOrder: number) {
@@ -608,7 +660,8 @@ function QuestionWorkspace({
     }
   }
 
-  const disabled = saveStatus === "saving" || actionBusy;
+  const responseDisabled = actionBusy;
+  const actionDisabled = saveStatus !== "idle" && saveStatus !== "saved" || actionBusy;
 
   return (
     <div className={styles.questionWorkspace}>
@@ -647,15 +700,16 @@ function QuestionWorkspace({
 
         <section className={styles.questionPrompt} aria-labelledby={`question-${player.item.id}`}>
           <QuestionIllustration illustration={player.illustration} />
+          <QuestionAudio audio={player.audio} />
           <h1 id={`question-${player.item.id}`} ref={questionHeadingRef} tabIndex={-1}>
             {player.item.prompt}
           </h1>
           <QuestionRenderer
             item={player.item}
             response={response}
-            disabled={disabled}
+            disabled={responseDisabled}
             copy={copy}
-            onChange={(next) => void persist(next, flagged)}
+            onChange={(next) => persist(next, flagged)}
           />
         </section>
 
@@ -664,8 +718,8 @@ function QuestionWorkspace({
             type="button"
             className={styles.flagButton}
             aria-pressed={flagged}
-            disabled={disabled}
-            onClick={() => void persist(response, !flagged)}
+            disabled={responseDisabled}
+            onClick={() => persist(response, !flagged)}
           >
             <FlagIcon width={20} height={20} strokeWidth={1.9} aria-hidden />
             {flagged ? copy.unflag : copy.flag}
@@ -677,7 +731,7 @@ function QuestionWorkspace({
           <button
             type="button"
             className={styles.quietButton}
-            disabled={!player.navigation.canGoBack || disabled}
+            disabled={!player.navigation.canGoBack || actionDisabled}
             onClick={() => void moveTo(player.navigation.itemOrder - 1)}
           >
             <ArrowLeftIcon width={20} height={20} strokeWidth={2} aria-hidden />
@@ -688,14 +742,14 @@ function QuestionWorkspace({
               player={player}
               launcherRef={finishLauncherRef}
               lastSection={lastSection}
-              busy={disabled}
+              busy={actionDisabled}
               onConfirm={confirmFinish}
             />
           ) : (
             <button
               type="button"
               className={styles.primaryButton}
-              disabled={disabled}
+              disabled={actionDisabled}
               onClick={() => void moveTo(player.navigation.itemOrder + 1)}
             >
               {copy.next}

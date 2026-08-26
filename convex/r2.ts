@@ -19,13 +19,14 @@ import {
   type ActionCtx,
 } from "./_generated/server";
 import { adminHasPermission } from "./lib/adminAuth";
+import { MAX_ASSESSMENT_AUDIO_DURATION_MS } from "./lib/assessmentMedia";
 import {
   mediaContentTypeValidator,
   mediaPurposeValidator,
 } from "./validators";
 
 const objectKeyPattern =
-  /^(?:brand|images|members|uploads)\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9_-]*\.(?:avif|jpe?g|png|svg|webp)$/;
+  /^(?:brand|images|members|uploads)\/(?:[a-z0-9][a-z0-9_-]*\/)*[a-z0-9][a-z0-9_-]*\.(?:avif|jpe?g|png|svg|webp|mp3|m4a|ogg|webm)$/;
 const accountIdPattern = /^[a-f0-9]{32}$/;
 const bucketNamePattern = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
 
@@ -35,6 +36,10 @@ const allowedContentTypes = {
   "image/png": ".png",
   "image/svg+xml": ".svg",
   "image/webp": ".webp",
+  "audio/mpeg": ".mp3",
+  "audio/mp4": ".m4a",
+  "audio/ogg": ".ogg",
+  "audio/webm": ".webm",
 } as const;
 
 const adminUploadExtensions = {
@@ -42,6 +47,10 @@ const adminUploadExtensions = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/ogg": "ogg",
+  "audio/webm": "webm",
 } as const;
 
 function getR2Config() {
@@ -105,7 +114,8 @@ function validateObjectInput({
     !objectKey.endsWith(expectedExtension) ||
     !Number.isInteger(byteSize) ||
     byteSize < 1 ||
-    byteSize > 10 * 1024 * 1024
+    byteSize >
+      (contentType.startsWith("audio/") ? 25 * 1024 * 1024 : 10 * 1024 * 1024)
   ) {
     throw new Error("R2 object input is invalid.");
   }
@@ -120,6 +130,8 @@ function validateAdminUploadInput(args: {
   alt: string;
   contentType: keyof typeof adminUploadExtensions;
   byteSize: number;
+  purpose: string;
+  durationMs?: number;
 }) {
   const originalName = cleanUploadText(args.originalName);
   const alt = cleanUploadText(args.alt);
@@ -131,11 +143,27 @@ function validateAdminUploadInput(args: {
     alt.length > 240 ||
     !Number.isInteger(args.byteSize) ||
     args.byteSize < 1 ||
-    args.byteSize > 10 * 1024 * 1024
+    args.byteSize >
+      (args.contentType.startsWith("audio/")
+        ? 25 * 1024 * 1024
+        : 10 * 1024 * 1024)
   ) {
     throw new Error("Media upload input is invalid.");
   }
-  return { originalName, alt };
+  const isAudio = args.contentType.startsWith("audio/");
+  if (
+    (isAudio && args.purpose !== "assessment-audio") ||
+    (!isAudio && args.purpose === "assessment-audio") ||
+    (isAudio &&
+      (args.durationMs === undefined ||
+        !Number.isInteger(args.durationMs) ||
+        args.durationMs < 1 ||
+        args.durationMs > MAX_ASSESSMENT_AUDIO_DURATION_MS)) ||
+    (!isAudio && args.durationMs !== undefined)
+  ) {
+    throw new Error("Media upload purpose does not match its file type.");
+  }
+  return { originalName, alt, durationMs: args.durationMs };
 }
 
 async function requireAdminUpload(ctx: ActionCtx) {
@@ -278,6 +306,7 @@ export const createAdminUploadUrl = action({
     byteSize: v.number(),
     originalName: v.string(),
     alt: v.string(),
+    durationMs: v.optional(v.number()),
   },
   returns: v.object({
     mediaId: v.id("mediaAssets"),
@@ -292,7 +321,7 @@ export const createAdminUploadUrl = action({
   handler: async (ctx, args) => {
     const admin = await requireAdminUpload(ctx);
     const contentType = args.contentType as keyof typeof adminUploadExtensions;
-    const { originalName, alt } = validateAdminUploadInput({
+    const { originalName, alt, durationMs } = validateAdminUploadInput({
       ...args,
       contentType,
     });
@@ -343,6 +372,7 @@ export const createAdminUploadUrl = action({
         byteSize: args.byteSize,
         originalName,
         alt,
+        ...(durationMs === undefined ? {} : { durationMs }),
         uploadedBy: admin._id,
       },
     );
@@ -359,8 +389,9 @@ export const createAdminUploadUrl = action({
 export const verifyAdminUpload = action({
   args: {
     mediaId: v.id("mediaAssets"),
-    width: v.number(),
-    height: v.number(),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
   },
   returns: v.object({
     ok: v.literal(true),
@@ -389,8 +420,9 @@ export const verifyAdminUpload = action({
       internal.adminMedia.markReady,
       {
         mediaId: media._id,
-        width: args.width,
-        height: args.height,
+        ...(args.width === undefined ? {} : { width: args.width }),
+        ...(args.height === undefined ? {} : { height: args.height }),
+        ...(args.durationMs === undefined ? {} : { durationMs: args.durationMs }),
         actorId: admin._id,
       },
     );

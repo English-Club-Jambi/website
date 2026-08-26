@@ -621,17 +621,10 @@ describe("four-skill assessment seed", () => {
       mutable: false,
     });
     expect(
-      publishedPool?.sections.map((section) => ({
-        skill: section.skill,
-        required: section.requiredCount,
-        allowed: section.allowedCount,
-      })),
-    ).toEqual([
-      { skill: "reading", required: 50, allowed: 50 },
-      { skill: "listening", required: 47, allowed: 47 },
-      { skill: "writing", required: 12, allowed: 12 },
-      { skill: "speaking", required: 11, allowed: 11 },
-    ]);
+      publishedPool?.sections.every(
+        (section) => section.allowedCount >= section.requiredCount,
+      ),
+    ).toBe(true);
     expect(JSON.stringify(publishedPool)).not.toMatch(
       /ownerTokenIdentifier|attemptId|selectedChoiceKey|correctChoiceKey/,
     );
@@ -658,18 +651,27 @@ describe("four-skill assessment seed", () => {
     const extraReading = workingPool?.questions.find(
       (question) =>
         question.skill === "reading" &&
-        question.status === "ready" &&
-        !question.allowedByDefault,
+        question.effectiveAllowed &&
+        question.bankQuestionId !== allowedReading?.bankQuestionId,
     );
     if (allowedReading === undefined || extraReading === undefined) {
-      throw new Error("Expected default and optional reading questions.");
+      throw new Error("Expected two inherited reading questions.");
+    }
+    const initialReading = workingPool?.sections.find(
+      (section) => section.skill === "reading",
+    );
+    const initialSpeaking = workingPool?.sections.find(
+      (section) => section.skill === "speaking",
+    );
+    if (initialReading === undefined || initialSpeaking === undefined) {
+      throw new Error("Expected reading and speaking pool sections.");
     }
 
     await expect(
       publisher.mutation(api.adminAssessmentPools.setQuestionAllowed, {
         definitionId: published.definitionId,
-        bankQuestionId: extraReading.bankQuestionId,
-        allowed: true,
+        bankQuestionId: allowedReading.bankQuestionId,
+        allowed: false,
         expectedContentRevision: 1,
       }),
     ).rejects.toThrow();
@@ -689,18 +691,19 @@ describe("four-skill assessment seed", () => {
     );
     expect(
       shortPool?.sections.find((section) => section.skill === "reading"),
-    ).toMatchObject({ requiredCount: 50, allowedCount: 49, spareCount: -1 });
-    await expect(
-      owner.mutation(api.adminAssessments.validateDraft, {
-        versionId: clone.versionId,
-        expectedContentRevision: 2,
-      }),
-    ).resolves.toMatchObject({ ok: true, status: "failed" });
+    ).toMatchObject({
+      requiredCount: 50,
+    });
+    expect(
+      shortPool?.questions.find(
+        (question) => question.bankQuestionId === allowedReading.bankQuestionId,
+      ),
+    ).toMatchObject({ ruleState: "disabled", effectiveAllowed: false });
 
     await expect(
       owner.mutation(api.adminAssessmentPools.setQuestionAllowed, {
         definitionId: published.definitionId,
-        bankQuestionId: extraReading.bankQuestionId,
+        bankQuestionId: allowedReading.bankQuestionId,
         allowed: true,
         expectedContentRevision: 2,
       }),
@@ -712,17 +715,16 @@ describe("four-skill assessment seed", () => {
     );
     expect(
       revisedPool?.sections.find((section) => section.skill === "reading"),
-    ).toMatchObject({ requiredCount: 50, allowedCount: 50, spareCount: 0 });
-    expect(
-      revisedPool?.questions.find(
-        (question) => question.bankQuestionId === extraReading.bankQuestionId,
-      ),
-    ).toMatchObject({ ruleState: "allowed", effectiveAllowed: true });
+    ).toMatchObject({
+      requiredCount: 50,
+      allowedCount: initialReading.allowedCount,
+      spareCount: initialReading.spareCount,
+    });
     expect(
       revisedPool?.questions.find(
         (question) => question.bankQuestionId === allowedReading.bankQuestionId,
       ),
-    ).toMatchObject({ ruleState: "disabled", effectiveAllowed: false });
+    ).toMatchObject({ ruleState: "inherit", effectiveAllowed: true });
 
     const inheritedSpeaking = revisedPool?.questions.find(
       (question) =>
@@ -784,7 +786,7 @@ describe("four-skill assessment seed", () => {
     ).toMatchObject({
       deliveryMode: "random-bank",
       requiredCount: 11,
-      allowedCount: 11,
+      allowedCount: initialSpeaking.allowedCount,
     });
     expect(
       repairedPool?.questions.find(
@@ -931,5 +933,118 @@ describe("four-skill assessment seed", () => {
         (question) => question.bankQuestionId === delivered.bankQuestionId,
       )?.flagSignal,
     ).toMatchObject({ reviewStatus: "reviewed" });
+  }, 15_000);
+
+  it("preserves a legitimate copy-on-write seed edit across an idempotent rerun", async () => {
+    const t = harness();
+    await seedOwner(t);
+    const owner = t.withIdentity({
+      tokenIdentifier: "https://example.test|seed-owner",
+    });
+    const prepared = await t.mutation(
+      internal.assessmentSeed.prepareIbtPractice,
+      { confirm },
+    );
+    await attachAllAudio(t, prepared);
+    await t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm });
+
+    const fixture = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_profile_and_status_and_skill", (q) =>
+          q
+            .eq("profile", "ec-ibt-style-2026-v1")
+            .eq("status", "ready")
+            .eq("skill", "reading"),
+        )
+        .take(201);
+      for (const row of rows) {
+        if (!row.bankKey.includes("/four-skill-practice-form-1/")) continue;
+        const [item, key] = await Promise.all([
+          ctx.db.get("assessmentItems", row.sourceItemId),
+          ctx.db
+            .query("assessmentAnswerKeys")
+            .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+            .unique(),
+        ]);
+        if (
+          item?.type === "single-choice" &&
+          key?.kind === "choice" &&
+          key.correctChoiceKeys.length === 1
+        ) {
+          return {
+            row,
+            originalPrompt: item.prompt,
+            content: {
+              type: "single-choice" as const,
+              prompt: `${item.prompt} Use the revised club notice.`,
+              options: item.options,
+              correctChoiceKey: key.correctChoiceKeys[0],
+              explanation: item.explanation ?? null,
+            },
+          };
+        }
+      }
+      throw new Error("Expected a seeded single-choice Reading row.");
+    });
+    const edited = await owner.mutation(
+      api.adminAssessmentQuestionBank.updateContent,
+      {
+        bankQuestionId: fixture.row._id,
+        expectedUpdatedAt: fixture.row.updatedAt,
+        content: fixture.content,
+        illustrationMediaId: fixture.row.illustrationMediaId ?? null,
+        audioMediaId: null,
+      },
+    );
+    if (!edited.ok) throw new Error("Seeded row edit conflicted.");
+    expect(edited.sourceItemId).not.toBe(fixture.row.sourceItemId);
+
+    await expect(
+      t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm }),
+    ).resolves.toMatchObject({
+      inserted: 0,
+      existing: 145,
+      eligible: 121,
+      randomSections: 8,
+    });
+    const preserved = await t.run(async (ctx) => {
+      const row = await ctx.db.get("assessmentQuestionBank", fixture.row._id);
+      const item =
+        row === null ? null : await ctx.db.get("assessmentItems", row.sourceItemId);
+      const originalItem = await ctx.db.get(
+        "assessmentItems",
+        fixture.row.sourceItemId,
+      );
+      return { row, item, originalItem };
+    });
+    expect(preserved.row).toMatchObject({
+      bankKey: fixture.row.bankKey,
+      sourceItemId: edited.sourceItemId,
+      origin: "bank-authored",
+      seedBatch: fixture.row.seedBatch,
+    });
+    expect(preserved.item?.prompt).toBe(fixture.content.prompt);
+    expect(preserved.originalItem?.prompt).toBe(fixture.originalPrompt);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch("assessmentQuestionBank", fixture.row._id, {
+        seedBatch: undefined,
+      });
+    });
+    await expect(
+      t.mutation(internal.assessmentSeed.seedQuestionBank, { confirm }),
+    ).rejects.toThrow(/QUESTION_BANK_SEED_COLLISION/);
+    await expect(
+      t.run(async (ctx) => {
+        const row = await ctx.db.get(
+          "assessmentQuestionBank",
+          fixture.row._id,
+        );
+        return row === null
+          ? null
+          : await ctx.db.get("assessmentItems", row.sourceItemId);
+      }),
+    ).resolves.toMatchObject({ prompt: fixture.content.prompt });
   }, 15_000);
 });

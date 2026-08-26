@@ -155,7 +155,7 @@ function cleanAuthError(error: unknown) {
   }
 
   if (/password must be 12.+128 characters/i.test(message)) {
-    return "Password must be 12–128 characters and include upper-case, lower-case, and numeric characters.";
+    return "Password must be 12–128 characters, fit the 72-byte security limit, and include upper-case, lower-case, and numeric characters.";
   }
 
   return "The request could not be completed. Try again.";

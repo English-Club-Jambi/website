@@ -1,19 +1,18 @@
 "use client";
 
 import {
-  ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CircleStackIcon,
+  InformationCircleIcon,
   PlusIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
 import { useMutation, useQuery } from "convex/react";
-import type { Route } from "next";
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -36,6 +35,10 @@ import {
 } from "../admin-ui";
 import { getAssessmentAdminCapabilities } from "./assessment-admin-permissions";
 import {
+  QuestionAudioField,
+  type QuestionAudioAsset,
+} from "./question-audio-field";
+import {
   QuestionIllustrationField,
   type QuestionIllustrationAsset,
 } from "./question-illustration-field";
@@ -50,6 +53,8 @@ type TaskFamily = FunctionReturnType<
 type BankRow = FunctionReturnType<
   typeof api.adminAssessmentQuestionBank.listPage
 >["page"][number];
+type BankContent = BankRow["content"];
+type BankProfile = BankRow["profile"];
 
 const statusOptions = [
   { value: "ready", label: "Ready for selection" },
@@ -83,6 +88,47 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function itemTypeLabel(value: BankContent["type"]) {
+  return {
+    "single-choice": "Single choice",
+    "multiple-select": "Multiple select",
+    "cloze-select": "Cloze select",
+    "sentence-build": "Sentence build",
+    "constructed-response": "Constructed response",
+  }[value];
+}
+
+const profileLabelByValue: Record<BankProfile, string> = {
+  "ec-itp-level-1-aligned-v1": "English Club ITP Level 1",
+  "ec-ibt-style-2026-v1": "English Club four-skill practice (2026)",
+  "club-program-v1": "English Club programme quiz",
+};
+
+function mediaNameFromUrl(publicUrl: string, fallback: string) {
+  try {
+    const filename = new URL(publicUrl).pathname
+      .split("/")
+      .filter(Boolean)
+      .at(-1);
+    return filename ? decodeURIComponent(filename) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function rowSelectionState(row: BankRow) {
+  if (row.status === "archived") {
+    return { label: "Archived", tone: "neutral" as const };
+  }
+  if (row.status === "paused") {
+    return { label: "Paused", tone: "neutral" as const };
+  }
+  if (row.skill === "listening" && row.audio === null) {
+    return { label: "Audio required", tone: "danger" as const };
+  }
+  return { label: "Format default", tone: "success" as const };
+}
+
 export function QuestionBankManager() {
   const admin = useAdminSession();
   const capabilities = getAssessmentAdminCapabilities(admin.role);
@@ -113,7 +159,17 @@ export function QuestionBankManager() {
       maximumRowsRead: 24,
     },
   });
+  const audioResult = useQuery(api.adminMedia.listPage, {
+    purpose: "assessment-audio",
+    status: "ready",
+    paginationOpts: {
+      cursor: null,
+      numItems: 24,
+      maximumRowsRead: 24,
+    },
+  });
   const illustrationAssets = illustrationResult?.page ?? [];
+  const audioAssets = audioResult?.page ?? [];
 
   function resetPage() {
     setCursors([null]);
@@ -146,7 +202,10 @@ export function QuestionBankManager() {
               )}
               {creating ? "Close builder" : "Add question"}
             </button>
-            <Link className={adminStyles.secondaryButton} href="/admin/assessments">
+            <Link
+              className={adminStyles.secondaryButton}
+              href="/admin/assessments"
+            >
               Back to assessments
             </Link>
           </>
@@ -159,7 +218,8 @@ export function QuestionBankManager() {
           description="Create an original single-choice question, keep its answer key private, and review its selection settings before it can enter a live practice."
         >
           <QuestionBankCreateForm
-            assets={illustrationAssets}
+            illustrationAssets={illustrationAssets}
+            audioAssets={audioAssets}
             onCancel={() => setCreating(false)}
             onCreated={(bankQuestionId) => {
               setStatus("paused");
@@ -185,9 +245,16 @@ export function QuestionBankManager() {
               const required = requiredBySkill[capacitySkill];
               const ready = count >= required;
               return (
-                <div key={capacitySkill} className={styles.bankCapacityCard} data-ready={ready}>
+                <div
+                  key={capacitySkill}
+                  className={styles.bankCapacityCard}
+                  data-ready={ready}
+                >
                   <span>{titleCase(capacitySkill)}</span>
-                  <strong>{count}<small> / {required}</small></strong>
+                  <strong>
+                    {count}
+                    <small> / {required}</small>
+                  </strong>
                   <AdminStatus tone={ready ? "success" : "danger"}>
                     {ready ? "Ready" : `${required - count} short`}
                   </AdminStatus>
@@ -196,8 +263,13 @@ export function QuestionBankManager() {
             })}
             <div className={styles.bankCapacityCard}>
               <span>Catalogue</span>
-              <strong>{summary.total}{summary.capped ? <small>+</small> : null}</strong>
-              <AdminStatus tone="neutral">{summary.eligible} eligible</AdminStatus>
+              <strong>
+                {summary.total}
+                {summary.capped ? <small>+</small> : null}
+              </strong>
+              <AdminStatus tone="neutral">
+                {summary.eligible} eligible
+              </AdminStatus>
             </div>
           </div>
         )}
@@ -205,8 +277,22 @@ export function QuestionBankManager() {
 
       <AdminSection
         title="Bank catalogue"
-        description="Author questions here or bring them in from an assessment workspace, then control selection status, task family, difficulty, tags, and optional illustration."
+        description="Author and revise questions here, then set review status, task family, difficulty, media, and tags."
       >
+        <div className={styles.bankFormatNotice}>
+          <InformationCircleIcon aria-hidden width={21} height={21} />
+          <div>
+            <strong>Ready questions are allowed by default.</strong>
+            <p>
+              Each Practice Format can keep that default, disable a question, or
+              add an explicit exception. Attempt manifests keep the exact
+              question revision they received.
+            </p>
+          </div>
+          <Link className={adminStyles.textButton} href="/admin/assessments">
+            Manage formats
+          </Link>
+        </div>
         <div className={styles.bankToolbar}>
           <SelectField
             label="Selection status"
@@ -250,19 +336,39 @@ export function QuestionBankManager() {
           />
         ) : (
           <div className={styles.bankWorkspace}>
-            <div className={styles.bankList} role="list" aria-label="Question bank entries">
+            <div
+              className={styles.bankList}
+              role="list"
+              aria-label="Question bank entries"
+            >
               {result.page.map((row) => {
                 const active = row.bankQuestionId === selected.bankQuestionId;
+                const selectionState = rowSelectionState(row);
                 return (
-                  <div key={row.bankQuestionId} className={styles.bankRow} data-active={active} role="listitem">
-                    <button type="button" onClick={() => setSelectedId(row.bankQuestionId)} aria-pressed={active}>
-                      <span className={styles.bankRowIndex}><CircleStackIcon aria-hidden width={18} height={18} /></span>
+                  <div
+                    key={row.bankQuestionId}
+                    className={styles.bankRow}
+                    data-active={active}
+                    role="listitem"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(row.bankQuestionId)}
+                      aria-pressed={active}
+                    >
+                      <span className={styles.bankRowIndex}>
+                        <CircleStackIcon aria-hidden width={18} height={18} />
+                      </span>
                       <span className={styles.bankRowCopy}>
                         <strong>{row.prompt}</strong>
-                        <small>{titleCase(row.skill)} · {assessmentTaskFamilyLabelByValue[row.taskFamily]} · {titleCase(row.difficulty)}</small>
+                        <small>
+                          {titleCase(row.skill)} ·{" "}
+                          {assessmentTaskFamilyLabelByValue[row.taskFamily]} ·{" "}
+                          {titleCase(row.difficulty)}
+                        </small>
                       </span>
-                      <AdminStatus tone={row.fullPracticeEligible ? "success" : "neutral"}>
-                        {row.fullPracticeEligible ? "In full practice" : "Fixed only"}
+                      <AdminStatus tone={selectionState.tone}>
+                        {selectionState.label}
                       </AdminStatus>
                     </button>
                   </div>
@@ -270,23 +376,29 @@ export function QuestionBankManager() {
               })}
             </div>
             <QuestionBankEditor
-              key={`${selected.bankQuestionId}-${selected.updatedAt}`}
+              key={selected.bankQuestionId}
               row={selected}
               canEdit={capabilities.canEdit}
               illustrationAssets={illustrationAssets}
+              audioAssets={audioAssets}
             />
           </div>
         )}
 
         {result && (cursors.length > 1 || !result.isDone) ? (
-          <nav className={adminStyles.listFooter} aria-label="Question bank pages">
+          <nav
+            className={adminStyles.listFooter}
+            aria-label="Question bank pages"
+          >
             <div className={adminStyles.buttonRow}>
               <button
                 className={adminStyles.secondaryButton}
                 type="button"
                 disabled={cursors.length === 1}
                 onClick={() => {
-                  setCursors((current) => current.slice(0, Math.max(1, current.length - 1)));
+                  setCursors((current) =>
+                    current.slice(0, Math.max(1, current.length - 1)),
+                  );
                   setSelectedId(null);
                 }}
               >
@@ -325,15 +437,19 @@ const authoredSkillOptions = skillOptions.filter(
 );
 
 function QuestionBankCreateForm({
-  assets,
+  illustrationAssets,
+  audioAssets,
   onCancel,
   onCreated,
 }: {
-  assets: ReadonlyArray<QuestionIllustrationAsset>;
+  illustrationAssets: ReadonlyArray<QuestionIllustrationAsset>;
+  audioAssets: ReadonlyArray<QuestionAudioAsset>;
   onCancel: () => void;
   onCreated: (bankQuestionId: string) => void;
 }) {
-  const createQuestion = useMutation(api.adminAssessmentQuestionBank.createQuestion);
+  const createQuestion = useMutation(
+    api.adminAssessmentQuestionBank.createQuestion,
+  );
   const requestIdRef = useRef<string | null>(null);
   const [skill, setSkill] = useState<Skill>("reading");
   const [taskFamily, setTaskFamily] = useState<TaskFamily>(
@@ -353,6 +469,7 @@ function QuestionBankCreateForm({
   const [illustrationMediaId, setIllustrationMediaId] = useState<string | null>(
     null,
   );
+  const [audioMediaId, setAudioMediaId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -375,6 +492,12 @@ function QuestionBankCreateForm({
       setError("Each answer choice needs distinct wording.");
       return;
     }
+    if (skill === "listening" && audioMediaId === null) {
+      setError(
+        "Choose or upload a reviewed recording before creating a Listening question.",
+      );
+      return;
+    }
     setPending(true);
     try {
       requestIdRef.current ??= `bank-question-${crypto.randomUUID()}`;
@@ -395,6 +518,8 @@ function QuestionBankCreateForm({
           illustrationMediaId === null
             ? null
             : (illustrationMediaId as Id<"mediaAssets">),
+        audioMediaId:
+          audioMediaId === null ? null : (audioMediaId as Id<"mediaAssets">),
       });
       requestIdRef.current = null;
       onCreated(result.bankQuestionId);
@@ -440,6 +565,7 @@ function QuestionBankCreateForm({
               const nextSkill = value as Skill;
               setSkill(nextSkill);
               setTaskFamily(defaultTaskFamilyBySkill[nextSkill]);
+              if (nextSkill !== "listening") setAudioMediaId(null);
             }}
           />
         </div>
@@ -456,7 +582,9 @@ function QuestionBankCreateForm({
           <SelectField
             label="Difficulty"
             value={difficulty}
-            options={difficultyOptions.filter((option) => option.value !== "all")}
+            options={difficultyOptions.filter(
+              (option) => option.value !== "all",
+            )}
             disabled={pending}
             onValueChange={(value) => setDifficulty(value as Difficulty)}
           />
@@ -534,18 +662,28 @@ function QuestionBankCreateForm({
 
         <div className={adminStyles.spanFull}>
           <QuestionIllustrationField
-            assets={assets}
+            assets={illustrationAssets}
             selectedMediaId={illustrationMediaId}
             disabled={pending}
             onChange={setIllustrationMediaId}
           />
         </div>
+        {skill === "listening" ? (
+          <div className={adminStyles.spanFull}>
+            <QuestionAudioField
+              assets={audioAssets}
+              selectedMediaId={audioMediaId}
+              disabled={pending}
+              onChange={setAudioMediaId}
+            />
+          </div>
+        ) : null}
       </div>
       {error ? <AdminError>{error}</AdminError> : null}
       <footer className={styles.questionCreateFooter}>
         <p>
-          Saving keeps the question and its private answer key together. Use
-          the selection settings afterward to review and activate it.
+          Saving keeps the question and its private answer key together. Use the
+          selection settings afterward to review and activate it.
         </p>
         <div className={adminStyles.buttonRow}>
           <button
@@ -574,121 +712,963 @@ function QuestionBankEditor({
   row,
   canEdit,
   illustrationAssets,
+  audioAssets,
 }: {
   row: BankRow;
   canEdit: boolean;
   illustrationAssets: ReadonlyArray<QuestionIllustrationAsset>;
+  audioAssets: ReadonlyArray<QuestionAudioAsset>;
 }) {
-  const updateMetadata = useMutation(api.adminAssessmentQuestionBank.updateMetadata);
+  const updateContent = useMutation(
+    api.adminAssessmentQuestionBank.updateContent,
+  );
+  const updateMetadata = useMutation(
+    api.adminAssessmentQuestionBank.updateMetadata,
+  );
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(row.updatedAt);
+  const [content, setContent] = useState<BankContent>(row.content);
   const [status, setStatus] = useState<BankStatus>(row.status);
   const [taskFamily, setTaskFamily] = useState<TaskFamily>(row.taskFamily);
   const [difficulty, setDifficulty] = useState<Difficulty>(row.difficulty);
-  const [eligible, setEligible] = useState(row.fullPracticeEligible);
   const [tags, setTags] = useState(row.tags.join(", "));
   const [illustrationMediaId, setIllustrationMediaId] = useState<string | null>(
     row.illustration?.mediaId ?? null,
   );
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const sourceHref = `/admin/assessments/${row.sourceDefinitionId}/sections/${row.sourceSectionId}` as Route;
+  const [audioMediaId, setAudioMediaId] = useState<string | null>(
+    row.audio?.mediaId ?? null,
+  );
+  const [contentPending, setContentPending] = useState(false);
+  const [settingsPending, setSettingsPending] = useState(false);
+  const [contentMessage, setContentMessage] = useState("");
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [contentError, setContentError] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const pending = contentPending || settingsPending;
+  const selectableIllustrationAssets =
+    row.illustration !== null &&
+    !illustrationAssets.some(
+      (asset) => asset._id === row.illustration?.mediaId,
+    )
+      ? [
+          {
+            _id: row.illustration.mediaId,
+            publicUrl: row.illustration.publicUrl,
+            alt: row.illustration.alt,
+            width: row.illustration.width,
+            height: row.illustration.height,
+            originalName: mediaNameFromUrl(
+              row.illustration.publicUrl,
+              "Attached question illustration",
+            ),
+          },
+          ...illustrationAssets,
+        ]
+      : illustrationAssets;
+  const selectableAudioAssets =
+    row.audio !== null &&
+    !audioAssets.some((asset) => asset._id === row.audio?.mediaId)
+      ? [
+          {
+            _id: row.audio.mediaId,
+            publicUrl: row.audio.publicUrl,
+            alt: row.audio.description,
+            durationMs: row.audio.durationMs,
+            originalName: mediaNameFromUrl(
+              row.audio.publicUrl,
+              "Attached Listening audio",
+            ),
+          },
+          ...audioAssets,
+        ]
+      : audioAssets;
 
-  async function save() {
-    setPending(true);
-    setMessage("");
-    setError("");
+  async function saveContent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setContentPending(true);
+    setContentMessage("");
+    setContentError("");
+    if (
+      row.skill === "listening" &&
+      row.status === "ready" &&
+      audioMediaId === null
+    ) {
+      setContentError(
+        "Pause this question in Review and selection before removing its audio.",
+      );
+      setContentPending(false);
+      return;
+    }
     try {
-      const result = await updateMetadata({
+      const normalizedContent = {
+        ...content,
+        prompt: content.prompt.trim(),
+        explanation: content.explanation?.trim() || null,
+      } as BankContent;
+      const result = await updateContent({
         bankQuestionId: row.bankQuestionId,
-        expectedUpdatedAt: row.updatedAt,
-        status,
-        taskFamily,
-        difficulty,
-        fullPracticeEligible: eligible,
-        tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+        expectedUpdatedAt,
+        content: normalizedContent,
         illustrationMediaId:
           illustrationMediaId === null
             ? null
             : (illustrationMediaId as Id<"mediaAssets">),
+        audioMediaId:
+          audioMediaId === null ? null : (audioMediaId as Id<"mediaAssets">),
       });
       if (!result.ok) {
-        setError("This bank entry changed in another session. Reload before saving again.");
+        setContentError(
+          "This question changed in another session. Reload it before saving again.",
+        );
         return;
       }
-      setMessage("Question-bank settings saved.");
+      setExpectedUpdatedAt(result.updatedAt);
+      setContent(normalizedContent);
+      setContentMessage(
+        "Question revision saved. Existing attempts still use their pinned revision.",
+      );
     } catch (caught) {
-      setError(humanizeError(caught));
+      setContentError(humanizeError(caught));
     } finally {
-      setPending(false);
+      setContentPending(false);
+    }
+  }
+
+  async function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSettingsPending(true);
+    setSettingsMessage("");
+    setSettingsError("");
+    if (
+      row.skill === "listening" &&
+      status === "ready" &&
+      audioMediaId === null
+    ) {
+      setSettingsError(
+        "A Listening question needs reviewed audio before it can be ready.",
+      );
+      setSettingsPending(false);
+      return;
+    }
+    try {
+      const result = await updateMetadata({
+        bankQuestionId: row.bankQuestionId,
+        expectedUpdatedAt,
+        status,
+        taskFamily,
+        difficulty,
+        fullPracticeEligible: status === "ready",
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        illustrationMediaId:
+          illustrationMediaId === null
+            ? null
+            : (illustrationMediaId as Id<"mediaAssets">),
+        audioMediaId:
+          audioMediaId === null ? null : (audioMediaId as Id<"mediaAssets">),
+      });
+      if (!result.ok) {
+        setSettingsError(
+          "This question changed in another session. Reload it before saving again.",
+        );
+        return;
+      }
+      setExpectedUpdatedAt(result.updatedAt);
+      setSettingsMessage(
+        status === "ready"
+          ? "Settings saved. Compatible Practice Formats now allow this question by default."
+          : "Question settings saved.",
+      );
+    } catch (caught) {
+      setSettingsError(humanizeError(caught));
+    } finally {
+      setSettingsPending(false);
     }
   }
 
   return (
-    <aside className={styles.bankEditor} aria-label="Selected question settings">
+    <aside className={styles.bankEditor} aria-label="Selected question editor">
       <header>
         <div>
           <span>{row.sourceTitle}</span>
-          <h3>Selection settings</h3>
+          <h3>Edit bank question</h3>
         </div>
-        {row.origin === "assessment-source" ? (
-          <Link className={adminStyles.textButton} href={sourceHref}>
-            Edit source
-            <ArrowTopRightOnSquareIcon aria-hidden width={17} height={17} />
-          </Link>
-        ) : (
-          <AdminStatus tone="neutral">Authored here</AdminStatus>
-        )}
+        <AdminStatus tone="neutral">
+          {itemTypeLabel(row.content.type)}
+        </AdminStatus>
       </header>
-      <p className={styles.bankEditorPrompt}>{row.prompt}</p>
-      <div className={styles.bankEditorFields}>
-        <SelectField label="Status" value={status} options={statusOptions} disabled={!canEdit || pending} onValueChange={(value) => setStatus(value as BankStatus)} />
-        <SelectField
-          label="Task family"
-          value={taskFamily}
-          groups={taskFamilySelectGroupsForSkill(row.skill)}
+
+      <form className={styles.bankEditorSection} onSubmit={saveContent}>
+        <div className={styles.bankEditorSectionHeading}>
+          <div>
+            <h4>Question and answer key</h4>
+            <p>
+              Edit this item here, even when it came from a published or older
+              assessment. Saving creates a new source revision.
+            </p>
+          </div>
+          <AdminStatus tone="neutral">Private key</AdminStatus>
+        </div>
+        <QuestionContentFields
+          content={content}
           disabled={!canEdit || pending}
-          onValueChange={(value) => setTaskFamily(value as TaskFamily)}
+          onChange={setContent}
         />
-        <SelectField label="Difficulty" value={difficulty} options={difficultyOptions.filter((option) => option.value !== "all")} disabled={!canEdit || pending} onValueChange={(value) => setDifficulty(value as Difficulty)} />
-        <label className={adminStyles.field}>
-          <span>Tags</span>
-          <input value={tags} maxLength={260} disabled={!canEdit || pending} placeholder="campus-life, inference" onChange={(event) => setTags(event.target.value)} />
-        </label>
-        <label className={`${adminStyles.checkbox} ${styles.bankEligibility}`}>
-          <input type="checkbox" checked={eligible} disabled={!canEdit || pending} onChange={(event) => setEligible(event.target.checked)} />
-          <span>
-            <strong>Available to full practice</strong>
-            <small>Ready entries can be randomly selected once the skill pool meets its quota.</small>
-          </span>
-        </label>
-        <div className={styles.bankEligibility}>
+        <div className={styles.bankMediaFields}>
           <QuestionIllustrationField
-            assets={illustrationAssets}
+            assets={selectableIllustrationAssets}
             selectedMediaId={illustrationMediaId}
             disabled={!canEdit || pending}
             onChange={setIllustrationMediaId}
           />
+          {row.skill === "listening" ? (
+            <QuestionAudioField
+              assets={selectableAudioAssets}
+              selectedMediaId={audioMediaId}
+              disabled={!canEdit || pending}
+              onChange={setAudioMediaId}
+            />
+          ) : null}
         </div>
-      </div>
+        {contentError ? <AdminError>{contentError}</AdminError> : null}
+        <div className={styles.bankEditorActionBar}>
+          <p role="status">
+            {contentMessage ||
+              "Answer details stay inside the protected admin query and mutation."}
+          </p>
+          <button
+            className={adminStyles.primaryButton}
+            type="submit"
+            disabled={!canEdit || pending}
+          >
+            <CheckCircleIcon aria-hidden width={18} height={18} />
+            {contentPending ? "Saving revision…" : "Save question revision"}
+          </button>
+        </div>
+      </form>
+
+      <form className={styles.bankEditorSection} onSubmit={saveSettings}>
+        <div className={styles.bankEditorSectionHeading}>
+          <div>
+            <h4>Review and selection</h4>
+            <p>
+              Ready, compatible questions inherit each format&apos;s default.
+              Explicit allow and disable rules live in Practice Builder.
+            </p>
+          </div>
+          <Link className={adminStyles.textButton} href="/admin/assessments">
+            Practice Formats
+          </Link>
+        </div>
+        <div className={styles.bankEditorFields}>
+          <SelectField
+            label="Status"
+            value={status}
+            options={statusOptions}
+            disabled={!canEdit || pending}
+            onValueChange={(value) => setStatus(value as BankStatus)}
+          />
+          <SelectField
+            label="Task family"
+            value={taskFamily}
+            groups={taskFamilySelectGroupsForSkill(row.skill)}
+            disabled={!canEdit || pending}
+            onValueChange={(value) => setTaskFamily(value as TaskFamily)}
+          />
+          <SelectField
+            label="Difficulty"
+            value={difficulty}
+            options={difficultyOptions.filter(
+              (option) => option.value !== "all",
+            )}
+            disabled={!canEdit || pending}
+            onValueChange={(value) => setDifficulty(value as Difficulty)}
+          />
+          <label className={adminStyles.field}>
+            <span>Tags</span>
+            <input
+              value={tags}
+              maxLength={260}
+              disabled={!canEdit || pending}
+              placeholder="campus-life, inference"
+              onChange={(event) => setTags(event.target.value)}
+            />
+          </label>
+        </div>
+        {settingsError ? <AdminError>{settingsError}</AdminError> : null}
+        <div className={styles.bankEditorActionBar}>
+          <p role="status">
+            {settingsMessage ||
+              "Practice Format overrides decide exceptions to the ready default."}
+          </p>
+          <button
+            className={adminStyles.primaryButton}
+            type="submit"
+            disabled={!canEdit || pending}
+          >
+            <CheckCircleIcon aria-hidden width={18} height={18} />
+            {settingsPending ? "Saving settings…" : "Save review settings"}
+          </button>
+        </div>
+      </form>
+
       <dl className={styles.bankFacts}>
-        <div><dt>Profile</dt><dd>2026 four-skill practice</dd></div>
-        <div><dt>Uses</dt><dd>{row.usageCount}{row.usageCountCapped ? "+" : ""}</dd></div>
-        <div><dt>Item type</dt><dd>{row.itemType}</dd></div>
-        <div><dt>Points</dt><dd>{row.points}</dd></div>
+        <div>
+          <dt>Profile</dt>
+          <dd>{profileLabelByValue[row.profile]}</dd>
+        </div>
+        <div>
+          <dt>Uses</dt>
+          <dd>
+            {row.usageCount}
+            {row.usageCountCapped ? "+" : ""}
+          </dd>
+        </div>
+        <div>
+          <dt>Item type</dt>
+          <dd>{itemTypeLabel(row.content.type)}</dd>
+        </div>
+        <div>
+          <dt>Points</dt>
+          <dd>{row.points}</dd>
+        </div>
       </dl>
-      {error ? <AdminError>{error}</AdminError> : null}
-      <footer>
-        <p role="status">
-          {message ||
-            (row.origin === "bank-authored"
-              ? "Question text and its private answer key remain available for later review."
-              : "Question text and answer key remain in the source assessment.")}
-        </p>
-        <button className={adminStyles.primaryButton} type="button" disabled={!canEdit || pending} onClick={() => void save()}>
-          <CheckCircleIcon aria-hidden width={18} height={18} />
-          {pending ? "Saving…" : "Save bank settings"}
-        </button>
-      </footer>
     </aside>
+  );
+}
+
+function QuestionContentFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: BankContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  return (
+    <div className={styles.questionContentFields}>
+      <label className={adminStyles.field}>
+        <span>Question prompt</span>
+        <textarea
+          value={content.prompt}
+          minLength={2}
+          maxLength={4_000}
+          required
+          disabled={disabled}
+          onChange={(event) =>
+            onChange({ ...content, prompt: event.target.value } as BankContent)
+          }
+        />
+      </label>
+
+      {content.type === "single-choice" ? (
+        <SingleChoiceFields
+          content={content}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ) : content.type === "multiple-select" ? (
+        <MultipleSelectFields
+          content={content}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ) : content.type === "cloze-select" ? (
+        <ClozeFields
+          content={content}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ) : content.type === "sentence-build" ? (
+        <SentenceBuildFields
+          content={content}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ) : (
+        <ConstructedResponseFields
+          content={content}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      )}
+
+      <label className={adminStyles.field}>
+        <span>Answer note</span>
+        <textarea
+          value={content.explanation ?? ""}
+          minLength={2}
+          maxLength={4_000}
+          disabled={disabled}
+          placeholder="Explain how the review key should be interpreted"
+          onChange={(event) =>
+            onChange({
+              ...content,
+              explanation: event.target.value || null,
+            } as BankContent)
+          }
+        />
+      </label>
+    </div>
+  );
+}
+
+type SingleChoiceContent = Extract<BankContent, { type: "single-choice" }>;
+type MultipleSelectContent = Extract<BankContent, { type: "multiple-select" }>;
+type ClozeContent = Extract<BankContent, { type: "cloze-select" }>;
+type SentenceBuildContent = Extract<BankContent, { type: "sentence-build" }>;
+type ConstructedResponseContent = Extract<
+  BankContent,
+  { type: "constructed-response" }
+>;
+
+function SingleChoiceFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: SingleChoiceContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  const name = useId();
+  return (
+    <fieldset className={styles.questionTypePanel} disabled={disabled}>
+      <legend>
+        Answer choices <span>Choose one key</span>
+      </legend>
+      <div className={styles.questionOptionEditList}>
+        {content.options.map((option, index) => (
+          <div className={styles.questionOptionEditRow} key={option.key}>
+            <label className={adminStyles.field}>
+              <span>Answer {option.key.toUpperCase()}</span>
+              <input
+                value={option.label}
+                minLength={1}
+                maxLength={500}
+                required
+                onChange={(event) =>
+                  onChange({
+                    ...content,
+                    options: content.options.map((candidate, optionIndex) =>
+                      optionIndex === index
+                        ? { ...candidate, label: event.target.value }
+                        : candidate,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <label className={styles.answerKeyControl}>
+              <input
+                type="radio"
+                name={name}
+                checked={content.correctChoiceKey === option.key}
+                onChange={() =>
+                  onChange({ ...content, correctChoiceKey: option.key })
+                }
+              />
+              Correct answer
+            </label>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function MultipleSelectFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: MultipleSelectContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  return (
+    <fieldset className={styles.questionTypePanel} disabled={disabled}>
+      <legend>
+        Answer choices <span>Choose every keyed response</span>
+      </legend>
+      <div className={styles.questionOptionEditList}>
+        {content.options.map((option, index) => {
+          const checked = content.correctChoiceKeys.includes(option.key);
+          return (
+            <div className={styles.questionOptionEditRow} key={option.key}>
+              <label className={adminStyles.field}>
+                <span>Answer {option.key.toUpperCase()}</span>
+                <input
+                  value={option.label}
+                  minLength={1}
+                  maxLength={500}
+                  required
+                  onChange={(event) =>
+                    onChange({
+                      ...content,
+                      options: content.options.map((candidate, optionIndex) =>
+                        optionIndex === index
+                          ? { ...candidate, label: event.target.value }
+                          : candidate,
+                      ),
+                    })
+                  }
+                />
+              </label>
+              <label className={styles.answerKeyControl}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() =>
+                    onChange({
+                      ...content,
+                      correctChoiceKeys: checked
+                        ? content.correctChoiceKeys.filter(
+                            (key) => key !== option.key,
+                          )
+                        : [...content.correctChoiceKeys, option.key],
+                    })
+                  }
+                />
+                Correct answer
+              </label>
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.questionNumberGrid}>
+        <label className={adminStyles.field}>
+          <span>Minimum selections</span>
+          <input
+            type="number"
+            min={1}
+            max={content.options.length}
+            required
+            value={content.selectionMin}
+            onChange={(event) =>
+              onChange({ ...content, selectionMin: Number(event.target.value) })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Maximum selections</span>
+          <input
+            type="number"
+            min={content.selectionMin}
+            max={content.options.length}
+            required
+            value={content.selectionMax}
+            onChange={(event) =>
+              onChange({ ...content, selectionMax: Number(event.target.value) })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
+function ClozeFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: ClozeContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  return (
+    <fieldset className={styles.questionTypePanel} disabled={disabled}>
+      <legend>
+        Sentence blanks <span>Blank count stays fixed</span>
+      </legend>
+      <div className={styles.clozeEditList}>
+        {content.gaps.map((gap, gapIndex) => {
+          const correct = content.correctGapAnswers.find(
+            (answer) => answer.gapKey === gap.key,
+          )?.choiceKey;
+          const name = `cloze-${gap.key}`;
+          return (
+            <div className={styles.clozeEditBlock} key={gap.key}>
+              <label className={adminStyles.field}>
+                <span>Text before blank {gapIndex + 1}</span>
+                <textarea
+                  value={content.stemParts[gapIndex] ?? ""}
+                  maxLength={2_000}
+                  onChange={(event) =>
+                    onChange({
+                      ...content,
+                      stemParts: content.stemParts.map((part, partIndex) =>
+                        partIndex === gapIndex ? event.target.value : part,
+                      ),
+                    })
+                  }
+                />
+              </label>
+              <div className={styles.questionOptionEditList}>
+                {gap.options.map((option, optionIndex) => (
+                  <div
+                    className={styles.questionOptionEditRow}
+                    key={option.key}
+                  >
+                    <label className={adminStyles.field}>
+                      <span>
+                        Blank {gapIndex + 1}, option {option.key.toUpperCase()}
+                      </span>
+                      <input
+                        value={option.label}
+                        minLength={1}
+                        maxLength={500}
+                        required
+                        onChange={(event) =>
+                          onChange({
+                            ...content,
+                            gaps: content.gaps.map(
+                              (candidate, candidateIndex) =>
+                                candidateIndex === gapIndex
+                                  ? {
+                                      ...candidate,
+                                      options: candidate.options.map(
+                                        (
+                                          candidateOption,
+                                          candidateOptionIndex,
+                                        ) =>
+                                          candidateOptionIndex === optionIndex
+                                            ? {
+                                                ...candidateOption,
+                                                label: event.target.value,
+                                              }
+                                            : candidateOption,
+                                      ),
+                                    }
+                                  : candidate,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className={styles.answerKeyControl}>
+                      <input
+                        type="radio"
+                        name={name}
+                        checked={correct === option.key}
+                        onChange={() =>
+                          onChange({
+                            ...content,
+                            correctGapAnswers: content.correctGapAnswers.map(
+                              (answer) =>
+                                answer.gapKey === gap.key
+                                  ? { ...answer, choiceKey: option.key }
+                                  : answer,
+                            ),
+                          })
+                        }
+                      />
+                      Correct word
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        <label className={adminStyles.field}>
+          <span>Text after the final blank</span>
+          <textarea
+            value={content.stemParts.at(-1) ?? ""}
+            maxLength={2_000}
+            onChange={(event) =>
+              onChange({
+                ...content,
+                stemParts: content.stemParts.map((part, index) =>
+                  index === content.stemParts.length - 1
+                    ? event.target.value
+                    : part,
+                ),
+              })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
+function SentenceBuildFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: SentenceBuildContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  function replaceOrderKey(
+    orderIndex: number,
+    position: number,
+    value: string,
+  ) {
+    const orders = content.acceptedTokenOrders.map((order, candidateIndex) => {
+      if (candidateIndex !== orderIndex) return order;
+      const next = [...order];
+      const previous = next[position];
+      const occupiedPosition = next.indexOf(value);
+      next[position] = value;
+      if (occupiedPosition !== -1 && occupiedPosition !== position) {
+        next[occupiedPosition] = previous;
+      }
+      return next;
+    });
+    onChange({ ...content, acceptedTokenOrders: orders });
+  }
+
+  return (
+    <fieldset className={styles.questionTypePanel} disabled={disabled}>
+      <legend>
+        Sentence tokens <span>Token count stays fixed</span>
+      </legend>
+      <div className={styles.tokenEditGrid}>
+        {content.tokens.map((token, index) => (
+          <label className={adminStyles.field} key={token.key}>
+            <span>Token {index + 1}</span>
+            <input
+              value={token.label}
+              minLength={1}
+              maxLength={200}
+              required
+              onChange={(event) =>
+                onChange({
+                  ...content,
+                  tokens: content.tokens.map((candidate, tokenIndex) =>
+                    tokenIndex === index
+                      ? { ...candidate, label: event.target.value }
+                      : candidate,
+                  ),
+                })
+              }
+            />
+          </label>
+        ))}
+      </div>
+      <div className={styles.sentenceOrderList}>
+        {content.acceptedTokenOrders.map((order, orderIndex) => (
+          <div
+            className={styles.sentenceOrderBlock}
+            key={`order-${orderIndex}`}
+          >
+            <strong>Accepted order {orderIndex + 1}</strong>
+            <div>
+              {order.map((key, position) => (
+                <SelectField
+                  key={`${orderIndex}-${position}`}
+                  label={`Position ${position + 1}`}
+                  value={key}
+                  disabled={disabled}
+                  options={content.tokens.map((token) => ({
+                    value: token.key,
+                    label: token.label,
+                  }))}
+                  onValueChange={(value) =>
+                    replaceOrderKey(orderIndex, position, value)
+                  }
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function ConstructedResponseFields({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: ConstructedResponseContent;
+  disabled: boolean;
+  onChange: (content: BankContent) => void;
+}) {
+  const [targetTerms, setTargetTerms] = useState(
+    content.rubric.targetTerms.join(", "),
+  );
+  const responseModeLabel = {
+    writing: "Writing",
+    "speaking-repeat": "Speaking repeat",
+    "speaking-interview": "Speaking interview",
+  }[content.responseMode];
+  const optionalNumber = (value: string) =>
+    value.trim() === "" ? null : Number(value);
+
+  return (
+    <fieldset className={styles.questionTypePanel} disabled={disabled}>
+      <legend>
+        Response and rubric <span>Private scoring guide</span>
+      </legend>
+      <div className={styles.questionModeFact}>
+        <span>Response mode</span>
+        <strong>{responseModeLabel}</strong>
+      </div>
+      <div className={styles.questionNumberGrid}>
+        <label className={adminStyles.field}>
+          <span>Minimum words</span>
+          <input
+            type="number"
+            min={0}
+            max={5_000}
+            required
+            value={content.minimumWords}
+            onChange={(event) =>
+              onChange({ ...content, minimumWords: Number(event.target.value) })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Recommended words</span>
+          <input
+            type="number"
+            min={content.minimumWords}
+            max={5_000}
+            required
+            value={content.recommendedWords}
+            onChange={(event) =>
+              onChange({
+                ...content,
+                recommendedWords: Number(event.target.value),
+              })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Maximum characters</span>
+          <input
+            type="number"
+            min={100}
+            max={40_000}
+            required
+            value={content.maximumCharacters}
+            onChange={(event) =>
+              onChange({
+                ...content,
+                maximumCharacters: Number(event.target.value),
+              })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Preparation seconds</span>
+          <input
+            type="number"
+            min={0}
+            max={1_800}
+            value={content.preparationSeconds ?? ""}
+            placeholder="None"
+            onChange={(event) =>
+              onChange({
+                ...content,
+                preparationSeconds: optionalNumber(event.target.value),
+              })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Response seconds</span>
+          <input
+            type="number"
+            min={0}
+            max={1_800}
+            value={content.responseSeconds ?? ""}
+            placeholder="None"
+            onChange={(event) =>
+              onChange({
+                ...content,
+                responseSeconds: optionalNumber(event.target.value),
+              })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Maximum points</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            required
+            value={content.rubric.maxPoints}
+            onChange={(event) =>
+              onChange({
+                ...content,
+                rubric: {
+                  ...content.rubric,
+                  maxPoints: Number(event.target.value),
+                },
+              })
+            }
+          />
+        </label>
+        <label className={adminStyles.field}>
+          <span>Rubric minimum words</span>
+          <input
+            type="number"
+            min={0}
+            max={5_000}
+            required
+            value={content.rubric.minimumWords}
+            onChange={(event) =>
+              onChange({
+                ...content,
+                rubric: {
+                  ...content.rubric,
+                  minimumWords: Number(event.target.value),
+                },
+              })
+            }
+          />
+        </label>
+      </div>
+      <label className={adminStyles.field}>
+        <span>Target terms</span>
+        <input
+          value={targetTerms}
+          maxLength={3_000}
+          placeholder="meeting, evidence, example"
+          onChange={(event) => {
+            const value = event.target.value;
+            setTargetTerms(value);
+            onChange({
+              ...content,
+              rubric: {
+                ...content.rubric,
+                targetTerms: value
+                  .split(",")
+                  .map((term) => term.trim())
+                  .filter(Boolean),
+              },
+            });
+          }}
+        />
+      </label>
+      <label className={adminStyles.field}>
+        <span>Sample response</span>
+        <textarea
+          value={content.rubric.sampleResponse}
+          minLength={2}
+          maxLength={8_000}
+          required
+          onChange={(event) =>
+            onChange({
+              ...content,
+              rubric: {
+                ...content.rubric,
+                sampleResponse: event.target.value,
+              },
+            })
+          }
+        />
+      </label>
+    </fieldset>
   );
 }

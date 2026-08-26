@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../convex/_generated/api";
+import { verifyPasswordSecret } from "../../convex/lib/passwordCrypto";
 import { validateEditorDocument } from "../../convex/lib/editorDocument";
 import schema from "../../convex/schema";
 
@@ -18,6 +19,10 @@ const publisherToken =
   "https://perfect-greyhound-270.convex.site|publisher-user";
 const editorToken = "https://perfect-greyhound-270.convex.site|editor-user";
 const testIssuer = "https://perfect-greyhound-270.convex.site";
+
+function testCredential(label: string, sequence: number) {
+  return `${label}Credential${sequence}Alpha!`;
+}
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -84,6 +89,8 @@ describe("admin authentication and authorization", () => {
   it("rejects public Password sign-up and provisions an owner only through the internal action", async () => {
     vi.stubEnv("CONVEX_SITE_URL", testIssuer);
     const t = convexTest(schema, modules);
+    const browserCredential = testCredential("Browser", 12);
+    const internalCredential = testCredential("Internal", 12);
     await expect(
       t.action(api.auth.signIn, {
         provider: "password",
@@ -91,7 +98,7 @@ describe("admin authentication and authorization", () => {
           flow: "signUp",
           name: "Browser Owner",
           email: "browser-owner@example.com",
-          password: "StrongBrowserPassword12",
+          password: browserCredential,
         },
       }),
     ).rejects.toThrow("provisioned internally");
@@ -113,11 +120,64 @@ describe("admin authentication and authorization", () => {
       {
         displayName: "Internal Owner",
         email: "internal-owner@example.com",
-        password: "StrongInternalPassword12",
+        password: internalCredential,
         role: "owner",
       },
     );
     expect(provisioned.role).toBe("owner");
+
+    const initialCredential = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "internal-owner@example.com"),
+        )
+        .unique(),
+    );
+    expect(initialCredential?.secret).toMatch(/^\$2[aby]\$10\$/);
+    expect(initialCredential).not.toHaveProperty("expirationTime");
+
+    if (initialCredential?.secret === undefined) {
+      throw new Error("Expected a stored Password credential.");
+    }
+    await expect(
+      verifyPasswordSecret(
+        internalCredential,
+        initialCredential.secret,
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      verifyPasswordSecret(
+        internalCredential,
+        initialCredential.secret,
+      ),
+    ).resolves.toBe(true);
+
+    const credentialAfterTwoSignIns = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "internal-owner@example.com"),
+        )
+        .unique(),
+    );
+    expect(credentialAfterTwoSignIns?.secret).toBe(initialCredential?.secret);
+
+    await expect(
+      t.query(internal.adminUsers.inspectPasswordCredential, {
+        email: "internal-owner@example.com",
+      }),
+    ).resolves.toMatchObject({
+      accountExists: true,
+      hashStored: true,
+      algorithm: "bcrypt",
+      bcryptCost: 10,
+      expirationFieldPresent: false,
+    });
 
     const issuer = testIssuer;
     const firstSession = t.withIdentity({
@@ -146,6 +206,7 @@ describe("admin authentication and authorization", () => {
   it("repairs only the sole exact placeholder owner during internal provisioning", async () => {
     vi.stubEnv("CONVEX_SITE_URL", testIssuer);
     const t = convexTest(schema, modules);
+    const recoveryCredential = testCredential("Recovery", 12);
     const placeholderId = await t.mutation(
       internal.adminUsers.bootstrapOwner,
       {
@@ -159,7 +220,7 @@ describe("admin authentication and authorization", () => {
       {
         displayName: "Recovered Owner",
         email: "recovered-owner@example.com",
-        password: "StrongRecoveryPassword12",
+        password: recoveryCredential,
         role: "owner",
         replaceSoleLegacyTokenIdentifier: "TOKEN_DARI_UI",
       },
@@ -180,9 +241,90 @@ describe("admin authentication and authorization", () => {
     });
   });
 
+  it("resets an active admin password once without expiry or sign-in rotation", async () => {
+    vi.stubEnv("CONVEX_SITE_URL", testIssuer);
+    const t = convexTest(schema, modules);
+    const originalCredential = testCredential("Original", 12);
+    const finalCredential = testCredential("Final", 42);
+    await t.action(internal.adminProvisioning.provisionPasswordAdmin, {
+      displayName: "Persistent Owner",
+      email: "persistent-owner@example.com",
+      password: originalCredential,
+      role: "owner",
+    });
+
+    const originalAccount = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "persistent-owner@example.com"),
+        )
+        .unique(),
+    );
+    const reset = await t.action(
+      internal.adminProvisioning.resetPasswordAdmin,
+      {
+        email: "persistent-owner@example.com",
+        password: finalCredential,
+      },
+    );
+    expect(reset.role).toBe("owner");
+
+    const resetAccount = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "persistent-owner@example.com"),
+        )
+        .unique(),
+    );
+    expect(resetAccount?.secret).toMatch(/^\$2[aby]\$10\$/);
+    expect(resetAccount?.secret).not.toBe(originalAccount?.secret);
+    expect(resetAccount).not.toHaveProperty("expirationTime");
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signIn",
+          email: "persistent-owner@example.com",
+          password: originalCredential,
+        },
+      }),
+    ).rejects.toThrow("InvalidSecret");
+
+    if (resetAccount?.secret === undefined) {
+      throw new Error("Expected a reset Password credential.");
+    }
+    await expect(
+      verifyPasswordSecret(finalCredential, resetAccount.secret),
+    ).resolves.toBe(true);
+    await expect(
+      verifyPasswordSecret(finalCredential, resetAccount.secret),
+    ).resolves.toBe(true);
+
+    const accountAfterSignIns = await t.run(async (ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (q) =>
+          q
+            .eq("provider", "password")
+            .eq("providerAccountId", "persistent-owner@example.com"),
+        )
+        .unique(),
+    );
+    expect(accountAfterSignIns?.secret).toBe(resetAccount?.secret);
+  });
+
   it("recovers an orphaned Password account before rebinding the sole placeholder owner", async () => {
     vi.stubEnv("CONVEX_SITE_URL", testIssuer);
     const t = convexTest(schema, modules);
+    const originalCredential = testCredential("Orphan", 12);
+    const recoveredCredential = testCredential("Recovered", 42);
     const placeholderId = await t.mutation(
       internal.adminUsers.bootstrapOwner,
       {
@@ -195,7 +337,7 @@ describe("admin authentication and authorization", () => {
       t.action(internal.adminProvisioning.provisionPasswordAdmin, {
         displayName: "Orphaned Owner",
         email: "orphaned-owner@example.com",
-        password: "OriginalOrphanPassword12",
+        password: originalCredential,
         role: "owner",
         replaceSoleLegacyTokenIdentifier: "WRONG_PLACEHOLDER",
       }),
@@ -226,7 +368,7 @@ describe("admin authentication and authorization", () => {
       {
         displayName: "Recovered Owner",
         email: "orphaned-owner@example.com",
-        password: "RotatedRecoveryPassword12",
+        password: recoveredCredential,
         role: "owner",
         replaceSoleLegacyTokenIdentifier: "TOKEN_DARI_UI",
         recoverExistingAccount: true,

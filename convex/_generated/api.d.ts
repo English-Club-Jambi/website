@@ -47,6 +47,7 @@ import type * as lib_assessmentQuestionSignals from "../lib/assessmentQuestionSi
 import type * as lib_assessmentScoring from "../lib/assessmentScoring.js";
 import type * as lib_editorDocument from "../lib/editorDocument.js";
 import type * as lib_media from "../lib/media.js";
+import type * as lib_passwordCrypto from "../lib/passwordCrypto.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as members from "../members.js";
 import type * as posts from "../posts.js";
@@ -104,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   "lib/assessmentScoring": typeof lib_assessmentScoring;
   "lib/editorDocument": typeof lib_editorDocument;
   "lib/media": typeof lib_media;
+  "lib/passwordCrypto": typeof lib_passwordCrypto;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   members: typeof members;
   posts: typeof posts;
