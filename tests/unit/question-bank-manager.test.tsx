@@ -225,6 +225,7 @@ describe("QuestionBankManager", () => {
       ...baseRow,
       skill: "listening",
       taskFamily: "listen-conversation",
+      points: 35 / 47,
       audio: {
         mediaId: "audio-attached",
         publicUrl:
@@ -251,6 +252,7 @@ describe("QuestionBankManager", () => {
         "The uploaded recording is being added to the reviewed library.",
       ),
     ).not.toBeInTheDocument();
+    expect(within(editor).getByText("0.74", { exact: true })).toBeVisible();
   });
 
   it("keeps an older projected illustration visible and labels its actual profile", () => {

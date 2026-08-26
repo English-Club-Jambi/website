@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import { captureAdminEvidence } from "./helpers/admin-evidence";
+
 type AdminCredentials = {
   email: string;
   password: string;
@@ -102,7 +104,7 @@ test.describe("admin journal page editor", () => {
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     }
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/journal-block-menu-${testInfo.project.name}.png`,
       fullPage: false,
       animations: "disabled",
@@ -153,7 +155,7 @@ test.describe("admin journal page editor", () => {
       }
     });
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/journal-block-editor-${testInfo.project.name}.png`,
       fullPage: false,
       animations: "disabled",

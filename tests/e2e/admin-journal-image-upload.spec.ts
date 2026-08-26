@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { captureAdminEvidence } from "./helpers/admin-evidence";
+
 type AdminCredentials = {
   email: string;
   password: string;
@@ -87,10 +89,10 @@ test.describe("admin journal image upload", () => {
       .click();
 
     const panel = page.getByRole("group", { name: "Add an image" });
-    const alt = "A speaker addresses an English Club panel while participants listen";
+    const alt = "Blank message cards cross a cobalt paper path between two places";
     await panel
       .getByLabel("Image file")
-      .setInputFiles(resolve("public/images/leeds-panel.webp"));
+      .setInputFiles(resolve("public/images/activity-exchange-relay-v2.webp"));
     await panel.getByRole("textbox", { name: "Alternative text" }).fill(alt);
 
     const relayResponse = page.waitForResponse(
@@ -133,7 +135,7 @@ test.describe("admin journal image upload", () => {
     await expect(reloadedImage).toBeVisible({ timeout: 20_000 });
     await expect(reloadedImage).toHaveAttribute("src", publicMediaUrl!);
     await reloadedImage.scrollIntoViewIfNeeded();
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/journal-image-upload-success-desktop-chromium.png",
       animations: "disabled",
     });

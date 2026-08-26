@@ -23,7 +23,7 @@ export function getActivityThemes(
       prompt: copy.speakPrompt,
       description: copy.speakDescription,
       evidence: copy.speakEvidence,
-      image: "speaking-session",
+      image: "activity-speak-relay-v2",
     },
     {
       id: "exchange",
@@ -32,7 +32,7 @@ export function getActivityThemes(
       prompt: copy.exchangePrompt,
       description: copy.exchangeDescription,
       evidence: copy.exchangeEvidence,
-      image: "leeds-panel",
+      image: "activity-exchange-relay-v2",
     },
     {
       id: "make",
@@ -41,7 +41,7 @@ export function getActivityThemes(
       prompt: copy.makePrompt,
       description: copy.makeDescription,
       evidence: copy.makeEvidence,
-      image: "shared-work",
+      image: "activity-make-relay-v2",
     },
     {
       id: "room",
@@ -50,7 +50,7 @@ export function getActivityThemes(
       prompt: copy.roomPrompt,
       description: copy.roomDescription,
       evidence: copy.roomEvidence,
-      image: "club-room-wide",
+      image: "activity-room-relay-v2",
     },
   ];
 }

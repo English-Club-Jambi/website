@@ -205,6 +205,15 @@ No public production deployment was performed.
 - Reproduced the Journal image failure as a Cloudflare R2 CORS 403. The current upload path uses a constrained same-origin streaming relay, preserves Convex HEAD verification, reloads the custom-domain image after save, and leaves no active QA media.
 - Added independent Page Copy rail/editor scrolling, a touch-friendly field picker, managed Member divisions, coordinator assignment, reusable filters, and the guarded 15-profile development seed.
 - Reset the human owner credential once through the guarded internal operator path, verified its bcrypt cost 10 hash without exposing it, then froze it. Automation moved to a separate ignored QA owner. Normal login, session refresh, and deployment do not rotate Password credentials.
-- The final integrated gate passes TypeScript, ESLint, all 57 Vitest files and 252 tests, all 9 Convex files and 70 tests, the R2 connection check, and the isolated production build. The final 231-case browser matrix passed 189 cases with 42 intentional project/credential/mutation skips and no failures across desktop, Pixel 7, and 320 px.
+- The final integrated gate passes TypeScript, ESLint, all 57 Vitest files and 254 tests, all 9 Convex files and 70 tests, the R2 connection check, and the isolated production build. The final 231-case browser matrix passed 191 cases with 40 intentional project-specific skips and no failures across desktop, Pixel 7, and 320 px.
 - The Playwright development worker count is bounded at three because eight fully parallel workers saturated one reused `next dev` process; no application behavior changed.
 - Port 3987 remained available throughout the final run. No public production deployment was performed.
+
+## 26 August 2026 — Public media and evidence privacy closeout
+
+- Replaced every browser-addressable documentary derivative with a people-free paper-and-clay Conversation Relay asset. The Home and Practice hero, four Activity states, About record, Home handoff, and seeded Journal covers now use six generated sources and 12 versioned AVIF/WebP derivatives.
+- Uploaded all 12 reviewed derivatives to `r2.mukhtada.my.id`. Each custom-domain read returned HTTP 200 with the expected MIME type and exact byte size.
+- Moved the 20 former documentary derivatives from `public/images/` to ignored `assets/consent-pending-derivatives/`. Raw masters remain untouched and local. Legacy Convex Journal keys resolve through cleared aliases, not old file paths.
+- Added a strict public media manifest and filesystem allowlist: every mapped asset is rights-cleared, consent-cleared, generated-synthetic, and recorded as containing no real people.
+- Removed the obsolete real-cloud admin screenshot and added capture-time identity masking to five admin E2E suites. All 33 remaining admin evidence PNGs passed full-image OCR plus a 400 percent footer-crop check with no email pattern.
+- The final public-media browser review found no pending-file request, horizontal overflow, or WCAG A/AA violation on Home, Activities, About, or Journal. The supporting prompt, hash, recovery, and R2 ledger is in `docs/PUBLIC-MEDIA-RELEASE-AUDIT.md`.

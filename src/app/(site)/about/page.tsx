@@ -64,7 +64,7 @@ export default async function AboutPage() {
       <section className="evidence-boundary section-space" aria-labelledby="record-title">
         <PageContainer className="evidence-boundary-grid">
           <DocumentaryImage
-            media={media["club-room-selfie"]}
+            media={media["about-record-relay-v2"]}
             ratio="5 / 4"
             sizes="(max-width: 879px) 100vw, 40vw"
             className="evidence-boundary-image"

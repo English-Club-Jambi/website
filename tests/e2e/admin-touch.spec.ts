@@ -1,6 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import { captureAdminEvidence } from "./helpers/admin-evidence";
+
 type AdminCredentials = {
   email: string;
   password: string;
@@ -194,7 +196,7 @@ test.describe("private authenticated admin touch smoke", () => {
     await expectTouchClickTrace(page, editorLink);
     await expect(page.getByText("Add a link", { exact: true })).toBeVisible();
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/admin-owner-touch-${testInfo.project.name}.png`,
       animations: "disabled",
     });

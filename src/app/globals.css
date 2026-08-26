@@ -940,7 +940,7 @@ dd {
 
 .evidence-word {
   margin-bottom: clamp(2rem, 5vw, 4rem);
-  color: var(--signal);
+  color: var(--primary-strong);
   font-weight: 700;
 }
 

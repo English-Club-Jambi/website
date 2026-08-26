@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import { captureAdminEvidence } from "./helpers/admin-evidence";
+
 type AdminCredentials = {
   email: string;
   password: string;
@@ -111,7 +113,7 @@ test.describe("seeded public and admin integration", () => {
     );
     expect(optionStates).toContain(true);
     expect(optionStates).toContain(false);
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/question-bank-task-family-groups-desktop-chromium.png",
       animations: "disabled",
     });
@@ -124,7 +126,7 @@ test.describe("seeded public and admin integration", () => {
       directEditor.getByRole("link", { name: "Edit source" }),
     ).toHaveCount(0);
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/question-bank-seeded-desktop-chromium.png",
       fullPage: true,
       animations: "disabled",
@@ -142,7 +144,7 @@ test.describe("seeded public and admin integration", () => {
       "src",
       /^https:\/\/r2\.mukhtada\.my\.id\//,
     );
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/question-bank-listening-editor-desktop-chromium.png",
       fullPage: true,
       animations: "disabled",
@@ -294,8 +296,26 @@ test.describe("seeded public and admin integration", () => {
       builder.getByRole("button", { name: "Upload audio to R2" }),
     ).toBeDisabled();
     await builder.getByRole("combobox", { name: "Reviewed recording" }).click();
-    expect(await page.getByRole("option").count()).toBeGreaterThan(1);
-    await page.keyboard.press("Escape");
+    const audioOptions = page.getByRole("option");
+    expect(await audioOptions.count()).toBeGreaterThan(1);
+    await audioOptions.nth(1).click();
+    const audioPreview = builder.locator("audio");
+    await expect(audioPreview).toHaveCount(1);
+    await expect(audioPreview).toHaveAttribute(
+      "src",
+      /^https:\/\/r2\.mukhtada\.my\.id\//,
+    );
+    await builder.getByLabel("Audio file").setInputFiles({
+      name: "question-bank-upload-check.mp3",
+      mimeType: "audio/mpeg",
+      buffer: Buffer.from("ID3 question bank browser upload check"),
+    });
+    await builder
+      .getByLabel("Accessible description")
+      .fill("Two members arrange the next conversation circle");
+    await expect(
+      builder.getByRole("button", { name: "Upload audio to R2" }),
+    ).toBeEnabled();
 
     const targets = await builder.getByRole("button").evaluateAll((buttons) =>
       buttons.map((button) => {
@@ -326,7 +346,7 @@ test.describe("seeded public and admin integration", () => {
           violation.impact === "critical" || violation.impact === "serious",
       ),
     ).toEqual([]);
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/question-bank-add-${testInfo.project.name}.png`,
       fullPage: true,
       animations: "disabled",
@@ -422,7 +442,7 @@ test.describe("seeded public and admin integration", () => {
         .getByRole("list", { name: "Question bank entries" })
         .getByText(prompt, { exact: true })
         .click();
-      await page.screenshot({
+      await captureAdminEvidence(page, {
         path: "docs/evidence/admin/question-bank-illustrated-seed-desktop-chromium.png",
         fullPage: true,
         animations: "disabled",
@@ -484,7 +504,7 @@ test.describe("seeded public and admin integration", () => {
     await expect(bankList.getByText(prompt, { exact: true })).toBeVisible({
       timeout: 20_000,
     });
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/question-bank-illustrated-seed-desktop-chromium.png",
       fullPage: true,
       animations: "disabled",

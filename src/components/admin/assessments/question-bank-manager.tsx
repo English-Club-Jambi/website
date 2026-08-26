@@ -88,6 +88,12 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function formatPoints(value: number) {
+  return new Intl.NumberFormat("en", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function itemTypeLabel(value: BankContent["type"]) {
   return {
     "single-choice": "Single choice",
@@ -1031,7 +1037,7 @@ function QuestionBankEditor({
         </div>
         <div>
           <dt>Points</dt>
-          <dd>{row.points}</dd>
+          <dd>{formatPoints(row.points)}</dd>
         </div>
       </dl>
     </aside>

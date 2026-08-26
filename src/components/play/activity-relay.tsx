@@ -116,7 +116,7 @@ export function ActivityRelay({
         <div key={active.image} className={styles.activityMedia}>
           <DocumentaryImage
             media={media[active.image]}
-            ratio={active.image === "leeds-panel" ? "3 / 2" : "4 / 3"}
+            ratio={active.id === "exchange" ? "3 / 2" : "4 / 3"}
             sizes={context === "home" ? "(max-width: 879px) 100vw, 32vw" : "(max-width: 879px) 100vw, 38vw"}
           />
         </div>

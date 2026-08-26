@@ -25,7 +25,8 @@ The gate verifies the authorised Convex development deployment and never targets
 | Pinned audio replaces duplicate stimulus audio | Pass in unit and Convex tests | Exactly one `<audio>` element; pinned R2 URL wins |
 | Legacy stimulus audio fallback | Pass in unit test | Legacy R2 URL renders when the pinned field is absent |
 | Optional illustration | Pass in unit and live browser tests | Desktop, Pixel 7, and 320 px; R2 URL, alt text, no overlap or overflow |
-| Ready-by-default pool and explicit disable | Pass in Convex tests | Inherited ready question starts allowed; disable rule excludes it; removing the rule restores inheritance |
+| Full bank-backed manifest | Pass in live browser tests | A 50-item full-practice manifest starts on desktop, Pixel 7, and 320 px using click or real touch as appropriate |
+| Ready-by-default pool and explicit disable | Pass in cloud draft check and Convex tests | A ready inherited question changed to `disabled`/`effectiveAllowed=false`, then returned to `inherit`/`effectiveAllowed=true`; the cleanup query found no remaining rule |
 | Attempt manifest immutability | Pass in Convex tests | A bank content/audio edit changes later attempts while the first attempt keeps its original item and audio IDs |
 | New Convex contract on the shared dev deployment | Pass | Synced only to `dev:perfect-greyhound-270`; 146 ready records, 121 unique selectable fingerprints, and eight random-bank sections |
 | Pinned Question Bank audio in a live cloud attempt | Pass | One custom-domain R2 player and no duplicate legacy player at desktop, Pixel 7, and 320 px |
@@ -41,6 +42,9 @@ The gate verifies the authorised Convex development deployment and never targets
 - `docs/evidence/practice-bank-audio-live-desktop-chromium.png`
 - `docs/evidence/practice-bank-audio-live-mobile-chromium.png`
 - `docs/evidence/practice-bank-audio-live-narrow-chromium.png`
+- `docs/evidence/practice-full-bank-live-desktop-chromium.png`
+- `docs/evidence/practice-full-bank-live-mobile-chromium.png`
+- `docs/evidence/practice-full-bank-live-narrow-chromium.png`
 
 The Writing captures use the current viewport. Playwright full-page capture relocates sticky headers and the skip link into the stitched document, which looks like an overlap even though the viewport doesn't show one.
 
@@ -54,9 +58,10 @@ npx vitest run tests/convex/question-bank-audio.test.ts tests/convex/assessment-
 RUN_SEEDED_PRACTICE_E2E=1 npx playwright test tests/e2e/practice-seeded-flow.spec.ts --grep "keeps the Writing response focused"
 RUN_SEEDED_PRACTICE_E2E=1 RUN_ILLUSTRATED_QUESTION_E2E=1 npx playwright test tests/e2e/practice-seeded-flow.spec.ts --grep "delivers the seeded bank illustration"
 RUN_SEEDED_PRACTICE_E2E=1 npx playwright test tests/e2e/practice-seeded-flow.spec.ts --grep "serves one pinned Question Bank recording"
+RUN_SEEDED_PRACTICE_E2E=1 RUN_ILLUSTRATED_QUESTION_E2E=1 npx playwright test tests/e2e/practice-seeded-flow.spec.ts --grep "starts the public full-practice|delivers the seeded bank illustration|keeps the Writing response focused|serves one pinned" --workers=1
 ```
 
-Results: the final integrated run passed all 252 unit/contract tests and all 70 backend tests. Writing, illustration, and pinned-audio browser checks passed at desktop, Pixel 7, and 320 px. The full 231-case Playwright matrix finished with 189 passes, 42 intentional project/credential/mutation skips, and no failures.
+Results: the final integrated run passed all 254 unit/contract tests and all 70 backend tests. The focused cloud command passed 12/12 cases in 2.8 minutes: full manifest, Writing focus, illustration, and pinned audio at desktop, Pixel 7, and 320 px. The final 231-case Playwright matrix finished with 191 passes, 40 intentional project-specific skips, and no failures.
 
 ## Audit score
 
@@ -85,6 +90,10 @@ Suggested command: `$impeccable harden` if this scan later becomes slow in seria
 
 The authorised development push completed, and the browser found one public custom-domain R2 audio control inside the labelled question-audio section at all three widths. The same checks confirmed that no second legacy audio control was rendered.
 
+### Resolved: format override round trip leaves no rule behind
+
+The cloud draft check started from a compatible ready Speaking question with `allowedByDefault=true`, `ruleState=inherit`, and `effectiveAllowed=true`. The official pool mutation changed revision 5 to 6 and projected `ruleState=disabled` with `effectiveAllowed=false`. Restoring inheritance changed revision 6 to 7; the final projection returned to `inherit`/`true`, and a direct read found zero matching rule rows. Published-manifest exclusion, duplicate-fingerprint protection, and restoration are covered by the atomic Convex regression because an unpublished working draft must not alter a public attempt.
+
 ## Positive findings
 
 The Writing fix removes the original failure mechanism: autosave no longer disables the textarea after each keystroke. Local state updates immediately, the latest response snapshot wins, and navigation waits until the queued save settles.
@@ -100,7 +109,9 @@ Image delivery behaves the same at each checked width. The R2 asset keeps its al
 - [x] Convex default/override and immutable-manifest tests
 - [x] Writing browser proof at three widths
 - [x] Illustration browser proof at three widths
+- [x] Full bank-backed manifest browser proof at three widths
 - [x] Push only the authorised Convex development deployment
 - [x] Run pinned-audio browser proof at three widths
+- [x] Round-trip one explicit format disable and verify zero residual rule rows
 - [x] Inspect generated audio screenshots, console, Axe, R2 response, and overflow
 - [x] Recheck port 3987 without restarting it

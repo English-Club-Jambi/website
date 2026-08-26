@@ -20,6 +20,7 @@ Verified public path:
   - `images/member-directory-portraits-v1.avif`
   - `images/member-directory-portraits-v1.webp`
 - Existing-key overwrite is rejected.
+- Six new people-free Conversation Relay v2 asset pairs are checked in and uploaded under stable `images/*-v2.{avif,webp}` keys. `HeadObject` and custom-domain reads verified all 12 objects against their exact MIME type and byte size. Their source prompts and hashes are in `docs/PUBLIC-MEDIA-RELEASE-AUDIT.md`.
 - Presigned URLs were not written to source or logs.
 - `https://r2.mukhtada.my.id` is active. DNS, TLS, cache, and representative public object reads passed the recorded development checks.
 - A real authenticated Journal upload passed the same-origin relay with HTTP 204, Convex `HeadObject` verification, editor insertion, revision save, edit-route reload, custom-domain rendering, and QA cleanup. The browser made no request to the S3 host.
@@ -28,7 +29,7 @@ Not verified:
 
 - The separate private Assessment bucket does not exist in the current application configuration.
 - Private Assessment CORS, SHA-256 upload headers, `HeadObject` checksum response, private preview, and public-derivative publication have not had a real Cloudflare round trip.
-- Participant documentary media remains blocked where rights or consent are pending.
+- Participant documentary media remains blocked where rights or consent are pending. The 20 former public derivatives are now quarantined in ignored `assets/consent-pending-derivatives/`, so they cannot ship through Next.js static hosting either.
 
 Do not infer the private path is healthy because the public bucket works.
 

@@ -77,9 +77,12 @@ This file is the release checklist for the English Club website. A task is marke
 
 - [x] Push the final Convex contract to `dev:perfect-greyhound-270` only; do not deploy production.
 - [x] Re-run R2 connectivity and a real upload/playback smoke test on the custom domain.
+- [x] Replace every public documentary derivative whose consent is pending with a cleared synthetic asset; keep the original derivatives in the ignored local quarantine only.
+- [x] Upload every replacement derivative to the reviewed public R2 path and verify its custom-domain response, content type, and size.
+- [x] Remove or regenerate tracked admin evidence that exposes an operator login identifier, then repeat an OCR-assisted evidence audit.
 - [x] Run full lint, TypeScript, unit, backend, production build, Playwright, Axe, responsive geometry, and screenshot review from the final source.
 - [x] Confirm port 3987 remains listening and returns HTTP 200; do not kill or restart it.
 - [x] Run dependency, secret, ignored-file, raw-asset/privacy, absolute-path, file-size, and staged-diff audits.
-- [x] Commit every reviewed change to the local Git repository only after all gates pass.
-- [x] Verify the repository is clean after commit.
-- [x] Read and hand off the development owner password only after the successful commit; do not expose R2 or Convex secrets.
+- [ ] Commit every reviewed change to the local Git repository only after all gates pass.
+- [ ] Verify the repository is clean after commit.
+- [ ] Read and hand off the development owner password only after the successful commit; do not expose R2 or Convex secrets.

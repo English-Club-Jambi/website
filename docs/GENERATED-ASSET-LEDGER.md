@@ -4,6 +4,8 @@ Status: temporary design assets with local and R2 derivatives
 Date: 25 August 2026
 Generator: built-in image generation tool
 
+Update, 26 August 2026: the Home, Practice, Activities, About, and seeded Journal surfaces now use the people-free paper-and-clay **Conversation Relay v2** set. Its six exact prompts, evidence masters, versioned derivatives, checksums, runtime mappings, R2 verification, and visual review are recorded in `PUBLIC-MEDIA-RELEASE-AUDIT.md`. The earlier generated people assets below remain cleared project-generated files, but the Home hero no longer selects the people-based placeholder.
+
 ## 1. Release boundary
 
 These files are useful for composition and testing, but they are not a final brand approval or evidence of a real English Club event. The generated people do not represent members. Before launch, the club may keep the generated atmosphere, commission a replacement, or remove it without changing the page structure.

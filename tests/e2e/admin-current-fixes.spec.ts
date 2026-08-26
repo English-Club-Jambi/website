@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { captureAdminEvidence } from "./helpers/admin-evidence";
+
 type AdminCredentials = {
   email: string;
   password: string;
@@ -155,7 +157,7 @@ test.describe("current administration fixes", () => {
     ).toBeVisible();
     await expect.poll(() => rail.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: "docs/evidence/admin/page-copy-independent-scroll-desktop-chromium.png",
       animations: "disabled",
     });
@@ -191,7 +193,7 @@ test.describe("current administration fixes", () => {
     ).toBeVisible();
     await expect(page.getByRole("region", { name: "Home content fields" })).toBeHidden();
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/page-copy-touch-picker-${testInfo.project.name}.png`,
       animations: "disabled",
     });
@@ -262,7 +264,7 @@ test.describe("current administration fixes", () => {
     await expect(page.getByRole("combobox", { name: "Coordinator" })).toBeVisible();
     await expect(page.getByText(/Member assignments protect this division/)).toBeVisible();
 
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/member-divisions-${testInfo.project.name}.png`,
       animations: "disabled",
     });
@@ -365,16 +367,22 @@ test.describe("current administration fixes", () => {
     await expect(page.getByRole("textbox", { name: "Journal body" })).toContainText(
       /language changes when it has a real person on the other side/i,
     );
-    await expect(page.getByRole("heading", { name: "Featured image" })).toBeVisible();
+    const featuredImage = page.getByRole("region", {
+      name: "Featured image",
+    });
+    await expect(featuredImage).toBeVisible();
     await expect(page.getByText("Cover ready", { exact: true })).toBeVisible();
-    await expect(
-      page.getByAltText(
-        "Speakers sit in a panel while one person talks into a handheld microphone.",
-      ),
-    ).toBeVisible();
+    const alternativeText = await featuredImage
+      .getByLabel("Alternative text")
+      .inputValue();
+    expect(alternativeText.trim().length).toBeGreaterThan(2);
+    await expect(featuredImage.locator("img")).toHaveAttribute(
+      "alt",
+      alternativeText,
+    );
 
     await page.getByRole("heading", { name: "Featured image" }).scrollIntoViewIfNeeded();
-    await page.screenshot({
+    await captureAdminEvidence(page, {
       path: `docs/evidence/admin/journal-featured-image-${testInfo.project.name}.png`,
       animations: "disabled",
     });

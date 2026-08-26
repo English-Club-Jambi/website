@@ -92,7 +92,7 @@ export function SentencePlayground({
     >
       <div className={styles.sentenceBackdrop} aria-hidden>
         <Image
-          src={media["conversation-hero-placeholder"].src}
+          src={media["conversation-relay-hero-v2"].src}
           alt=""
           fill
           priority

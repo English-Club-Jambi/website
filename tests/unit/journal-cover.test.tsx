@@ -25,11 +25,11 @@ describe("JournalCover", () => {
     );
   });
 
-  it("keeps known documentary covers compatible", () => {
+  it("keeps old Journal keys compatible through a synthetic replacement", () => {
     render(<JournalCover coverKey="club-room-wide" />);
     expect(
       screen.getByAltText(
-        "People sit around low tables in a library-like room with bookshelves along one wall.",
+        "A paper-and-clay miniature conversation circle with empty chairs, blank notebooks, cards, and headphones.",
       ),
     ).toBeVisible();
   });

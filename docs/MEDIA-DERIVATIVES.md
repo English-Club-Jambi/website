@@ -2,9 +2,15 @@
 
 Generated: 25 August 2026
 Tool: ImageMagick 7
-Status: documentary derivatives remain local; cleared generated derivatives are verified in R2
+Status: consent-pending documentary derivatives are quarantined outside `public/`; previously cleared generated derivatives are verified in R2
 
-Production target: Cloudflare R2 Standard under a versioned prefix such as `english-club/v2/images/`. The documentary files remain QA evidence until consent clears; see `R2-SETUP.md`.
+Production target: Cloudflare R2 Standard under versioned object keys. The documentary files remain local QA evidence until consent clears; see `R2-SETUP.md` and `PUBLIC-MEDIA-RELEASE-AUDIT.md`.
+
+## 26 August release resolution
+
+All 20 pending AVIF/WebP files listed in the documentary mapping below were moved from `public/images/` to the ignored, recoverable directory `assets/consent-pending-derivatives/`. Their raw masters remain untouched under `assets/`. None of these filenames can ship as a directly addressable Next.js public asset.
+
+Home, Practice, Activities, About, and the three seeded Journal covers now use six people-free paper-and-clay miniature assets. Existing Convex Journal rows with an old cover key resolve through a safe alias rather than the old file path. The complete mapping, prompt ledger, checksums, and release allowlist live in `PUBLIC-MEDIA-RELEASE-AUDIT.md`.
 
 ## Method
 
@@ -76,7 +82,8 @@ e91798cc6262c70a199273c45f47563475c536dd961fb391b139e9f9e2a41f68  table-conversa
 ## Remaining checks
 
 - [x] Inspect responsive crops at phone, tablet, and wide screenshots.
-- [ ] Confirm publication consent for every included participant image.
+- [ ] Confirm publication consent before any quarantined participant image is reconsidered.
 - [x] Upload and verify the six cleared generated derivatives.
-- [ ] Upload documentary derivatives only after their individual consent state clears.
+- [x] Remove every pending documentary derivative from browser-addressable storage.
+- [ ] Upload documentary derivatives only after their individual consent state clears and the public allowlist is deliberately reviewed.
 - [ ] Re-run metadata and hash checks after any crop or re-encode.

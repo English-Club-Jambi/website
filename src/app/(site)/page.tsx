@@ -126,7 +126,7 @@ export default async function HomePage() {
             <TextLink href="/about">{copy.handoffLink}</TextLink>
           </div>
           <DocumentaryImage
-            media={media["club-room-wide"]}
+            media={media["activity-room-relay-v2"]}
             ratio="4 / 3"
             sizes="(max-width: 879px) 100vw, 43vw"
             className="handoff-image"

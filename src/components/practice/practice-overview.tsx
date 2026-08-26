@@ -134,7 +134,7 @@ export function PracticeOverview({
 
           <div className={styles.practiceHeroVisual} aria-hidden>
             <DocumentaryImage
-              media={media["conversation-hero-placeholder"]}
+              media={media["conversation-relay-hero-v2"]}
               ratio="4 / 3"
               sizes="(max-width: 879px) 100vw, 48vw"
               priority
