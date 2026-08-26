@@ -10,6 +10,7 @@ import { ConvexError, v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { bumpAssessmentRevision } from "./lib/assessmentAdmin";
 import { publicAssessmentDerivativeKey } from "./lib/assessmentMedia";
 import {
   difficultyForPosition,
@@ -642,6 +643,117 @@ export const seedQuestionBank = internalMutation({
       });
     }
     return { inserted, existing: existingCount, eligible, randomSections };
+  },
+});
+
+export const repairLegacyDraftQuestionPools = internalMutation({
+  args: { confirm: v.literal(confirmation) },
+  returns: v.object({
+    repairedDefinitions: v.number(),
+    repairedSections: v.number(),
+  }),
+  handler: async (ctx) => {
+    const author = await requireSeedAuthor(ctx);
+    let repairedDefinitions = 0;
+    let repairedSections = 0;
+
+    for (const bankDefinition of ibtPracticeBank) {
+      const definition = await ctx.db
+        .query("assessmentDefinitions")
+        .withIndex("by_slug", (q) => q.eq("slug", bankDefinition.slug))
+        .unique();
+      if (definition?.draftVersionId === undefined) continue;
+      const draft = await ctx.db.get(
+        "assessmentVersions",
+        definition.draftVersionId,
+      );
+      if (
+        draft === null ||
+        (draft.status !== "draft" && draft.status !== "ready") ||
+        draft.cloneSourceVersionId === undefined
+      ) {
+        continue;
+      }
+      const sourceVersion = await ctx.db.get(
+        "assessmentVersions",
+        draft.cloneSourceVersionId,
+      );
+      if (
+        sourceVersion === null ||
+        sourceVersion.definitionId !== definition._id ||
+        sourceVersion.status !== "published"
+      ) {
+        continue;
+      }
+      const draftSections = await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_order", (q) =>
+          q.eq("versionId", draft._id),
+        )
+        .take(9);
+      if (draftSections.length > 8) {
+        throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      }
+      let repairedForDefinition = 0;
+      for (const draftSection of draftSections) {
+        const legacyPoolClone =
+          draftSection.deliveryMode === undefined &&
+          draftSection.bankProfile === undefined &&
+          draftSection.bankSelectionContract === undefined;
+        if (!legacyPoolClone) continue;
+        const sourceSection = await ctx.db
+          .query("assessmentSections")
+          .withIndex("by_version_id_and_section_key", (q) =>
+            q
+              .eq("versionId", sourceVersion._id)
+              .eq("sectionKey", draftSection.sectionKey),
+          )
+          .unique();
+        if (
+          sourceSection === null ||
+          sourceSection.skill !== draftSection.skill ||
+          sourceSection.deliveryMode !== "random-bank" ||
+          sourceSection.bankProfile !== definition.profile ||
+          sourceSection.bankSelectionContract !== 1
+        ) {
+          continue;
+        }
+        await ctx.db.patch("assessmentSections", draftSection._id, {
+          deliveryMode: "random-bank",
+          bankProfile: sourceSection.bankProfile,
+          bankSelectionContract: 1,
+          ...(sourceSection.bankSeedBatch === undefined
+            ? {}
+            : { bankSeedBatch: sourceSection.bankSeedBatch }),
+        });
+        repairedForDefinition += 1;
+      }
+      if (repairedForDefinition === 0) continue;
+      const now = Date.now();
+      await bumpAssessmentRevision(
+        ctx,
+        draft._id,
+        draft.contentRevision,
+        now,
+      );
+      await ctx.db.patch("assessmentDefinitions", definition._id, {
+        updatedBy: author._id,
+        updatedAt: now,
+      });
+      await ctx.db.insert("cmsAuditEvents", {
+        area: "assessment",
+        action: "update",
+        resourceType: "assessment-question-pool",
+        resourceId: draft._id,
+        summary: `${definition.slug} inherited question-pool configuration restored`,
+        actorId: author._id,
+        createdAt: now,
+      });
+      repairedDefinitions += 1;
+      repairedSections += repairedForDefinition;
+    }
+
+    return { repairedDefinitions, repairedSections };
   },
 });
 

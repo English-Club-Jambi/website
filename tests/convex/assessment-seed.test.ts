@@ -724,6 +724,119 @@ describe("four-skill assessment seed", () => {
       ),
     ).toMatchObject({ ruleState: "disabled", effectiveAllowed: false });
 
+    const inheritedSpeaking = revisedPool?.questions.find(
+      (question) =>
+        question.skill === "speaking" &&
+        question.allowedByDefault &&
+        question.effectiveAllowed,
+    );
+    if (inheritedSpeaking === undefined) {
+      throw new Error("Expected an inherited speaking question.");
+    }
+    await t.run(async (ctx) => {
+      const section = await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_section_key", (q) =>
+          q.eq("versionId", clone.versionId).eq("sectionKey", "speaking"),
+        )
+        .unique();
+      if (section === null) throw new Error("Expected cloned speaking section.");
+      await ctx.db.replace("assessmentSections", section._id, {
+        versionId: section.versionId,
+        sectionKey: section.sectionKey,
+        skill: section.skill,
+        order: section.order,
+        title: section.title,
+        instructions: section.instructions,
+        timeLimitSeconds: section.timeLimitSeconds,
+        audioReplayPolicy: section.audioReplayPolicy,
+        itemCount: section.itemCount,
+      });
+    });
+    const legacyPool = await owner.query(
+      api.adminAssessmentPools.getOverview,
+      { definitionId: published.definitionId },
+    );
+    expect(
+      legacyPool?.sections.find((section) => section.skill === "speaking"),
+    ).toMatchObject({ deliveryMode: "fixed", allowedCount: 0 });
+    expect(
+      legacyPool?.questions.find(
+        (question) =>
+          question.bankQuestionId === inheritedSpeaking.bankQuestionId,
+      ),
+    ).toMatchObject({ allowedByDefault: true, effectiveAllowed: false });
+
+    await expect(
+      owner.mutation(api.adminAssessmentPools.setQuestionAllowed, {
+        definitionId: published.definitionId,
+        bankQuestionId: inheritedSpeaking.bankQuestionId,
+        allowed: true,
+        expectedContentRevision: 3,
+      }),
+    ).resolves.toMatchObject({ ok: true, changed: true, contentRevision: 4 });
+    const repairedPool = await owner.query(
+      api.adminAssessmentPools.getOverview,
+      { definitionId: published.definitionId },
+    );
+    expect(
+      repairedPool?.sections.find((section) => section.skill === "speaking"),
+    ).toMatchObject({
+      deliveryMode: "random-bank",
+      requiredCount: 11,
+      allowedCount: 11,
+    });
+    expect(
+      repairedPool?.questions.find(
+        (question) =>
+          question.bankQuestionId === inheritedSpeaking.bankQuestionId,
+      ),
+    ).toMatchObject({ ruleState: "inherit", effectiveAllowed: true });
+
+    await t.run(async (ctx) => {
+      const section = await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_section_key", (q) =>
+          q.eq("versionId", clone.versionId).eq("sectionKey", "listening"),
+        )
+        .unique();
+      if (section === null) throw new Error("Expected cloned listening section.");
+      await ctx.db.replace("assessmentSections", section._id, {
+        versionId: section.versionId,
+        sectionKey: section.sectionKey,
+        skill: section.skill,
+        order: section.order,
+        title: section.title,
+        instructions: section.instructions,
+        timeLimitSeconds: section.timeLimitSeconds,
+        audioReplayPolicy: section.audioReplayPolicy,
+        itemCount: section.itemCount,
+      });
+    });
+    await expect(
+      t.mutation(internal.assessmentSeed.repairLegacyDraftQuestionPools, {
+        confirm,
+      }),
+    ).resolves.toEqual({ repairedDefinitions: 1, repairedSections: 1 });
+    await expect(
+      t.mutation(internal.assessmentSeed.repairLegacyDraftQuestionPools, {
+        confirm,
+      }),
+    ).resolves.toEqual({ repairedDefinitions: 0, repairedSections: 0 });
+    const maintainedSection = await t.run(async (ctx) =>
+      await ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_section_key", (q) =>
+          q.eq("versionId", clone.versionId).eq("sectionKey", "listening"),
+        )
+        .unique(),
+    );
+    expect(maintainedSection).toMatchObject({
+      deliveryMode: "random-bank",
+      bankProfile: "ec-ibt-style-2026-v1",
+      bankSelectionContract: 1,
+    });
+
     const authUserId = await t.run(async (ctx) =>
       await ctx.db.insert("users", { isAnonymous: true }),
     );

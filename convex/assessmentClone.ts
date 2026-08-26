@@ -57,7 +57,28 @@ export const cloneSections = internalMutation({
           q.eq("versionId", draft._id).eq("sectionKey", section.sectionKey),
         )
         .unique();
-      if (existing !== null) continue;
+      if (existing !== null) {
+        const legacyPoolClone =
+          existing.deliveryMode === undefined &&
+          existing.bankProfile === undefined &&
+          existing.bankSelectionContract === undefined;
+        if (
+          legacyPoolClone &&
+          section.deliveryMode === "random-bank" &&
+          section.bankProfile !== undefined &&
+          section.bankSelectionContract === 1
+        ) {
+          await ctx.db.patch("assessmentSections", existing._id, {
+            deliveryMode: "random-bank",
+            bankProfile: section.bankProfile,
+            bankSelectionContract: 1,
+            ...(section.bankSeedBatch === undefined
+              ? {}
+              : { bankSeedBatch: section.bankSeedBatch }),
+          });
+        }
+        continue;
+      }
       await ctx.db.insert("assessmentSections", {
         versionId: draft._id,
         sectionKey: section.sectionKey,

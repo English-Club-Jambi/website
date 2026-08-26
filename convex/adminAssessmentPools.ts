@@ -12,7 +12,7 @@ import {
   itemTypeValidator,
 } from "./assessmentValidators";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import {
   bumpAssessmentRevision,
   getMutableAssessmentVersion,
@@ -121,6 +121,78 @@ function allowedByDefault(
   return definition.kind === "full-practice"
     ? question.fullPracticeEligible
     : question.sourceDefinitionId === definition._id;
+}
+
+function isLegacyClonedPoolSection(section: Doc<"assessmentSections">) {
+  return (
+    section.deliveryMode === undefined &&
+    section.bankProfile === undefined &&
+    section.bankSelectionContract === undefined
+  );
+}
+
+async function repairInheritedPoolSections(
+  ctx: MutationCtx,
+  definition: Doc<"assessmentDefinitions">,
+  version: Doc<"assessmentVersions">,
+  sections: readonly Doc<"assessmentSections">[],
+  skill: Doc<"assessmentQuestionBank">["skill"],
+) {
+  const matchingSections = sections.filter((section) => section.skill === skill);
+  let hasRandomBankSection = matchingSections.some(isRandomBankSection);
+  let repairedCount = 0;
+
+  if (
+    version.cloneSourceVersionId === undefined ||
+    !matchingSections.some(isLegacyClonedPoolSection)
+  ) {
+    return { hasRandomBankSection, repairedCount };
+  }
+
+  const sourceVersion = await ctx.db.get(
+    "assessmentVersions",
+    version.cloneSourceVersionId,
+  );
+  if (
+    sourceVersion === null ||
+    sourceVersion.definitionId !== definition._id ||
+    sourceVersion.status !== "published"
+  ) {
+    return { hasRandomBankSection, repairedCount };
+  }
+
+  for (const section of matchingSections) {
+    if (!isLegacyClonedPoolSection(section)) continue;
+    const sourceSection = await ctx.db
+      .query("assessmentSections")
+      .withIndex("by_version_id_and_section_key", (q) =>
+        q
+          .eq("versionId", sourceVersion._id)
+          .eq("sectionKey", section.sectionKey),
+      )
+      .unique();
+    if (
+      sourceSection === null ||
+      sourceSection.skill !== section.skill ||
+      !isRandomBankSection(sourceSection) ||
+      sourceSection.bankProfile !== definition.profile ||
+      sourceSection.bankSelectionContract !== 1
+    ) {
+      continue;
+    }
+    await ctx.db.patch("assessmentSections", section._id, {
+      deliveryMode: "random-bank",
+      bankProfile: sourceSection.bankProfile,
+      bankSelectionContract: 1,
+      ...(sourceSection.bankSeedBatch === undefined
+        ? {}
+        : { bankSeedBatch: sourceSection.bankSeedBatch }),
+    });
+    repairedCount += 1;
+    hasRandomBankSection = true;
+  }
+
+  return { hasRandomBankSection, repairedCount };
 }
 
 export const getOverview = query({
@@ -348,13 +420,17 @@ export const setQuestionAllowed = mutation({
         q.eq("versionId", version._id),
       )
       .take(9);
-    if (
-      sections.length > 8 ||
-      !sections.some(
-        (section) =>
-          section.skill === question.skill && isRandomBankSection(section),
-      )
-    ) {
+    if (sections.length > 8) {
+      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+    }
+    const poolConfiguration = await repairInheritedPoolSections(
+      ctx,
+      definition,
+      version,
+      sections,
+      question.skill,
+    );
+    if (!poolConfiguration.hasRandomBankSection) {
       throw new ConvexError({ code: "QUESTION_BANK_SKILL_NOT_USED" as const });
     }
     const existing = await ctx.db
@@ -367,7 +443,8 @@ export const setQuestionAllowed = mutation({
       .unique();
     const inherited = allowedByDefault(definition, question);
     const current = existing?.allowed ?? inherited;
-    if (current === args.allowed) {
+    const ruleChanged = current !== args.allowed;
+    if (!ruleChanged && poolConfiguration.repairedCount === 0) {
       return {
         ok: true as const,
         changed: false,
@@ -375,25 +452,27 @@ export const setQuestionAllowed = mutation({
       };
     }
     const now = Date.now();
-    if (args.allowed === inherited) {
-      if (existing !== null) {
-        await ctx.db.delete("assessmentVersionQuestionRules", existing._id);
+    if (ruleChanged) {
+      if (args.allowed === inherited) {
+        if (existing !== null) {
+          await ctx.db.delete("assessmentVersionQuestionRules", existing._id);
+        }
+      } else if (existing === null) {
+        await ctx.db.insert("assessmentVersionQuestionRules", {
+          versionId: version._id,
+          bankQuestionId: question._id,
+          allowed: args.allowed,
+          updatedBy: actor._id,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.patch("assessmentVersionQuestionRules", existing._id, {
+          allowed: args.allowed,
+          updatedBy: actor._id,
+          updatedAt: now,
+        });
       }
-    } else if (existing === null) {
-      await ctx.db.insert("assessmentVersionQuestionRules", {
-        versionId: version._id,
-        bankQuestionId: question._id,
-        allowed: args.allowed,
-        updatedBy: actor._id,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } else {
-      await ctx.db.patch("assessmentVersionQuestionRules", existing._id, {
-        allowed: args.allowed,
-        updatedBy: actor._id,
-        updatedAt: now,
-      });
     }
     const contentRevision = await bumpAssessmentRevision(
       ctx,
@@ -415,7 +494,10 @@ export const setQuestionAllowed = mutation({
         " " +
         question.skill +
         " question " +
-        (args.allowed ? "allowed" : "disabled"),
+        (args.allowed ? "allowed" : "disabled") +
+        (poolConfiguration.repairedCount > 0
+          ? "; inherited question-pool configuration restored"
+          : ""),
       actorId: actor._id,
     });
     return {
