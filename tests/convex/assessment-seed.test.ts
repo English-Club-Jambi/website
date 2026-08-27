@@ -536,6 +536,9 @@ describe("paper-based assessment seed", () => {
         skill: "reading",
       },
     ] as const;
+    const owner = t.withIdentity({
+      tokenIdentifier: "https://example.test|seed-owner",
+    });
     for (const format of quickFormats) {
       const quick = await t.run(async (ctx) => {
         const definition = await ctx.db
@@ -564,6 +567,26 @@ describe("paper-based assessment seed", () => {
           itemCount: sections[0].itemCount,
         };
       });
+      const quickPool = await owner.query(
+        api.adminAssessmentPools.getOverview,
+        { definitionId: quick.definitionId },
+      );
+      expect(quickPool?.sections).toEqual([
+        expect.objectContaining({
+          skill: format.skill,
+          requiredCount: quick.itemCount,
+          allowedCount: expect.any(Number),
+        }),
+      ]);
+      expect(quickPool?.sections[0].allowedCount).toBeGreaterThan(
+        quick.itemCount,
+      );
+      expect(
+        quickPool?.questions.filter(
+          (question) =>
+            question.skill === format.skill && question.allowedByDefault,
+        ).length,
+      ).toBeGreaterThan(quick.itemCount);
       const quickAttempt = await learner.mutation(api.assessmentAttempts.start, {
         definitionId: quick.definitionId,
         versionId: quick.versionId,
@@ -595,6 +618,9 @@ describe("paper-based assessment seed", () => {
               skill: question.skill,
               taskFamily: question.taskFamily,
               sourceItemMatches: question.sourceItemId === entry.itemId,
+              sourceDefinitionMatchesFormat:
+                question.sourceDefinitionId === quick.definitionId,
+              contentFingerprint: question.contentFingerprint,
             };
           }),
         ),
@@ -606,6 +632,16 @@ describe("paper-based assessment seed", () => {
             entry.sourceItemMatches &&
             isTaskFamilyForSkill(entry.skill, entry.taskFamily),
           ),
+      ).toBe(true);
+      expect(
+        new Set(
+          quickManifestAudit.map((entry) => entry.contentFingerprint),
+        ).size,
+      ).toBe(quick.itemCount);
+      expect(
+        quickManifestAudit.some(
+          (entry) => !entry.sourceDefinitionMatchesFormat,
+        ),
       ).toBe(true);
       const quickBegun = await learner.mutation(
         api.assessmentAttempts.beginSection,
@@ -630,14 +666,49 @@ describe("paper-based assessment seed", () => {
         objective: { possible: quick.itemCount },
         estimate: null,
       });
+
+      if (format.skill === "reading") {
+        const firstPinnedItems = quickManifest.map((entry) => entry.itemId);
+        const secondQuickAttempt = await learner.mutation(
+          api.assessmentAttempts.start,
+          {
+            definitionId: quick.definitionId,
+            versionId: quick.versionId,
+            timingMode: "standard",
+            timeMultiplier: 1,
+            listeningMode: "audio-primary",
+            startRequestId: "random-reading-attempt-0002",
+          },
+        );
+        const secondQuickManifest = await t.run(async (ctx) =>
+          await ctx.db
+            .query("assessmentAttemptItems")
+            .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
+              q.eq("attemptId", secondQuickAttempt.attemptId),
+            )
+            .take(quick.itemCount + 1),
+        );
+        expect(secondQuickManifest).toHaveLength(quick.itemCount);
+        expect(secondQuickManifest.map((entry) => entry.itemId)).not.toEqual(
+          firstPinnedItems,
+        );
+        const firstManifestAfterSecondStart = await t.run(async (ctx) =>
+          await ctx.db
+            .query("assessmentAttemptItems")
+            .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
+              q.eq("attemptId", quickAttempt.attemptId),
+            )
+            .take(quick.itemCount + 1),
+        );
+        expect(
+          firstManifestAfterSecondStart.map((entry) => entry.itemId),
+        ).toEqual(firstPinnedItems);
+      }
     }
 
     await expect(
       t.query(api.adminAssessmentQuestionBank.getSummary, {}),
     ).rejects.toThrow();
-    const owner = t.withIdentity({
-      tokenIdentifier: "https://example.test|seed-owner",
-    });
     const page = await owner.query(api.adminAssessmentQuestionBank.listPage, {
       status: "ready",
       skill: "reading",

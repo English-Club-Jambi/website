@@ -20,6 +20,7 @@ import {
 import {
   isRandomBankSection,
   listEligibleBankQuestionsForSection,
+  questionAllowedByDefaultForFormat,
   questionBankRowIsReadyForSelection,
 } from "./lib/assessmentQuestionBank";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
@@ -114,16 +115,6 @@ type PoolQuestionView = {
     reviewedAt: number | null;
   };
 };
-
-function allowedByDefault(
-  definition: Doc<"assessmentDefinitions">,
-  question: Doc<"assessmentQuestionBank">,
-) {
-  if (question.status !== "ready") return false;
-  return definition.kind === "full-practice"
-    ? true
-    : question.sourceDefinitionId === definition._id;
-}
 
 function isLegacyClonedPoolSection(section: Doc<"assessmentSections">) {
   return (
@@ -352,7 +343,7 @@ export const getOverview = query({
         allowedByDefault: group.some(
           (candidate) =>
             readyForSelectionIds.has(candidate._id) &&
-            allowedByDefault(definition, candidate),
+            questionAllowedByDefaultForFormat(definition, candidate),
         ),
         ruleState,
         effectiveAllowed: effectivelyAllowedFingerprints.has(
@@ -521,7 +512,7 @@ export const setQuestionAllowed = mutation({
       groupIds.has(rule.bankQuestionId),
     );
     const inherited = readyQuestionGroup.some((candidate) =>
-      allowedByDefault(definition, candidate),
+      questionAllowedByDefaultForFormat(definition, candidate),
     );
     const current = existingRules.some((rule) => !rule.allowed)
       ? false

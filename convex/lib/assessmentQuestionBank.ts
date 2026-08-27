@@ -282,6 +282,23 @@ export async function questionBankRowIsReadyForSelection(
   );
 }
 
+/**
+ * Defines the inherited Practice Format rule before an administrator adds an
+ * explicit allow/disable override. Full and quick formats share the same
+ * reviewed bank for their profile; the section query applies the exact skill
+ * boundary before this rule is evaluated.
+ */
+export function questionAllowedByDefaultForFormat(
+  definition: Doc<"assessmentDefinitions">,
+  question: Doc<"assessmentQuestionBank">,
+) {
+  return (
+    definition.kind !== "club-program-quiz" &&
+    definition.profile === question.profile &&
+    question.status === "ready"
+  );
+}
+
 export function isRandomBankSection(section: Doc<"assessmentSections">) {
   return section.deliveryMode === "random-bank";
 }
@@ -484,10 +501,10 @@ export async function listEligibleBankQuestionsForSection(
       String(left._id).localeCompare(String(right._id)),
   );
   for (const row of orderedRows) {
-    const allowedByDefault =
-      definition.kind === "full-practice"
-        ? true
-        : row.sourceDefinitionId === definition._id;
+    const allowedByDefault = questionAllowedByDefaultForFormat(
+      definition,
+      row,
+    );
     if (!(ruleByFingerprint.get(row.contentFingerprint) ?? allowedByDefault)) {
       continue;
     }
