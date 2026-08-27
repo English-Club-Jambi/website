@@ -16,9 +16,9 @@ type StoryProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return [];
-}
+// Convex server queries use no-store. Keep the route dynamic so metadata and
+// page rendering share the same runtime contract in Next production builds.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: StoryProps): Promise<Metadata> {
   const { slug } = await params;

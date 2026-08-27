@@ -1,8 +1,18 @@
 # Active Fix Ledger
 
-Updated: 26 August 2026
+Updated: 27 August 2026
 
 This file is the working acceptance ledger for the current administration fixes. It records user-reported symptoms, the evidence behind each diagnosis, and the final proof required before handoff.
+
+## Vercel Journal detail runtime
+
+- [x] Reproduce the deployed 500 with a local production build.
+- [x] Confirm `Page changed from static to dynamic at runtime` in server logs.
+- [x] Remove the empty Journal `generateStaticParams()` declaration.
+- [x] Keep Convex-backed story pages explicitly dynamic.
+- [x] Verify a published slug returns 200 and a missing slug reaches the
+  noindex not-found path under a rebuilt production server.
+- [x] Run focused tests, typecheck, targeted lint, and production build.
 
 ## Journal edit compatibility
 
