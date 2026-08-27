@@ -21,7 +21,7 @@ Create a public home for the working-name **English Club** that combines a conci
 
 Success means a new visitor can answer these questions quickly: Who is this club for? What happens inside it? Does it feel welcoming? How can I join or make contact? A partner should also find enough context to take the club seriously.
 
-The repository does not contain a confirmed legal name, address, membership price, member count, or verified production member roster. The current logo, atmospheric people imagery, and Member portrait sheet are generated working assets. The announced development deployment contains 15 explicitly fictional profiles and five managed divisions so the complete organisation, filtering, and consent contracts can be tested through Convex. These records are development data, do not establish the club's real roster or member total, and must be removed or replaced by consent-cleared records before production.
+The secretariat location is confirmed as Perpustakaan Universitas Jambi at the Mendalo campus, with a supplied street address, Plus Code, and Google Maps destination. The repository still does not contain a confirmed legal name, membership price, member count, or verified production member roster. The current logo, atmospheric people imagery, and Member portrait sheet are generated working assets. The announced development deployment contains 15 explicitly fictional profiles and five managed divisions so the complete organisation, filtering, and consent contracts can be tested through Convex. These records are development data, do not establish the club's real roster or member total, and must be removed or replaced by consent-cleared records before production.
 
 ## Brand Personality
 

@@ -1,0 +1,198 @@
+.section {
+  border-block: 1px solid var(--line);
+  background: var(--surface);
+  overflow: clip;
+}
+
+.frame {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--grid-gap);
+}
+
+.intro {
+  grid-column: 1 / span 5;
+}
+
+.intro h2 {
+  max-width: 9ch;
+  margin: 0;
+  color: var(--primary-strong);
+  font-size: clamp(2.8rem, 6vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.intro p {
+  max-width: 43ch;
+  margin: 2rem 0 0;
+  color: var(--muted);
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.mapLink {
+  width: fit-content;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 2rem;
+  border-bottom: 2px solid currentColor;
+  color: var(--primary-strong);
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    gap var(--duration-fast) var(--ease-out);
+}
+
+.mapLink:hover,
+.mapLink:focus-visible {
+  gap: 1rem;
+  color: var(--ink);
+}
+
+.locator {
+  grid-column: 7 / -1;
+  min-width: 0;
+  border-top: 2px solid var(--ink);
+}
+
+.destination {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem;
+  padding-block: clamp(1.5rem, 3vw, 2.5rem);
+  border-bottom: 1px solid var(--line);
+  color: var(--primary-strong);
+}
+
+.destination > svg {
+  flex: 0 0 auto;
+}
+
+.destination span,
+.addressRow span {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--muted);
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.destination strong {
+  display: block;
+  color: var(--ink);
+  font-size: clamp(1.55rem, 3vw, 2.7rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.address {
+  font-style: normal;
+}
+
+.addressRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  padding-block: 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.addressRow p {
+  max-width: 54ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.copyButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  background: transparent;
+  color: var(--primary-strong);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.copyButton:hover,
+.copyButton:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary-wash);
+  color: var(--ink);
+}
+
+.copyButton:active {
+  transform: translateY(1px);
+}
+
+.status {
+  min-height: 1.5rem;
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 879px) {
+  .frame {
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+  }
+
+  .intro,
+  .locator {
+    grid-column: 1;
+  }
+
+  .intro h2 {
+    max-width: 11ch;
+  }
+}
+
+@media (max-width: 479px) {
+  .addressRow {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .copyButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapLink,
+  .copyButton {
+    transition-duration: 0.01ms;
+  }
+
+  .copyButton:active {
+    transform: none;
+  }
+}

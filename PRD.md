@@ -446,6 +446,7 @@ Acceptance:
 
 ### Allowed first-release facts
 
+- The English Club secretariat is inside Perpustakaan Universitas Jambi at the Mendalo campus. The supplied address, Plus Code, and Google Maps destination may appear on the About page.
 - The archive shows an English Club gathering in a library-like room.
 - A photographed discussion is titled "Leeds the Way: Bridging England and Indonesia."
 - A poster visible in the room reads "EC Incoming Day: Journey of the Golden Island."
@@ -454,7 +455,7 @@ Acceptance:
 ### Held content
 
 - Donation handover imagery and video until guardian and organiser consent exists.
-- Member names, person-to-role assignments, quotes, counts, founding date, campus, city, address, schedule, fee, and social links until supplied and approved. The five-role taxonomy itself is confirmed by the user brief.
+- Member names, person-to-role assignments, quotes, counts, the organisation's exact legal name, membership schedule, fee, and social links until supplied and approved. The five-role taxonomy and secretariat location are confirmed by the user brief.
 - University or sponsor relationship claims.
 - Any Assessment question, source, media, answer key, estimate wording, or scoring interpretation that has not passed the complete publication gate.
 

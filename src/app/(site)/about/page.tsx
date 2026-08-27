@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { DocumentaryImage } from "@/components/documentary-image";
+import { Headquarters } from "@/components/headquarters";
 import { PageContainer, TextLink } from "@/components/ui";
+import { headquarters } from "@/content/headquarters";
 import { media } from "@/content/media";
 import { getPrinciples } from "@/content/site-copy";
 import { getPublicPageContent } from "@/lib/public-content";
-import { buildPageMetadata } from "@/lib/seo";
+import { absoluteUrl, buildPageMetadata, siteConfig } from "@/lib/seo";
+import { serializeJsonLd } from "@/lib/structured-data";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("about");
@@ -19,9 +22,45 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AboutPage() {
   const copy = await getPublicPageContent("about");
   const principles = getPrinciples(copy);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": absoluteUrl("/about#about-page"),
+    url: absoluteUrl("/about"),
+    name: copy.metadataTitle,
+    description: copy.metadataDescription,
+    inLanguage: siteConfig.language,
+    mainEntity: {
+      "@type": "Organization",
+      "@id": absoluteUrl("/#organization"),
+      name: siteConfig.name,
+      location: {
+        "@type": "Place",
+        name: copy.headquartersPlace,
+        hasMap: headquarters.mapUrl,
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: headquarters.latitude,
+          longitude: headquarters.longitude,
+        },
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: copy.headquartersAddress,
+          addressLocality: "Mendalo Darat",
+          addressRegion: "Jambi",
+          postalCode: "36657",
+          addressCountry: headquarters.countryCode,
+        },
+      },
+    },
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
       <header className="route-stage about-stage">
         <PageContainer className="route-stage-frame">
           <div className="route-stage-title">
@@ -80,6 +119,8 @@ export default async function AboutPage() {
           </div>
         </PageContainer>
       </section>
+
+      <Headquarters copy={copy} />
 
       <section className="route-handoff">
         <PageContainer className="route-handoff-frame">

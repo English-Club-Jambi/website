@@ -190,6 +190,7 @@ Preferred silhouettes:
 - **Answer Line**: a ruled assessment composition with a briefing, one current prompt, explicit response state, bounded section navigator, and result review.
 - **Publication Rail**: a compact admin state strip connecting draft revision, checks, human approvals, published version, and rollback.
 - **Intent Close**: three ordinary query-string links arranged as a conversational choice.
+- **Secretariat Locator**: an asymmetric ruled address field with one external directions action and small copy controls, never a generic map card.
 
 Three equal columns are never the default. A section must not be wrapped in a rounded container unless the boundary is interactive or functional.
 
@@ -228,6 +229,10 @@ The numeric values are classification codes, not scores or ranks. Published real
 ### Theme control
 
 Light is the unsaved default. The theme button changes the full document, stores `english-club-theme`, and exposes `Switch to dark theme` or `Switch to light theme` as its accessible name.
+
+### Secretariat locator
+
+The About page renders the place name, street address, and Plus Code in server HTML. Google Maps opens only after an explicit external-link action; the page does not load a third-party map or tracking frame. Address and Plus Code buttons use the Clipboard API as an enhancement, announce success or failure, and leave the complete location readable when copying is unavailable.
 
 ### Home programme quiz
 
