@@ -96,9 +96,10 @@ The footer has navigation and intent links but no verified public email, phone, 
 
 ## Technical content findings
 
-- Current manifest field counts remain inside the 200-entry per-page Convex limit: global 26, home 78, practice 173, about 39, activities 33, programs 24, members 44, journal 19, and contact 29.
-- About location content is editable through the existing Page Copy workflow. Coordinates and the confirmed Maps destination remain code-owned to prevent arbitrary tracking or malformed map URLs.
+- Current manifest field counts remain inside the 200-entry per-page Convex limit: global 26, home 78, practice 173, about 42, activities 33, programs 24, members 44, journal 19, and contact 29.
+- About location content is editable through the existing Page Copy workflow. Coordinates, the OpenStreetMap embed, and the confirmed Google Maps destination remain code-owned to prevent arbitrary map or tracking URLs.
 - The About page emits `AboutPage`, `Organization`, `Place`, `GeoCoordinates`, and `PostalAddress` structured data. The visible address remains present without JavaScript.
+- The interactive map loads from OpenStreetMap when the section nears the viewport. The production privacy notice should name this third-party map request; the visible address and Google Maps action remain usable if the embed fails.
 - The footer is a useful future home for a short secretariat link and privacy link, but those additions should follow confirmed visit and policy content.
 - Search Console and Bing Webmaster Tools still require operator verification, sitemap submission, and deployment of the latest search changes. Code alone cannot prove indexing.
 - If the journal grows beyond the current small archive, review the sitemap query cap and introduce topic discovery before adding decorative search controls.

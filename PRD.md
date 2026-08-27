@@ -216,13 +216,15 @@ Acceptance:
 - State what the archive proves and what the club values.
 - Let the four principles assemble or complete one shared statement instead of appearing as generic cards.
 - Use at most one of `IMG_2017`, `IMG_2028`, or `_MG_7702` after consent is marked.
+- Publish the confirmed secretariat place, street address, Plus Code, interactive OpenStreetMap position, and Google Maps directions action.
 - Provide a short principles list and one route onward to Activities.
 - Avoid repeating the homepage hero treatment.
 
 Acceptance:
 
 - Reading measure stays at or below 70 characters for prose.
-- The page does not name institutions, founders, member totals, or dates absent from the source.
+- The full location remains readable if JavaScript or the third-party map fails. The map supports pan and zoom, keeps provider attribution visible, and never replaces the external directions link.
+- The page does not name institutions, founders, member totals, or dates absent from an approved source or the user brief.
 
 ### FR-04 Members
 

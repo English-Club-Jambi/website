@@ -325,11 +325,12 @@ The composition may change on hover or focus, but no JavaScript is needed.
 ### Secretariat locator
 
 - Place name, full street address, and Plus Code are present in source before hydration.
+- A code-owned OpenStreetMap embed provides direct pan and zoom controls and keeps provider attribution visible.
 - One external-link control opens the confirmed Google Maps destination in a new tab.
 - Address and Plus Code rows share a ruled field, while copy actions remain separate 44 px targets.
 - Clipboard feedback uses one polite live region and never replaces the location text.
 - On phone, destination, address, and actions stack in reading order without horizontal scrolling.
-- Do not embed a map, add a decorative location pin field, or wrap the section in a generic rounded card.
+- The map is one flat plane within the ruled locator. Do not wrap it in a generic rounded card, cover provider attribution, or make the map the only source of location information.
 
 ### Home programme quiz
 

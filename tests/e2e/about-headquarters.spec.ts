@@ -33,6 +33,25 @@ test("About publishes a usable secretariat location", async ({
     section.getByRole("link", { name: /Open directions in Google Maps/ }),
   ).toHaveAttribute("href", "https://maps.app.goo.gl/gZNDkHecRKxmZkYV7");
 
+  const mapFrame = section.getByTitle(
+    "Interactive map showing the English Club secretariat",
+  );
+  await expect(mapFrame).toBeVisible();
+  await expect(mapFrame).toHaveAttribute(
+    "src",
+    /openstreetmap\.org\/export\/embed\.html/,
+  );
+  await mapFrame.evaluate((element) => {
+    element.scrollIntoView({ block: "center", behavior: "instant" });
+  });
+  const embeddedMap = page.frameLocator(
+    'iframe[title="Interactive map showing the English Club secretariat"]',
+  );
+  await expect(embeddedMap.locator("#map")).toBeVisible();
+  const zoomIn = embeddedMap.getByRole("button", { name: "Zoom In" });
+  await expect(zoomIn).toBeVisible();
+  await zoomIn.click();
+
   await section.getByRole("button", { name: "Copy address" }).click();
   await expect(section.getByText("Address copied.")).toBeVisible();
 
@@ -77,7 +96,12 @@ test("About publishes a usable secretariat location", async ({
     },
   });
 
-  const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+  const accessibility = await new AxeBuilder({ page })
+    .include("main")
+    .exclude(
+      'iframe[title="Interactive map showing the English Club secretariat"]',
+    )
+    .analyze();
   expect(accessibility.violations).toEqual([]);
   expect(errors).toEqual([]);
 
@@ -98,7 +122,7 @@ test("About publishes a usable secretariat location", async ({
   if (viewport === null) {
     throw new Error("The screenshot viewport is unavailable.");
   }
-  const evidenceHeight = Math.max(viewport.height, 1_500);
+  const evidenceHeight = Math.max(viewport.height, 1_900);
   await page.setViewportSize({ width: viewport.width, height: evidenceHeight });
   await section.evaluate((element) => {
     window.scrollTo({

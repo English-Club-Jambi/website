@@ -1179,6 +1179,24 @@ export const publicContentManifest = {
       "Open directions in Google Maps",
       70,
     ),
+    headquartersMapTitle: text(
+      "headquarters-map-title",
+      "Interactive map title",
+      "Interactive map showing the English Club secretariat",
+      100,
+    ),
+    headquartersMapLabel: text(
+      "headquarters-map-label",
+      "Interactive map label",
+      "Mendalo campus map",
+      60,
+    ),
+    headquartersMapHelp: text(
+      "headquarters-map-help",
+      "Interactive map guidance",
+      "Pan or zoom the map to look around the Mendalo campus.",
+      120,
+    ),
     headquartersCopyAddress: text(
       "headquarters-copy-address",
       "Copy address action",

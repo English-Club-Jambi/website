@@ -28,6 +28,16 @@ describe("About headquarters", () => {
       "href",
       "https://maps.app.goo.gl/gZNDkHecRKxmZkYV7",
     );
+    expect(
+      screen.getByTitle(copy.headquartersMapTitle),
+    ).toHaveAttribute(
+      "src",
+      expect.stringContaining("openstreetmap.org/export/embed.html"),
+    );
+    expect(screen.getByTitle(copy.headquartersMapTitle)).toHaveAttribute(
+      "loading",
+      "lazy",
+    );
   });
 
   it("copies the address and announces success", async () => {

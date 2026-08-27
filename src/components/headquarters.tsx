@@ -69,6 +69,23 @@ export function Headquarters({
         </header>
 
         <div className={styles.locator}>
+          <div className={styles.mapBlock}>
+            <div className={styles.mapMeta}>
+              <span>{copy.headquartersMapLabel}</span>
+              <p id="headquarters-map-help">{copy.headquartersMapHelp}</p>
+            </div>
+            <div className={styles.mapViewport}>
+              <iframe
+                className={styles.mapFrame}
+                src={headquarters.embedUrl}
+                title={copy.headquartersMapTitle}
+                aria-describedby="headquarters-map-help"
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+
           <div className={styles.destination}>
             <MapPinIcon aria-hidden width={32} height={32} />
             <div>
