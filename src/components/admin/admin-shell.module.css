@@ -1713,6 +1713,23 @@
   line-height: 1.45;
 }
 
+.contactEraseRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--admin-soft-line);
+  padding: 1rem clamp(1.15rem, 3vw, 2rem);
+}
+
+.contactEraseRow > p {
+  max-width: 54ch;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .storyWorkspaceHeader {
   width: min(100%, 62rem);
   min-width: 0;
@@ -3328,6 +3345,15 @@
   }
 
   .contactDetailHeader > .primaryButton {
+    width: 100%;
+  }
+
+  .contactEraseRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contactEraseRow > .dangerButton {
     width: 100%;
   }
 

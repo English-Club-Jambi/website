@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 
 import { DocumentaryImage } from "@/components/documentary-image";
 import { Headquarters } from "@/components/headquarters";
+import { InstitutionalRecord } from "@/components/institutional-record";
 import { PageContainer, TextLink } from "@/components/ui";
 import { headquarters } from "@/content/headquarters";
+import { institution } from "@/content/institution";
 import { media } from "@/content/media";
 import { getPrinciples } from "@/content/site-copy";
 import { getPublicPageContent } from "@/lib/public-content";
@@ -34,6 +36,24 @@ export default async function AboutPage() {
       "@type": "Organization",
       "@id": absoluteUrl("/#organization"),
       name: siteConfig.name,
+      alternateName: institution.officialRecordName,
+      foundingDate: institution.formedOn,
+      sameAs: [institution.officialClubUrl],
+      subjectOf: {
+        "@type": "Article",
+        name: "English Club UPT Perpustakaan Resmi Dibentuk",
+        url: institution.formationRecordUrl,
+        publisher: {
+          "@type": "Organization",
+          name: institution.unitName,
+          url: institution.libraryUrl,
+          parentOrganization: {
+            "@type": "CollegeOrUniversity",
+            name: institution.universityName,
+            url: "https://www.unja.ac.id/",
+          },
+        },
+      },
       location: {
         "@type": "Place",
         name: copy.headquartersPlace,
@@ -119,6 +139,8 @@ export default async function AboutPage() {
           </div>
         </PageContainer>
       </section>
+
+      <InstitutionalRecord copy={copy} />
 
       <Headquarters copy={copy} />
 

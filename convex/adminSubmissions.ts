@@ -38,6 +38,15 @@ const statusChangeResultValidator = v.union(
   }),
 );
 
+const deleteResultValidator = v.union(
+  v.object({ ok: v.literal(true), deleted: v.literal(true) }),
+  v.object({
+    ok: v.literal(false),
+    code: v.literal("conflict"),
+    currentUpdatedAt: v.number(),
+  }),
+);
+
 function toView(submission: Doc<"contactSubmissions">) {
   return {
     _id: submission._id,
@@ -155,5 +164,39 @@ export const setStatus = mutation({
     });
 
     return { ok: true, status: args.status, updatedAt } as const;
+  },
+});
+
+export const deleteSubmission = mutation({
+  args: {
+    id: v.id("contactSubmissions"),
+    expectedUpdatedAt: v.number(),
+  },
+  returns: deleteResultValidator,
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, "contact:manage");
+    const submission = await ctx.db.get("contactSubmissions", args.id);
+    if (submission === null) {
+      throw new Error("This contact message no longer exists.");
+    }
+    if (submission.updatedAt !== args.expectedUpdatedAt) {
+      return {
+        ok: false,
+        code: "conflict",
+        currentUpdatedAt: submission.updatedAt,
+      } as const;
+    }
+
+    await ctx.db.delete("contactSubmissions", submission._id);
+    await writeAuditEvent(ctx, {
+      area: "contact",
+      action: "delete",
+      resourceType: "contactSubmission",
+      resourceId: submission._id,
+      summary: `${submission.intent} submission erased after a privacy request`,
+      actorId: actor._id,
+    });
+
+    return { ok: true, deleted: true } as const;
   },
 });

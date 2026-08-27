@@ -286,7 +286,7 @@ The public bucket/custom domain is working. The separate private Assessment buck
 - Revoking portrait consent removes its key from the public projection before any later object cleanup.
 - Answer keys and confidential sources remain server-side before submit.
 - Administrator audit summaries must identify the operation without copying secrets, signed URLs, answer keys, contact message bodies, or private source content.
-- Production retention periods for contact data, Assessment attempts/results, audit events, and private media are organizational decisions still requiring approval. No automatic deletion policy should be invented.
+- Contact submissions have an approved 180-day maximum and are removed by a bounded scheduled mutation; verified privacy requests may trigger earlier authorized deletion. Retention periods for Assessment attempts/results, audit events, and private media remain organizational decisions and are not invented.
 
 ## 10. Migration policy
 

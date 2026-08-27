@@ -122,6 +122,7 @@ The first release is English-first and uses `lang="en"` at the document root. Sh
 ```text
 Home /
 ├── About /about
+├── Privacy /privacy
 ├── Activities /activities
 ├── Practice /practice
 │   ├── Full practice /practice/full
@@ -217,6 +218,7 @@ Acceptance:
 - Let the four principles assemble or complete one shared statement instead of appearing as generic cards.
 - Use at most one of `IMG_2017`, `IMG_2028`, or `_MG_7702` after consent is marked.
 - Publish the confirmed secretariat place, street address, Plus Code, interactive OpenStreetMap position, and Google Maps directions action.
+- Publish a sourced institutional record with the formation-record name, formation date, Universitas Jambi emblem, and direct UNJA/library source links. Keep `English Club` as the explained short public name.
 - Provide a short principles list and one route onward to Activities.
 - Avoid repeating the homepage hero treatment.
 
@@ -224,7 +226,7 @@ Acceptance:
 
 - Reading measure stays at or below 70 characters for prose.
 - The full location remains readable if JavaScript or the third-party map fails. The map supports pan and zoom, keeps provider attribution visible, and never replaces the external directions link.
-- The page does not name institutions, founders, member totals, or dates absent from an approved source or the user brief.
+- The page names an institution, responsible unit, or date only when the visible copy links to the approved source. The UNJA emblem identifies the institution record and never replaces the English Club mark.
 
 ### FR-04 Members
 
@@ -301,6 +303,9 @@ Acceptance:
 - Validate on client for immediate feedback and on Convex for authority.
 - Persist accepted submissions with `new` status and server timestamp.
 - Reject repeated submissions by the same normalised email when the indexed time window reaches the configured limit.
+- Publish a five-working-day review target, a 180-day maximum retention period, and a privacy-request route.
+- Remove expired submissions through a bounded scheduled mutation. Allow an authorized administrator to erase one verified record earlier while keeping the audit summary free of personal data.
+- Name the English Club form as the club's working channel. Present library email, telephone, and social details only in a separately labelled institutional block linked to the source.
 - Announce pending, success, and error state through an appropriate live region.
 
 Acceptance:
@@ -308,6 +313,7 @@ Acceptance:
 - Empty, invalid email, short message, absent consent, and honeypot states produce specific inline errors.
 - Submission works with a keyboard and at 200% zoom.
 - Failure preserves user input and exposes retry.
+- Privacy and institutional-channel labels remain readable without JavaScript and do not imply that a library account is owned by English Club.
 
 ### FR-09 Content backend
 
@@ -331,7 +337,7 @@ Acceptance:
 
 - Define `metadataBase`, title template, default description, canonical base, Open Graph, and social-card defaults.
 - Generate sitemap and robots routes.
-- Homepage JSON-LD uses `WebSite` and a conservative `Organization`; omit unknown address, logo URL, telephone, partner, and founding data.
+- Homepage JSON-LD uses `WebSite` and a conservative `Organization`. About may add the sourced formation date, official-record alternate name, formation article, and official club URL; the UNJA emblem is not declared as the English Club logo.
 - Use one generated or code-rendered Open Graph image style that follows the design system and never uses a participant photo without consent.
 
 Acceptance:
@@ -449,6 +455,8 @@ Acceptance:
 ### Allowed first-release facts
 
 - The English Club secretariat is inside Perpustakaan Universitas Jambi at the Mendalo campus. The supplied address, Plus Code, and Google Maps destination may appear on the About page.
+- The library's formation record names `English Club UPT Perpustakaan Universitas Jambi` and records its formation on 16 May 2024. `English Club` is the short public name used by this site.
+- Perpustakaan Universitas Jambi publishes `perpustakaan@unja.ac.id`, `0741 583111`, `@upt_perpustakaan_unja`, and `@UptPerpusUnja`; these remain labelled as institutional channels rather than English Club-owned accounts.
 - The archive shows an English Club gathering in a library-like room.
 - A photographed discussion is titled "Leeds the Way: Bridging England and Indonesia."
 - A poster visible in the room reads "EC Incoming Day: Journey of the Golden Island."
@@ -457,8 +465,8 @@ Acceptance:
 ### Held content
 
 - Donation handover imagery and video until guardian and organiser consent exists.
-- Member names, person-to-role assignments, quotes, counts, the organisation's exact legal name, membership schedule, fee, and social links until supplied and approved. The five-role taxonomy and secretariat location are confirmed by the user brief.
-- University or sponsor relationship claims.
+- Member names, person-to-role assignments, quotes, production counts, membership schedule, fee, and club-owned social links until supplied and approved. The five-role taxonomy, secretariat location, and sourced formation-record name are confirmed.
+- University or sponsor relationship claims beyond the linked formation record and official club page.
 - Any Assessment question, source, media, answer key, estimate wording, or scoring interpretation that has not passed the complete publication gate.
 
 ### Seed journal policy
@@ -493,6 +501,7 @@ Seed stories may explain visible scenes and general speaking-practice ideas. Sou
 - Escape structured data and render Markdown without raw HTML.
 - Keep secrets in deployment environment variables.
 - Minimise personal data: name, email, intent, message, consent time, and status only.
+- Delete contact submissions automatically after 180 days in bounded batches; allow earlier authorized erasure for a verified privacy request. Never copy contact PII into the retained audit summary.
 - Public member records use a separate purpose and consent contract from contact submissions. Profile-text consent does not imply portrait consent.
 - Administrator identity comes from Convex Auth and authorization comes from the active `adminUsers` record resolved by token identifier. A browser-supplied role never grants access.
 - Persisted Practice uses Anonymous Convex Auth only after Start. Attempt, response, transcript, and result reads require the owning token identifier; answer keys remain private before submit.

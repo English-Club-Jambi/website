@@ -180,4 +180,99 @@ describe("admin contact desk", () => {
     expect(events[0].summary).not.toContain("Damar");
     expect(events[0].summary).not.toContain("damar@example.com");
   });
+
+  it("erases verified privacy requests without leaving personal data in the audit log", async () => {
+    const { t, owner, editor } = await setup();
+    await submit(t, {
+      name: "Eka Saputra",
+      email: "eka@example.com",
+      intent: "join",
+      message: "Please remove the contact message I sent while asking to join.",
+    });
+    const before = await editor.query(api.adminSubmissions.listPage, {
+      intent: "join",
+      paginationOpts: { cursor: null, numItems: 20 },
+    });
+    const submission = before.page[0];
+
+    await expect(
+      t
+        .withIdentity({ tokenIdentifier: "https://identity.example|outsider" })
+        .mutation(api.adminSubmissions.deleteSubmission, {
+          id: submission._id,
+          expectedUpdatedAt: submission.updatedAt,
+        }),
+    ).rejects.toThrow();
+
+    await expect(
+      owner.mutation(api.adminSubmissions.deleteSubmission, {
+        id: submission._id,
+        expectedUpdatedAt: submission.updatedAt - 1,
+      }),
+    ).resolves.toMatchObject({ ok: false, code: "conflict" });
+
+    await expect(
+      owner.mutation(api.adminSubmissions.deleteSubmission, {
+        id: submission._id,
+        expectedUpdatedAt: submission.updatedAt,
+      }),
+    ).resolves.toEqual({ ok: true, deleted: true });
+
+    const after = await editor.query(api.adminSubmissions.listPage, {
+      paginationOpts: { cursor: null, numItems: 20 },
+    });
+    expect(after.page).toHaveLength(0);
+
+    const events = await t.run(async (ctx) =>
+      ctx.db
+        .query("cmsAuditEvents")
+        .withIndex("by_area_and_created_at", (q) => q.eq("area", "contact"))
+        .order("desc")
+        .take(1),
+    );
+    expect(events[0].summary).toBe(
+      "join submission erased after a privacy request",
+    );
+    expect(JSON.stringify(events[0])).not.toContain("Eka");
+    expect(JSON.stringify(events[0])).not.toContain("eka@example.com");
+  });
+
+  it("purges contact messages after the published 180-day limit", async () => {
+    const { t } = await setup();
+    const now = Date.now();
+    const oldId = await t.run(async (ctx) =>
+      ctx.db.insert("contactSubmissions", {
+        name: "Old Contact",
+        email: "old@example.com",
+        normalizedEmail: "old@example.com",
+        intent: "ask",
+        message: "This record is beyond the public retention limit.",
+        status: "closed",
+        consentAt: now - 181 * 24 * 60 * 60 * 1000,
+        createdAt: now - 181 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 181 * 24 * 60 * 60 * 1000,
+        sourcePath: "/contact",
+      }),
+    );
+    const recentId = await t.run(async (ctx) =>
+      ctx.db.insert("contactSubmissions", {
+        name: "Recent Contact",
+        email: "recent@example.com",
+        normalizedEmail: "recent@example.com",
+        intent: "ask",
+        message: "This record is still inside the published retention limit.",
+        status: "new",
+        consentAt: now - 30 * 24 * 60 * 60 * 1000,
+        createdAt: now - 30 * 24 * 60 * 60 * 1000,
+        updatedAt: now - 30 * 24 * 60 * 60 * 1000,
+        sourcePath: "/contact",
+      }),
+    );
+
+    await expect(
+      t.mutation(internal.submissions.purgeExpired, {}),
+    ).resolves.toEqual({ deleted: 1, hasMore: false });
+    await expect(t.run((ctx) => ctx.db.get("contactSubmissions", oldId))).resolves.toBeNull();
+    await expect(t.run((ctx) => ctx.db.get("contactSubmissions", recentId))).resolves.not.toBeNull();
+  });
 });

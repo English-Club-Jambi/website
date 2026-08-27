@@ -18,6 +18,19 @@ test("About publishes a usable secretariat location", async ({
   expect(response?.ok()).toBe(true);
   await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
 
+  const institutionRecord = page.getByRole("region", {
+    name: "English Club, in the university record.",
+  });
+  await expect(institutionRecord).toBeVisible();
+  await expect(
+    institutionRecord.getByText(
+      "English Club UPT Perpustakaan Universitas Jambi",
+    ),
+  ).toBeVisible();
+  await expect(
+    institutionRecord.getByAltText("Universitas Jambi emblem"),
+  ).toHaveAttribute("src", /unja-logo-2025\.png/);
+
   const section = page.getByRole("region", {
     name: "Find the club between classes.",
   });
@@ -94,6 +107,11 @@ test("About publishes a usable secretariat location", async ({
       postalCode: "36657",
       addressCountry: "ID",
     },
+  });
+  expect(aboutPage?.mainEntity).toMatchObject({
+    alternateName: "English Club UPT Perpustakaan Universitas Jambi",
+    foundingDate: "2024-05-16",
+    sameAs: ["https://englishclub.librarynew.unja.ac.id/"],
   });
 
   const accessibility = await new AxeBuilder({ page })

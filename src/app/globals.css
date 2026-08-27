@@ -508,6 +508,21 @@ dd {
   letter-spacing: -0.04em;
 }
 
+.footer-institution {
+  max-width: 31rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.85rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 640;
+  text-decoration-color: var(--line);
+  text-underline-offset: 0.25em;
+}
+
 .footer-nav {
   grid-column: 8 / span 2;
   display: grid;

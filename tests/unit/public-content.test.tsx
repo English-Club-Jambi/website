@@ -45,6 +45,7 @@ describe("public content manifest", () => {
       "programs",
       "members",
       "journal",
+      "privacy",
       "contact",
     ]);
   });

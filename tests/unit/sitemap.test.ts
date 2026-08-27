@@ -23,6 +23,7 @@ describe("sitemap", () => {
     expect(paths).toContain("/practice/quick/structure");
     expect(paths).toContain("/practice/quick/reading");
     expect(paths).toContain("/programs");
+    expect(paths).toContain("/privacy");
     expect(paths).toContain("/journal/a-room-made-for-trying-again");
     expect(paths.some((path) => path.startsWith("/practice/attempt/"))).toBe(false);
     expect(paths.some((path) => path.startsWith("/practice/result/"))).toBe(false);

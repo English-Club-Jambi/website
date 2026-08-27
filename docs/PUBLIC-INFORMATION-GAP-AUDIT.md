@@ -1,10 +1,27 @@
 # Public information gap audit
 
-Status: current implementation review
+Status: current implementation review; organisation-wide trust remediation implemented 28 August 2026
 
 Date: 27 August 2026
 
 Scope: public routes, public content manifest, footer, structured data, organisation records, and visitor action paths
+
+## Remediation update — 28 August 2026
+
+The three organisation-wide gaps named in the initial audit are now addressed in the application:
+
+| Gap | Implemented public contract | Operational enforcement |
+| --- | --- | --- |
+| Official identity and institutional relationship | `/about` publishes the name `English Club UPT Perpustakaan Universitas Jambi`, formation date, a UNJA identity mark, and direct source links. `English Club` remains the clearly explained short public name. | Organization structured data points to the official club and formation records without presenting the UNJA emblem as the club's own logo. |
+| Privacy, retention, and contact operations | `/privacy` explains the operator, purposes, member consent boundary, Practice records, service providers, maps, media, correction route, and record-specific retention. `/contact` publishes a five-working-day review target and the 180-day limit. | Convex removes contact submissions after 180 days in bounded scheduled batches. Authorized administrators can permanently erase a verified contact record earlier; the audit event contains no name, email, or message. |
+| Verified communication channels | The Contact page identifies the club form as English Club's working channel and separately lists email, telephone, Instagram, and X details published by Perpustakaan Universitas Jambi. Each group explains what it is for and links back to the institutional source. | The separation prevents a library account from being misrepresented as an English Club-owned channel. Privacy requests use the club form and a defined verification instruction. |
+
+Primary evidence:
+
+- [UNJA identity page](https://www.unja.ac.id/identitas/)
+- [English Club formation record](https://librarynew.unja.ac.id/english-club-upt-perpustakaan-resmi-di-bentuk/)
+- [Perpustakaan Universitas Jambi contact record](https://librarynew.unja.ac.id/struktur-organisasi/)
+- [UNJA English Club sharing-session record](https://www.unja.ac.id/upt-perpustakaan-unja-gelar-kegiatan-sharing-session-hadirkan-3-mahasiswa-university-of-leeds/)
 
 ## Evidence boundary
 
@@ -26,21 +43,15 @@ This audit separates confirmed facts from information the site still needs.
 | `/programs` | Sourced completed records and clearly labelled ongoing or planned programme lines | Current schedule and registration state for active programmes; accountable programme contact | P1 |
 | `/members` | Role taxonomy, managed divisions, filters, consent model | Consent-cleared production roster, current governance term, and confirmed office holders | P0 before presenting the directory as a live roster |
 | `/journal` and `/journal/{slug}` | Permanent article addresses, category, date, excerpt, structured article content, pagination | Verified author profiles or editorial contact; topic discovery only when archive scale makes it useful | P2 |
-| `/practice` | Scope, timing, result limits, privacy notes, and original-question boundary | A site-wide privacy and retention policy linked from the assessment entry and result surfaces | P0 before collecting production attempt data |
-| `/contact` | Three unambiguous intents, private queue behavior, consent, message guidance | Expected response window, responsible contact channel, retention period, deletion request path, and an alternative verified contact method | P0 |
+| `/practice` | Scope, timing, result limits, privacy notes, original-question boundary, and a site-wide privacy explanation | An approved automatic maximum lifetime for saved attempts; participants can already delete their own attempt records | P1 before long-term production collection |
+| `/contact` | Three unambiguous intents, private queue behavior, consent, five-working-day review target, 180-day maximum retention, early deletion route, and separately labelled institutional channels | A club-owned public email or social channel can be added later only after ownership and monitoring are verified | P2 |
+| `/privacy` | Responsible operator, record purposes, contact retention, member publication boundary, Practice deletion, providers, map/media requests, and correction/deletion route | Assessment auto-retention remains an explicit policy decision; current user-initiated deletion is documented | P1 |
 
 ## Organisation-wide gaps
 
-### 1. Official identity and institutional relationship
+### 1. Official identity and institutional relationship — resolved
 
-The public name is currently `English Club`, while source records also use `English Club Universitas Jambi` and refer to UPT or UPA Library. The exact official name and relationship to the university library are not yet stated as a confirmed organisation fact. Confirm:
-
-- official public name;
-- responsible university unit;
-- whether UPA, UPT, or another current term is correct;
-- approved organisation description for partners and search engines.
-
-Do not turn a sourced event record into a legal or institutional relationship claim.
+The About page now follows the published formation record exactly: `English Club UPT Perpustakaan Universitas Jambi`, formed on 16 May 2024. The UI explains that `English Club` is the site's short public name. The UNJA emblem is tied to the institution record and official identity source, not substituted for the English Club mark. The page does not invent a broader legal or partnership claim.
 
 ### 2. Secretariat visit information
 
@@ -79,41 +90,32 @@ The site correctly distinguishes themes, documented records, programme lines, an
 
 If there is no current session, say so directly and name the verified announcement channel instead of publishing an evergreen timetable.
 
-### 5. Privacy, retention, and contact operations
+### 5. Privacy, retention, and contact operations — contact lifecycle resolved
 
-The Contact form and Assessment Lab explain local consent at the point of action, but there is no public policy covering the full data lifecycle. Before production collection, publish:
+The new Privacy page supplies the responsible operator, purposes, service providers, correction route, and record-specific behavior. Contact submissions now have an enforced 180-day ceiling plus verified early deletion. Member profiles retain their existing consent and publication gates. Practice attempts remain participant-owned and deletable; an automatic maximum age for them remains a separate production policy decision and is not falsely claimed.
 
-- data controller or responsible unit;
-- purpose and legal or organisational basis for each data type;
-- retention periods for enquiries, member profiles, media consent, and assessment attempts;
-- correction and deletion request route;
-- whether service providers or storage regions receive the data;
-- a realistic response range for enquiries.
+### 6. Verified communication channels — resolved with a clear boundary
 
-### 6. Verified communication channels
-
-The footer has navigation and intent links but no verified public email, phone, WhatsApp, or social account. Add only accounts the club controls and can keep current. One dependable contact channel is more useful than a row of inactive social icons.
+The English Club contact form is now named as the club's working route. Email, telephone, Instagram, and X details published by Perpustakaan Universitas Jambi appear in a separate institutional block with a verification link. The site does not claim those accounts are owned by English Club.
 
 ## Technical content findings
 
-- Current manifest field counts remain inside the 200-entry per-page Convex limit: global 26, home 78, practice 173, about 42, activities 33, programs 24, members 44, journal 19, and contact 29.
+- Current manifest field counts remain inside the 200-entry per-page Convex limit: global 28, home 78, practice 173, about 52, activities 33, programs 24, members 44, journal 19, privacy 32, and contact 42.
 - About location content is editable through the existing Page Copy workflow. Coordinates, the OpenStreetMap embed, and the confirmed Google Maps destination remain code-owned to prevent arbitrary map or tracking URLs.
 - The About page emits `AboutPage`, `Organization`, `Place`, `GeoCoordinates`, and `PostalAddress` structured data. The visible address remains present without JavaScript.
 - The interactive map loads from OpenStreetMap when the section nears the viewport. The production privacy notice should name this third-party map request; the visible address and Google Maps action remain usable if the embed fails.
-- The footer is a useful future home for a short secretariat link and privacy link, but those additions should follow confirmed visit and policy content.
+- The footer now links to the institutional record and Privacy page without crowding the primary navigation.
 - Search Console and Bing Webmaster Tools still require operator verification, sitemap submission, and deployment of the latest search changes. Code alone cannot prove indexing.
 - If the journal grows beyond the current small archive, review the sitemap query cap and introduce topic discovery before adding decorative search controls.
 
 ## Recommended information collection order
 
-1. Confirm the official organisation name and responsible university unit.
-2. Approve the privacy, retention, correction, and deletion policy.
-3. Confirm the secretariat's room or floor, visiting hours, appointment rule, and accessible route.
-4. Confirm membership eligibility, fee status, participation expectations, and post-submission process.
-5. Supply the next reviewed programme or activity date and the announcement channel.
-6. Replace development member records with consent-cleared production profiles and a governance term.
-7. Confirm one monitored email or messaging channel and a realistic response range.
-8. Add verified social accounts only after ownership and maintenance are clear.
+1. Confirm the secretariat's room or floor, visiting hours, appointment rule, and accessible route.
+2. Confirm membership eligibility, fee status, participation expectations, and post-submission process.
+3. Approve a maximum retention age for saved Practice attempts if production collection continues long term.
+4. Supply the next reviewed programme or activity date and the announcement channel.
+5. Replace development member records with consent-cleared production profiles and a governance term.
+6. Add a club-owned public email or social account only after ownership and monitoring are clear.
 
 ## Do not fill these gaps by inference
 
@@ -122,5 +124,5 @@ The footer has navigation and intent links but no verified public email, phone, 
 - Do not call membership free because no price is shown.
 - Do not convert programme directions into scheduled recurring events.
 - Do not publish fictional development profiles as the current committee.
-- Do not infer an official university affiliation, legal name, or contact channel from a logo or an old event page.
+- Do not infer a broader university relationship than the current formation record and official club page support.
 - Do not promise a reply time until the responsible team can meet it.

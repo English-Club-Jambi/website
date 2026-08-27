@@ -4,6 +4,7 @@ import {
   CheckCircleIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
 import type { PublicContentFor } from "@content/public-content";
 
@@ -197,7 +198,12 @@ export function ContactForm({
             {copy.consentLabel}
           </label>
           <p id="consent-help" className="field-help" lang="id">
-            {copy.consentHelp}
+            {copy.consentHelp}{" "}
+            <span lang="en">
+              {copy.consentPrivacyLead}{" "}
+              <Link href="/privacy">{copy.consentPrivacyLink}</Link>.
+              {" "}{copy.consentRetention}
+            </span>
           </p>
           {state.fieldErrors.consent ? (
             <p id="consent-error" className="field-error">

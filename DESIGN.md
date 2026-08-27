@@ -234,6 +234,14 @@ Light is the unsaved default. The theme button changes the full document, stores
 
 The About page renders the place name, street address, and Plus Code in server HTML. A lazy OpenStreetMap iframe adds direct pan and zoom controls without requiring a map credential. Google Maps remains a separate directions action. Address and Plus Code buttons use the Clipboard API as an enhancement, announce success or failure, and leave the complete location readable when the map or copying is unavailable.
 
+### Institutional record
+
+The UNJA emblem appears once, inside a ruled About record that pairs the published formation name and date with direct institutional sources. It is a provenance mark, not a decorative partner logo or a replacement English Club identity. A pale primary wash links the mark column to the larger typographic record; source links form a flat publication rail rather than a logo wall or card cluster.
+
+### Contact and privacy operations
+
+Contact separates two responsibilities. The English Club form is the working route for joining, proposing, and asking; an adjacent operating ledger names the five-working-day review target and 180-day maximum. A second ruled block lists Perpustakaan UNJA channels with an explicit institutional label and verification link. Privacy uses an editorial ledger—numbered record types, plain retention facts, one correction action—not a grid of compliance cards.
+
 ### Home programme quiz
 
 The Home quiz is an untimed four-question orientation interaction assembled from reviewed Activities wording. It checks one explicit answer at a time, gives a plain explanation and Activities link, and stores no identity, attempt, score history, or free text. It must disappear or fall back to the Activities link if the supporting copy contract cannot build a complete question set.

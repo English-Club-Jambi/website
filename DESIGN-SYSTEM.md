@@ -332,6 +332,14 @@ The composition may change on hover or focus, but no JavaScript is needed.
 - On phone, destination, address, and actions stack in reading order without horizontal scrolling.
 - The map is one flat plane within the ruled locator. Do not wrap it in a generic rounded card, cover provider attribution, or make the map the only source of location information.
 
+### Institutional record and trust ledger
+
+- The UNJA emblem is confined to the About institutional record and keeps its own white identity field in both themes.
+- The record pairs an asymmetric mark column with a larger source-led text column. Official name, formation date, and source actions use rules rather than floating cards.
+- The emblem is never used as the English Club wordmark and never appears in a partner-logo strip.
+- Contact operations distinguish the club form from Perpustakaan UNJA channels by heading, explanatory copy, and source link—not colour alone.
+- Privacy record types form one vertical ledger. Retention and correction actions remain readable at 320 px without horizontal scrolling.
+
 ### Home programme quiz
 
 - Four local questions are assembled from the reviewed Activities manifest and timetable caution.
@@ -363,12 +371,13 @@ The composition may change on hover or focus, but no JavaScript is needed.
 | Route | First moment | Main body | Close |
 | --- | --- | --- | --- |
 | Home | Sentence Playground over a generated faded room scene | Prompt Mixer, Activity Relay, proof image, Journal Relay | Three intent links |
-| About | Large sentence with an offset principle clause | Four principles that assemble one thought, one evidence boundary | Activities link |
+| About | Large sentence with an offset principle clause | Four principles, evidence boundary, sourced institutional record, secretariat locator | Activities link |
 | Activities | Full-width route phrase and active verb | Activity Relay plus timetable caution | Ask intent link |
 | Members | Asymmetric statement over a generated faded group scene | Five responsibility channels, one role companion, consent-gated editorial roster | Existing Join intent |
 | Journal | Typographic title field | Journal Relay and honest empty state | Global footer |
 | Story | Calm article title and metadata | Optional cover and narrow Markdown body | Journal return |
-| Contact | Direct route phrase | Context plus existing form cycle | Form success state |
+| Contact | Direct route phrase | Form cycle, operating commitments, separately verified institutional channels | Form success state and Privacy route |
+| Privacy | Plain-language route phrase | Record-purpose and retention ledger | Correction request plus institutional handoff |
 | Practice | Assessment Lab statement and claim boundary | Published full/quick paths, briefing, owned Answer Line runner, bounded result/review | Back to Practice or another reviewed path |
 | Admin | Compact workspace identity and current access | Pages, Journal, Contact desk, Assessments, Members, Media, Appearance, and Activity tools | Save/publish or recorded-work state rather than a marketing close |
 

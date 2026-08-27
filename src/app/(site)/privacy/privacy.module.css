@@ -1,0 +1,269 @@
+.policy {
+  border-bottom: 1px solid var(--line);
+  padding-block: clamp(4.5rem, 9vw, 8rem);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--grid-gap);
+  padding-bottom: clamp(4rem, 8vw, 7rem);
+}
+
+.summary > p {
+  grid-column: 1 / span 3;
+  margin: 0;
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.summary > h2 {
+  grid-column: 4 / -1;
+  max-width: 27ch;
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+}
+
+.summary dl {
+  grid-column: 4 / -1;
+  display: grid;
+  grid-template-columns: 1.7fr 1.3fr 0.7fr;
+  gap: var(--grid-gap);
+  margin: clamp(2.5rem, 5vw, 4rem) 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.summary dl div {
+  padding-top: 1rem;
+}
+
+.summary dt {
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.summary dd {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.ledger {
+  border-top: 2px solid var(--ink);
+}
+
+.ledger > section {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--grid-gap);
+  border-bottom: 1px solid var(--line);
+  padding-block: clamp(2.5rem, 5vw, 4.5rem);
+}
+
+.ledger > section > svg {
+  grid-column: 1 / span 1;
+  color: var(--primary-strong);
+}
+
+.ledger > section > div {
+  grid-column: 4 / span 7;
+}
+
+.ledger > section > div > p:first-child {
+  margin: 0 0 1rem;
+  color: var(--primary-strong);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger h2 {
+  margin: 0 0 1.35rem;
+  font-size: clamp(1.8rem, 3.4vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.ledger h3 {
+  margin: 2.5rem 0 0.7rem;
+  font-size: 1.1rem;
+}
+
+.ledger p {
+  max-width: 66ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.retention {
+  margin: 2rem 0 1rem;
+  border-block: 1px solid var(--line);
+}
+
+.retention div {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(8rem, 1fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding-block: 1rem;
+}
+
+.retention svg {
+  color: var(--primary-strong);
+}
+
+.retention dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.retention dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.request {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--grid-gap);
+  padding-top: clamp(5rem, 10vw, 9rem);
+}
+
+.request > div {
+  grid-column: 1 / span 7;
+}
+
+.request > div > p:first-child {
+  margin: 0 0 1.25rem;
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.request h2 {
+  max-width: 13ch;
+  margin: 0;
+  font-size: clamp(2.8rem, 5.5vw, 5.8rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+}
+
+.request > div > p:not(:first-child) {
+  max-width: 57ch;
+  margin: 2rem 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.request > div > a {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  background: var(--signal);
+  color: var(--signal-ink);
+  font-weight: 720;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+.request aside {
+  grid-column: 9 / -1;
+  align-self: end;
+  border-top: 2px solid var(--ink);
+  padding-top: 1.25rem;
+}
+
+.request aside > svg {
+  color: var(--primary-strong);
+}
+
+.request aside h3 {
+  max-width: 16ch;
+  margin: 1.5rem 0 1rem;
+  font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.request aside p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.request aside a {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  overflow-wrap: anywhere;
+  color: var(--primary-strong);
+  font-size: 0.84rem;
+  font-weight: 680;
+}
+
+@media (max-width: 879px) {
+  .summary > p,
+  .summary > h2,
+  .summary dl,
+  .ledger > section > svg,
+  .ledger > section > div,
+  .request > div,
+  .request aside {
+    grid-column: 1 / -1;
+  }
+
+  .summary > h2 {
+    margin-top: 1.5rem;
+  }
+
+  .summary dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ledger > section > div {
+    margin-top: 1.25rem;
+  }
+
+  .request aside {
+    margin-top: 4rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .summary dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary > h2 {
+    font-size: clamp(1.8rem, 9vw, 2.8rem);
+  }
+
+  .ledger h2 {
+    font-size: clamp(1.75rem, 9vw, 2.6rem);
+  }
+
+  .retention div {
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+  }
+
+  .retention dd {
+    grid-column: 2;
+  }
+
+  .request h2 {
+    font-size: clamp(2.7rem, 14vw, 4.2rem);
+  }
+}

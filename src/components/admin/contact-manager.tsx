@@ -5,6 +5,7 @@ import {
   InboxStackIcon,
   LinkIcon,
   QuestionMarkCircleIcon,
+  TrashIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
@@ -25,6 +26,7 @@ import {
   formatAdminDate,
   humanizeError,
 } from "./admin-ui";
+import { useAdminConfirm } from "./admin-confirm-dialog";
 import styles from "./admin-shell.module.css";
 
 type ContactRecord = FunctionReturnType<
@@ -99,6 +101,7 @@ function mailtoRecipient(email: string) {
 }
 
 export function ContactManager() {
+  const confirm = useAdminConfirm();
   const [intent, setIntent] = useState<IntentFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selectedId, setSelectedId] = useState<ContactRecord["_id"] | null>(
@@ -109,6 +112,7 @@ export function ContactManager() {
   const [notice, setNotice] = useState("");
   const detailRef = useRef<HTMLElement>(null);
   const updateStatus = useMutation(api.adminSubmissions.setStatus);
+  const deleteSubmission = useMutation(api.adminSubmissions.deleteSubmission);
   const queryArgs = {
     ...(intent === "all" ? {} : { intent }),
     ...(status === "all" ? {} : { status }),
@@ -174,6 +178,39 @@ export function ContactManager() {
     } finally {
       setPending(false);
     }
+  }
+
+  async function eraseSelected() {
+    if (selected === null || pending) return;
+    await confirm(
+      {
+        title: "Erase this contact message?",
+        description:
+          "This permanently removes the sender's name, email address, message, and consent record. A PII-free audit event remains. This cannot be undone.",
+        confirmLabel: "Erase personal data",
+        cancelLabel: "Keep message",
+      },
+      async () => {
+        setPending(true);
+        setError("");
+        setNotice("");
+        try {
+          const result = await deleteSubmission({
+            id: selected._id,
+            expectedUpdatedAt: selected.updatedAt,
+          });
+          if (!result.ok) {
+            throw new Error(
+              "This message changed in another session. Close this dialog, review the latest record, and try again.",
+            );
+          }
+          setSelectedId(null);
+          setNotice("Personal data erased from the contact desk.");
+        } finally {
+          setPending(false);
+        }
+      },
+    );
   }
 
   return (
@@ -340,6 +377,21 @@ export function ContactManager() {
                     Use “Reply sent” only after a real reply has left your email
                     account. “Complete” closes the internal follow-up.
                   </p>
+                </div>
+                <div className={styles.contactEraseRow}>
+                  <p>
+                    Privacy request verified? Remove this record now instead of
+                    waiting for the 180-day retention limit.
+                  </p>
+                  <button
+                    className={styles.dangerButton}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void eraseSelected()}
+                  >
+                    <TrashIcon aria-hidden width={18} height={18} />
+                    Erase personal data
+                  </button>
                 </div>
               </article>
             ) : null}

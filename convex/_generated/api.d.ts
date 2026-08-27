@@ -34,6 +34,7 @@ import type * as assessmentSeed from "../assessmentSeed.js";
 import type * as assessmentValidators from "../assessmentValidators.js";
 import type * as assessments from "../assessments.js";
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as developmentSeed from "../developmentSeed.js";
 import type * as http from "../http.js";
 import type * as lib_adminAuth from "../lib/adminAuth.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   assessmentValidators: typeof assessmentValidators;
   assessments: typeof assessments;
   auth: typeof auth;
+  crons: typeof crons;
   developmentSeed: typeof developmentSeed;
   http: typeof http;
   "lib/adminAuth": typeof lib_adminAuth;

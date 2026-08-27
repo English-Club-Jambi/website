@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,8 +22,24 @@ vi.mock("convex/react", () => ({
 }));
 
 import { ContactManager } from "@/components/admin/contact-manager";
+import { AdminConfirmationProvider } from "@/components/admin/admin-confirm-dialog";
+
+function renderManager() {
+  return render(
+    <AdminConfirmationProvider>
+      <ContactManager />
+    </AdminConfirmationProvider>,
+  );
+}
 
 beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
   Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
     configurable: true,
     value: () => false,
@@ -86,7 +102,7 @@ afterEach(cleanup);
 describe("ContactManager", () => {
   it("keeps the three public intentions explicit and opens a clear reading pane", async () => {
     const user = userEvent.setup();
-    render(<ContactManager />);
+    renderManager();
 
     for (const label of [
       "Join the club",
@@ -121,7 +137,7 @@ describe("ContactManager", () => {
 
   it("records status separately from the email handoff", async () => {
     const user = userEvent.setup();
-    render(<ContactManager />);
+    renderManager();
 
     const trigger = screen.getByRole("combobox", {
       name: "Record work status",
@@ -141,9 +157,37 @@ describe("ContactManager", () => {
 
   it("uses an honest empty state without inventing contact records", () => {
     mocks.results = [];
-    render(<ContactManager />);
+    renderManager();
 
     expect(screen.getByText("No messages in this view")).toBeVisible();
     expect(screen.queryByRole("link", { name: /Write an email/ })).toBeNull();
+  });
+
+  it("requires an explicit irreversible confirmation before erasing personal data", async () => {
+    const user = userEvent.setup();
+    mocks.updateStatus.mockResolvedValueOnce({ ok: true, deleted: true });
+    renderManager();
+
+    await user.click(
+      screen.getByRole("button", { name: "Erase personal data" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Erase this contact message?" }),
+    ).toBeVisible();
+    expect(screen.getByText(/PII-free audit event remains/)).toBeVisible();
+    expect(mocks.updateStatus).not.toHaveBeenCalled();
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Erase this contact message?",
+    });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Erase personal data" }),
+    );
+    await waitFor(() =>
+      expect(mocks.updateStatus).toHaveBeenCalledWith({
+        id: "contact-join",
+        expectedUpdatedAt: joinMessage.updatedAt,
+      }),
+    );
   });
 });

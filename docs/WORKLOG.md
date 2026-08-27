@@ -5,6 +5,15 @@ Status: Admin CMS and Assessment Lab integrated and synced to Convex development
 
 This log records the research, redesign, Member extension, cloud integration, Admin CMS, Assessment Lab, repairs, and verification. Product requirements live in the root documents. File-level evidence lives in the audit ledgers. `QA-REPORT.md` now separates the current 26 August integrated release run from the retained 25 August public-site baseline.
 
+## 28 August 2026 — Public trust and contact lifecycle
+
+- Added a sourced institutional record to About with the official formation-record name, formation date, UNJA emblem, and direct links to UNJA and Perpustakaan UNJA sources. The copy keeps `English Club` as the short name and avoids a broader affiliation claim.
+- Added `/privacy` with operator, purpose, contact/member/Practice/media behavior, service providers, correction and deletion route, and the remaining Assessment retention boundary.
+- Separated English Club's private form from verified Perpustakaan UNJA email, telephone, Instagram, and X channels on Contact.
+- Enforced a 180-day contact-submission maximum through a bounded Convex cron mutation and added authorized early erasure with a PII-free audit event.
+- Added Privacy to the footer and sitemap; extended About structured data with the sourced formation record.
+- Verification: TypeScript, focused ESLint, the full 281-test Vitest suite, production build, and 3-project Playwright/Axe/320px/light/dark checks passed. The Convex functions and retention cron are ready on development deployment `perfect-greyhound-270`. Evidence lives in `docs/evidence/public-trust/`.
+
 ## 26 August integration record
 
 The repository now contains two major product lanes beyond the public organisation profile.
@@ -37,7 +46,7 @@ The repository now contains two major product lanes beyond the public organisati
 - Real editor and publisher identities have not yet exercised the negative permission matrix against the cloud deployment. The same matrix is green in isolated Convex tests.
 - The development-only paper seed has published one 140-item form and three quick forms from the typed original bank. The second run inserted no definitions, bank rows, or media ledgers. It bypasses the human review workflow by design and cannot be promoted as production approval. Production content must still pass the current validation/provenance check plus all four current-revision academic, rights, accessibility, and bias approvals.
 - The private Assessment R2 bucket is **not configured**. Its exact CORS, SHA-256 PUT/`HeadObject`, 180-second preview, and public derivative path remain unverified.
-- Production retention periods for contact, attempts/results, audit events, and private media remain an organizational decision.
+- Contact messages now have an enforced 180-day maximum. Retention periods for attempts/results, audit events, and private media remain organizational decisions.
 
 ### 26 August release closeout
 

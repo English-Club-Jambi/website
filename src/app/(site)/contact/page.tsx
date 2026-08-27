@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ContactForm } from "@/components/contact-form";
+import { ContactOperations } from "@/components/contact-operations";
 import { PageContainer } from "@/components/ui";
 import { parseContactIntent } from "@/lib/contact";
 import { getPublicPageContent } from "@/lib/public-content";
@@ -60,6 +61,8 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
           <ContactForm initialIntent={initialIntent} copy={copy} />
         </PageContainer>
       </section>
+
+      <ContactOperations copy={copy} />
     </>
   );
 }

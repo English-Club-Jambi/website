@@ -5,6 +5,7 @@ import {
   internalQuery,
   mutation,
 } from "./_generated/server";
+import { internal } from "./_generated/api";
 import {
   contactIntentValidator,
   contactStatusValidator,
@@ -13,6 +14,8 @@ import {
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const repeatWindowMs = 30 * 60 * 1000;
 const repeatLimit = 3;
+const contactRetentionMs = 180 * 24 * 60 * 60 * 1000;
+const purgeBatchSize = 50;
 
 const submissionResultValidator = v.union(
   v.object({ ok: v.literal(true) }),
@@ -136,5 +139,32 @@ export const setStatus = internalMutation({
       updatedAt: Date.now(),
     });
     return null;
+  },
+});
+
+export const purgeExpired = internalMutation({
+  args: {},
+  returns: v.object({
+    deleted: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx) => {
+    const cutoff = Date.now() - contactRetentionMs;
+    const expired = await ctx.db
+      .query("contactSubmissions")
+      .withIndex("by_created_at", (q) => q.lte("createdAt", cutoff))
+      .order("asc")
+      .take(purgeBatchSize);
+
+    for (const submission of expired) {
+      await ctx.db.delete("contactSubmissions", submission._id);
+    }
+
+    const hasMore = expired.length === purgeBatchSize;
+    if (hasMore) {
+      await ctx.scheduler.runAfter(0, internal.submissions.purgeExpired, {});
+    }
+
+    return { deleted: expired.length, hasMore };
   },
 });

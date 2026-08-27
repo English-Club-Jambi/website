@@ -13,6 +13,7 @@ import { SentencePlayground } from "@/components/play/sentence-playground";
 import { ProgrammeQuiz } from "@/components/practice/programme-quiz";
 import { PageContainer, TextLink } from "@/components/ui";
 import { buildProgrammeQuiz } from "@/content/assessment";
+import { institution } from "@/content/institution";
 import { media } from "@/content/media";
 import { getActivityThemes } from "@/content/site-copy";
 import { getPublishedPosts } from "@/lib/journal";
@@ -69,8 +70,11 @@ export default async function HomePage() {
       "@type": "Organization",
       "@id": absoluteUrl("/#organization"),
       name: globalCopy.siteName,
+      alternateName: institution.officialRecordName,
       url: absoluteUrl("/"),
       description: copy.metadataDescription,
+      foundingDate: institution.formedOn,
+      sameAs: [institution.officialClubUrl],
     },
   ];
 

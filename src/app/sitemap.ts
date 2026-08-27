@@ -15,6 +15,7 @@ const staticRoutes = [
   "/practice/quick/structure",
   "/practice/quick/reading",
   "/journal",
+  "/privacy",
   "/contact",
 ];
 
