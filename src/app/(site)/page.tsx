@@ -16,27 +16,19 @@ import { buildProgrammeQuiz } from "@/content/assessment";
 import { media } from "@/content/media";
 import { getActivityThemes } from "@/content/site-copy";
 import { getPublishedPosts } from "@/lib/journal";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, buildPageMetadata, siteConfig } from "@/lib/seo";
 import { serializeJsonLd } from "@/lib/structured-data";
 
 import { getPublicPageContent } from "@/lib/public-content";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("home");
-  return {
-    title: { absolute: copy.metadataTitle },
+  return buildPageMetadata({
+    title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/" },
-    openGraph: {
-      title: copy.metadataTitle,
-      description: copy.metadataDescription,
-      url: "/",
-    },
-    twitter: {
-      title: copy.metadataTitle,
-      description: copy.metadataDescription,
-    },
-  };
+    path: "/",
+    absoluteTitle: true,
+  });
 }
 
 export default async function HomePage() {
@@ -65,13 +57,17 @@ export default async function HomePage() {
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": absoluteUrl("/#website"),
       name: globalCopy.siteName,
       url: absoluteUrl("/"),
       description: copy.metadataDescription,
+      inLanguage: siteConfig.language,
+      publisher: { "@id": absoluteUrl("/#organization") },
     },
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": absoluteUrl("/#organization"),
       name: globalCopy.siteName,
       url: absoluteUrl("/"),
       description: copy.metadataDescription,

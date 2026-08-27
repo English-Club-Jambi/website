@@ -4,14 +4,15 @@ import { ContactForm } from "@/components/contact-form";
 import { PageContainer } from "@/components/ui";
 import { parseContactIntent } from "@/lib/contact";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("contact");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/contact" },
-  };
+    path: "/contact",
+  });
 }
 
 type ContactPageProps = {

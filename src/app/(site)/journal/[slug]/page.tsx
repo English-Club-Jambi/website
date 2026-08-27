@@ -8,8 +8,9 @@ import { getMedia } from "@/content/media";
 import {
   formatPublishedDate,
   getPublishedPost,
+  type PublicPost,
 } from "@/lib/journal";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, buildArticleMetadata, siteConfig } from "@/lib/seo";
 import { serializeJsonLd } from "@/lib/structured-data";
 
 type StoryProps = {
@@ -20,28 +21,48 @@ type StoryProps = {
 // page rendering share the same runtime contract in Next production builds.
 export const dynamic = "force-dynamic";
 
+function getPostSocialImage(post: PublicPost) {
+  if (post.coverMedia !== undefined) {
+    return {
+      url: absoluteUrl(post.coverMedia.publicUrl),
+      width: post.coverMedia.width,
+      height: post.coverMedia.height,
+      alt: post.coverMedia.alt,
+    };
+  }
+
+  const cover = getMedia(post.coverKey);
+  return cover === undefined
+    ? undefined
+    : {
+        url: absoluteUrl(cover.src),
+        width: cover.width,
+        height: cover.height,
+        alt: cover.alt,
+      };
+}
+
 export async function generateMetadata({ params }: StoryProps): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPublishedPost(slug);
 
   if (!post) {
-    return { title: "Story not found" };
+    return {
+      title: "Story not found",
+      robots: { index: false, follow: false },
+    };
   }
 
-  return {
+  return buildArticleMetadata({
     title: post.title,
     description: post.excerpt,
-    alternates: { canonical: `/journal/${post.slug}` },
-    openGraph: {
-      type: "article",
-      title: post.title,
-      description: post.excerpt,
-      url: `/journal/${post.slug}`,
-      publishedTime: new Date(post.publishedAt).toISOString(),
-      modifiedTime: new Date(post.updatedAt).toISOString(),
-      authors: [post.authorName],
-    },
-  };
+    path: `/journal/${post.slug}`,
+    image: getPostSocialImage(post),
+    publishedTime: new Date(post.publishedAt).toISOString(),
+    modifiedTime: new Date(post.updatedAt).toISOString(),
+    authors: [post.authorName],
+    section: post.category,
+  });
 }
 
 export default async function JournalStoryPage({ params }: StoryProps) {
@@ -55,6 +76,7 @@ export default async function JournalStoryPage({ params }: StoryProps) {
   const hasCover =
     post.coverMedia !== undefined || getMedia(post.coverKey) !== undefined;
   const canonicalUrl = absoluteUrl(`/journal/${post.slug}`);
+  const socialImage = getPostSocialImage(post);
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -62,11 +84,29 @@ export default async function JournalStoryPage({ params }: StoryProps) {
       headline: post.title,
       description: post.excerpt,
       author: { "@type": "Organization", name: post.authorName },
-      publisher: { "@type": "Organization", name: "English Club" },
+      publisher: {
+        "@type": "Organization",
+        "@id": absoluteUrl("/#organization"),
+        name: siteConfig.name,
+        url: absoluteUrl("/"),
+      },
       datePublished: new Date(post.publishedAt).toISOString(),
       dateModified: new Date(post.updatedAt).toISOString(),
-      mainEntityOfPage: canonicalUrl,
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": canonicalUrl,
+      },
       url: canonicalUrl,
+      inLanguage: siteConfig.language,
+      articleSection: post.category,
+      isAccessibleForFree: true,
+      isPartOf: {
+        "@type": "Blog",
+        "@id": absoluteUrl("/journal#journal"),
+        url: absoluteUrl("/journal"),
+        name: `${siteConfig.name} Journal`,
+      },
+      ...(socialImage ? { image: [socialImage.url] } : {}),
     },
     {
       "@context": "https://schema.org",

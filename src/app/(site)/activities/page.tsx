@@ -3,14 +3,15 @@ import type { Metadata } from "next";
 import { ActivityRelay } from "@/components/play/activity-relay";
 import { PageContainer, TextLink } from "@/components/ui";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("activities");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/activities" },
-  };
+    path: "/activities",
+  });
 }
 
 export default async function ActivitiesPage() {

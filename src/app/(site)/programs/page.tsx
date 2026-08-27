@@ -7,22 +7,15 @@ import styles from "@/components/programs/programs.module.css";
 import { PageContainer } from "@/components/ui";
 import { getPublicPageContent } from "@/lib/public-content";
 import { getPublicPrograms } from "@/lib/programs";
-import { absoluteUrl, siteConfig } from "@/lib/seo";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("programs");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/programs" },
-    openGraph: {
-      title: copy.metadataTitle,
-      description: copy.metadataDescription,
-      url: absoluteUrl("/programs"),
-      siteName: siteConfig.name,
-      type: "website",
-    },
-  };
+    path: "/programs",
+  });
 }
 
 export default async function ProgramsPage() {

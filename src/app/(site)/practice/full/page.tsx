@@ -6,14 +6,15 @@ import {
 } from "@/components/practice/practice-briefing";
 import { getFullPracticeAssessment } from "@/lib/assessment";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("practice");
-  return {
+  return buildPageMetadata({
     title: copy.fullTitle,
     description: copy.fullSummary,
-    alternates: { canonical: "/practice/full" },
-  };
+    path: "/practice/full",
+  });
 }
 
 export const dynamic = "force-dynamic";

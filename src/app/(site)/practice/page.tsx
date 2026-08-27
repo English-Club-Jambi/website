@@ -3,14 +3,15 @@ import type { Metadata } from "next";
 import { PracticeOverview } from "@/components/practice/practice-overview";
 import { getAssessmentCatalog } from "@/lib/assessment";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("practice");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/practice" },
-  };
+    path: "/practice",
+  });
 }
 
 export const dynamic = "force-dynamic";

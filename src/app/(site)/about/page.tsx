@@ -5,14 +5,15 @@ import { PageContainer, TextLink } from "@/components/ui";
 import { media } from "@/content/media";
 import { getPrinciples } from "@/content/site-copy";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("about");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/about" },
-  };
+    path: "/about",
+  });
 }
 
 export default async function AboutPage() {

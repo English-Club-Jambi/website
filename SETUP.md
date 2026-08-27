@@ -402,6 +402,8 @@ CONVEX_URL=https://your-production-deployment.convex.cloud
 CONVEX_SITE_URL=https://your-production-deployment.convex.site
 NEXT_PUBLIC_SITE_URL=https://YOUR-EXACT-PRODUCTION-ORIGIN
 NEXT_PUBLIC_MEDIA_BASE_URL=https://r2.mukhtada.my.id
+GOOGLE_SITE_VERIFICATION=YOUR-GOOGLE-SEARCH-CONSOLE-TOKEN
+BING_SITE_VERIFICATION=YOUR-BING-WEBMASTER-TOOLS-TOKEN
 ```
 
 Convex production deployment:
@@ -421,6 +423,14 @@ R2_ASSESSMENT_SECRET_ACCESS_KEY
 ```
 
 Use a production-only Auth key pair, exact HTTPS origin, least-privilege bucket credentials, and independently configured public/private R2 policies.
+
+`NEXT_PUBLIC_SITE_URL` is the canonical search origin. It must be the stable
+public HTTPS domain, never a localhost or deployment-preview URL. The two
+verification values are optional and render only the ownership meta tags
+issued by Google Search Console and Bing Webmaster Tools.
+
+The post-deploy submission and inspection workflow is documented in
+[`docs/SEO-SEARCH-VISIBILITY.md`](docs/SEO-SEARCH-VISIBILITY.md).
 
 ## 14. Release checklist
 

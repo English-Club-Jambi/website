@@ -6,6 +6,7 @@ import archiveStyles from "@/components/journal/journal-archive.module.css";
 import { PageContainer } from "@/components/ui";
 import { getPublishedPostsPage, parseJournalCursor } from "@/lib/journal";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 type JournalPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -19,11 +20,11 @@ export async function generateMetadata({
     getPublicPageContent("journal"),
   ]);
   const cursor = parseJournalCursor(params.after);
-  const journalMetadata: Metadata = {
+  const journalMetadata = buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/journal" },
-  };
+    path: "/journal",
+  });
   return cursor.state === "cursor"
     ? {
         ...journalMetadata,

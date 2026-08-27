@@ -8,6 +8,7 @@ import {
 import { getPracticeSkill, type PracticeSkill } from "@/content/assessment";
 import { getQuickPracticeAssessment } from "@/lib/assessment";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 function getSkillCopy(
   skill: PracticeSkill,
@@ -41,15 +42,18 @@ export async function generateMetadata({
   const copy = await getPublicPageContent("practice");
 
   if (skill === undefined) {
-    return { title: copy.metadataTitle };
+    return {
+      title: copy.metadataTitle,
+      robots: { index: false, follow: false },
+    };
   }
 
   const skillCopy = getSkillCopy(skill.key, copy);
-  return {
+  return buildPageMetadata({
     title: skillCopy.title,
     description: skillCopy.summary,
-    alternates: { canonical: skill.href },
-  };
+    path: skill.href,
+  });
 }
 
 export const dynamic = "force-dynamic";

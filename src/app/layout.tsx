@@ -3,7 +3,11 @@ import { Bricolage_Grotesque } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { getPublicThemeDelivery } from "@/lib/public-theme";
-import { getSiteUrl, siteConfig } from "@/lib/seo";
+import {
+  defaultSocialImage,
+  getSiteUrl,
+  siteConfig,
+} from "@/lib/seo";
 
 import "./globals.css";
 
@@ -34,18 +38,46 @@ export const metadata: Metadata = {
   },
   description: siteConfig.shortDescription,
   applicationName: siteConfig.name,
+  referrer: "strict-origin-when-cross-origin",
   alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     type: "website",
     siteName: siteConfig.name,
     title: "English Club | English grows in company",
     description: siteConfig.shortDescription,
     url: "/",
+    locale: siteConfig.locale,
+    images: [defaultSocialImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "English Club | English grows in company",
     description: siteConfig.shortDescription,
+    images: [defaultSocialImage.url],
+  },
+  verification: {
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+      : {}),
+    ...(process.env.BING_SITE_VERIFICATION
+      ? {
+          other: {
+            "msvalidate.01": process.env.BING_SITE_VERIFICATION,
+          },
+        }
+      : {}),
   },
 };
 

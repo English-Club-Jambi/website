@@ -5,16 +5,17 @@ import { MemberRelay } from "@/components/members/member-relay";
 import { media } from "@/content/media";
 import { getPublishedMembers } from "@/lib/members";
 import { getPublicPageContent } from "@/lib/public-content";
+import { buildPageMetadata } from "@/lib/seo";
 
 import styles from "@/components/members/member-relay.module.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = await getPublicPageContent("members");
-  return {
+  return buildPageMetadata({
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: { canonical: "/members" },
-  };
+    path: "/members",
+  });
 }
 
 export const dynamic = "force-dynamic";

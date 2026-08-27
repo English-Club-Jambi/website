@@ -10,34 +10,33 @@ const staticRoutes = [
   "/programs",
   "/members",
   "/practice",
+  "/practice/full",
+  "/practice/quick/listening",
+  "/practice/quick/structure",
+  "/practice/quick/reading",
   "/journal",
   "/contact",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getSitemapPosts();
-  const latestPostUpdate = posts.reduce(
-    (latest, post) => Math.max(latest, post.updatedAt),
-    Date.UTC(2026, 7, 25),
+  const latestPostUpdate = posts.reduce<number | undefined>(
+    (latest, post) =>
+      latest === undefined ? post.updatedAt : Math.max(latest, post.updatedAt),
+    undefined,
   );
 
   return [
     ...staticRoutes.map((route) => ({
       url: absoluteUrl(route),
-      lastModified: new Date(latestPostUpdate),
-      changeFrequency: route === "/journal" ? ("weekly" as const) : ("monthly" as const),
-      priority:
-        route === "/"
-          ? 1
-          : route === "/contact" || route === "/practice"
-            ? 0.8
-            : 0.7,
+      ...((route === "/" || route === "/journal") &&
+      latestPostUpdate !== undefined
+        ? { lastModified: new Date(latestPostUpdate) }
+        : {}),
     })),
     ...posts.map((post) => ({
       url: absoluteUrl(`/journal/${post.slug}`),
       lastModified: new Date(post.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
     })),
   ];
 }
