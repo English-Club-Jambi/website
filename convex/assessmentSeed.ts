@@ -9,7 +9,12 @@ import {
 import { ConvexError, v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
 import { bumpAssessmentRevision } from "./lib/assessmentAdmin";
 import { publicAssessmentDerivativeKey } from "./lib/assessmentMedia";
 import {
@@ -100,6 +105,28 @@ async function requireSeedAuthor(ctx: MutationCtx) {
     if (author !== undefined) return author;
   }
   throw new ConvexError({ code: "ASSESSMENT_SEED_AUTHOR_REQUIRED" as const });
+}
+
+async function listReadyPaperBankRows(
+  ctx: Pick<MutationCtx | QueryCtx, "db">,
+) {
+  const rows: Array<Doc<"assessmentQuestionBank">> = [];
+  for (const skill of ["listening", "structure", "reading"] as const) {
+    const skillRows = await ctx.db
+      .query("assessmentQuestionBank")
+      .withIndex("by_profile_and_status_and_skill", (q) =>
+        q
+          .eq("profile", "ec-itp-level-1-aligned-v1")
+          .eq("status", "ready")
+          .eq("skill", skill),
+      )
+      .take(201);
+    if (skillRows.length > 200) {
+      throw new ConvexError({ code: "QUESTION_BANK_SKILL_LIMIT" as const });
+    }
+    rows.push(...skillRows);
+  }
+  return rows;
 }
 
 function provenanceJson(definition: PaperBankDefinition) {
@@ -734,10 +761,7 @@ export const seedQuestionBank = internalMutation({
         }
       }
     }
-    const bankRows = await ctx.db.query("assessmentQuestionBank").take(501);
-    if (bankRows.length > 500) {
-      throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
-    }
+    const bankRows = await listReadyPaperBankRows(ctx);
     const selectableFingerprints = new Set<string>();
     for (const row of bankRows) {
       if (
@@ -985,10 +1009,7 @@ export const verifyQuestionBank = internalQuery({
     ),
   }),
   handler: async (ctx) => {
-    const rows = await ctx.db.query("assessmentQuestionBank").take(501);
-    if (rows.length > 500) {
-      throw new ConvexError({ code: "QUESTION_BANK_CATALOGUE_LIMIT" as const });
-    }
+    const rows = await listReadyPaperBankRows(ctx);
     let randomSections = 0;
     for (const source of paperPracticeBank) {
       const definition = await ctx.db

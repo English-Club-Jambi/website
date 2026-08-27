@@ -20,7 +20,13 @@ import {
 } from "./assessmentValidators";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { mutation, query } from "./_generated/server";
+import {
+  env,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
 import {
   normalizeBankPrompt,
@@ -28,6 +34,7 @@ import {
   questionBankRowIsReadyForSelection,
   questionBankSourceIsReady,
   questionContentFingerprint,
+  difficultyForPosition,
   QUESTION_BANK_AUTHORING_LEDGER_SLUG,
   resolveReadyQuestionAudio,
 } from "./lib/assessmentQuestionBank";
@@ -290,6 +297,71 @@ const authoredSkillValidator = v.union(
   v.literal("structure"),
 );
 
+const readingImportConfirmation = "import-toefl-reading-v1" as const;
+const readingImportTarget = "https://perfect-greyhound-270.convex.cloud";
+
+const readingImportParagraphValidator = v.object({
+  id: v.string(),
+  order: v.number(),
+  label: v.string(),
+  text: v.string(),
+});
+
+const readingImportQuestionValidator = v.object({
+  id: v.string(),
+  number: v.number(),
+  prompt: v.string(),
+  options: v.array(assessmentOptionValidator),
+  correctChoiceKey: v.string(),
+  explanation: v.string(),
+});
+
+function assertReadingImportTarget() {
+  const cloudUrl = (env as { CONVEX_CLOUD_URL?: string }).CONVEX_CLOUD_URL;
+  // convex-test does not inject platform URLs; deployed Convex runtimes always do.
+  if (cloudUrl === undefined) return;
+  if (
+    cloudUrl !== readingImportTarget &&
+    !cloudUrl.startsWith("http://127.0.0.1") &&
+    !cloudUrl.startsWith("http://localhost")
+  ) {
+    throw new ConvexError({
+      code: "READING_IMPORT_TARGET_REJECTED" as const,
+    });
+  }
+}
+
+async function requireReadingImportAuthor(ctx: MutationCtx) {
+  for (const role of ["owner", "publisher"] as const) {
+    const [author] = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_role_and_status_and_updated_at", (q) =>
+        q.eq("role", role).eq("status", "active"),
+      )
+      .order("desc")
+      .take(1);
+    if (author !== undefined) return author;
+  }
+  throw new ConvexError({ code: "READING_IMPORT_AUTHOR_REQUIRED" as const });
+}
+
+function normalizeReadingImportId(value: string, field: string) {
+  return normalizeKey(value, field);
+}
+
+function normalizeReadingImportPages(values: number[], field: string) {
+  if (values.length < 1 || values.length > 20) {
+    throw new ConvexError({ code: "INVALID_INPUT" as const, field });
+  }
+  const pages = values.map((value, index) =>
+    requireIntegerInRange(value, 1, 10_000, `${field}.${index}`),
+  );
+  if (new Set(pages).size !== pages.length) {
+    throw new ConvexError({ code: "INVALID_INPUT" as const, field });
+  }
+  return pages;
+}
+
 async function createAuthoringLedgerVersion(
   ctx: MutationCtx,
   definition: Doc<"assessmentDefinitions">,
@@ -364,7 +436,9 @@ async function getAuthoringLedgerSection(
   actorId: Id<"adminUsers">,
   skill: "listening" | "structure" | "reading" | "writing" | "speaking",
   now: number,
+  requiredSlots = 1,
 ) {
+  requireIntegerInRange(requiredSlots, 1, 50, "requiredSlots");
   let definition = await ctx.db
     .query("assessmentDefinitions")
     .withIndex("by_slug", (q) =>
@@ -413,7 +487,7 @@ async function getAuthoringLedgerSection(
       throw new ConvexError({ code: "QUESTION_BANK_LEDGER_INVALID" as const });
     }
     const section = sections.find((candidate) => candidate.skill === skill) ?? null;
-    if (section !== null && section.itemCount < 50) {
+    if (section !== null && section.itemCount + requiredSlots <= 50) {
       return { definition, version, section };
     }
   }
@@ -1065,6 +1139,450 @@ async function insertEditableContentSource(
   ]);
   return { definition, version, section, itemId };
 }
+
+export const importReadingSection = internalMutation({
+  args: {
+    confirm: v.literal(readingImportConfirmation),
+    datasetChecksum: v.string(),
+    topic: v.object({
+      id: v.string(),
+      title: v.string(),
+      sourceFile: v.string(),
+    }),
+    section: v.object({
+      id: v.string(),
+      number: v.number(),
+      title: v.string(),
+      sourcePages: v.array(v.number()),
+    }),
+    passage: v.object({
+      id: v.string(),
+      title: v.string(),
+      sourcePages: v.array(v.number()),
+      paragraphs: v.array(readingImportParagraphValidator),
+    }),
+    questions: v.array(readingImportQuestionValidator),
+  },
+  returns: v.object({
+    inserted: v.number(),
+    existing: v.number(),
+    duplicates: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    assertReadingImportTarget();
+    const datasetChecksum = args.datasetChecksum.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(datasetChecksum)) {
+      throw new ConvexError({ code: "READING_IMPORT_CHECKSUM_INVALID" as const });
+    }
+    if (args.questions.length < 1 || args.questions.length > 20) {
+      throw new ConvexError({ code: "READING_IMPORT_BATCH_INVALID" as const });
+    }
+    if (args.passage.paragraphs.length < 1 || args.passage.paragraphs.length > 30) {
+      throw new ConvexError({ code: "READING_IMPORT_PASSAGE_INVALID" as const });
+    }
+
+    const topicId = normalizeReadingImportId(args.topic.id, "topic.id");
+    const sectionId = normalizeReadingImportId(args.section.id, "section.id");
+    const passageId = normalizeReadingImportId(args.passage.id, "passage.id");
+    const topicTitle = normalizeBoundedText(args.topic.title, "topic.title", 2, 160);
+    const sourceFile = normalizeBoundedText(
+      args.topic.sourceFile,
+      "topic.sourceFile",
+      3,
+      240,
+    );
+    const sectionTitle = normalizeBoundedText(
+      args.section.title,
+      "section.title",
+      2,
+      240,
+    );
+    const passageTitle = normalizeBoundedText(
+      args.passage.title,
+      "passage.title",
+      2,
+      240,
+    );
+    const sectionNumber = requireIntegerInRange(
+      args.section.number,
+      1,
+      1_000,
+      "section.number",
+    );
+    const sectionPages = normalizeReadingImportPages(
+      args.section.sourcePages,
+      "section.sourcePages",
+    );
+    const passagePages = normalizeReadingImportPages(
+      args.passage.sourcePages,
+      "passage.sourcePages",
+    );
+    const paragraphs = [...args.passage.paragraphs]
+      .map((paragraph, index) => ({
+        id: normalizeReadingImportId(paragraph.id, `passage.paragraphs.${index}.id`),
+        order: requireIntegerInRange(
+          paragraph.order,
+          1,
+          100,
+          `passage.paragraphs.${index}.order`,
+        ),
+        label: normalizeBoundedText(
+          paragraph.label,
+          `passage.paragraphs.${index}.label`,
+          1,
+          80,
+        ),
+        text: normalizeBoundedText(
+          paragraph.text,
+          `passage.paragraphs.${index}.text`,
+          2,
+          4_000,
+        ),
+      }))
+      .sort((left, right) => left.order - right.order);
+    if (
+      new Set(paragraphs.map((paragraph) => paragraph.id)).size !== paragraphs.length ||
+      paragraphs.some((paragraph, index) => paragraph.order !== index + 1)
+    ) {
+      throw new ConvexError({ code: "READING_IMPORT_PASSAGE_INVALID" as const });
+    }
+    const passageBody = normalizeBoundedText(
+      paragraphs
+        .map((paragraph) => `${paragraph.label}\n${paragraph.text}`)
+        .join("\n\n"),
+      "passage.body",
+      2,
+      20_000,
+    );
+    const seedBatch = `toefl-reading:${datasetChecksum}`;
+    const normalizedQuestions = args.questions.map((question, index) => {
+      const id = normalizeReadingImportId(question.id, `questions.${index}.id`);
+      const number = requireIntegerInRange(
+        question.number,
+        1,
+        100_000,
+        `questions.${index}.number`,
+      );
+      const prompt = normalizeBoundedText(
+        question.prompt,
+        `questions.${index}.prompt`,
+        2,
+        4_000,
+      );
+      const options = normalizeOptions(question.options);
+      const normalizedLabels = options.map((option) =>
+        option.label.toLocaleLowerCase("en"),
+      );
+      if (new Set(normalizedLabels).size !== normalizedLabels.length) {
+        throw new ConvexError({ code: "DUPLICATE_OPTION_LABEL" as const });
+      }
+      const correctChoiceKey = normalizeKey(
+        question.correctChoiceKey,
+        `questions.${index}.correctChoiceKey`,
+      );
+      if (!options.some((option) => option.key === correctChoiceKey)) {
+        throw new ConvexError({ code: "ANSWER_NOT_IN_OPTIONS" as const });
+      }
+      const explanation = normalizeBoundedText(
+        question.explanation,
+        `questions.${index}.explanation`,
+        2,
+        8_000,
+      );
+      return {
+        id,
+        number,
+        prompt,
+        options,
+        correctChoiceKey,
+        explanation,
+        fingerprint: questionContentFingerprint(
+          "reading",
+          prompt,
+          options.map((option) => option.label),
+        ),
+        bankKey: `import/toefl-reading/${topicId}/${sectionId}/${id}`,
+      };
+    });
+    if (
+      new Set(normalizedQuestions.map((question) => question.id)).size !==
+        normalizedQuestions.length ||
+      new Set(normalizedQuestions.map((question) => question.bankKey)).size !==
+        normalizedQuestions.length
+    ) {
+      throw new ConvexError({ code: "READING_IMPORT_BATCH_INVALID" as const });
+    }
+
+    let existing = 0;
+    let duplicates = 0;
+    const pending = [];
+    const pendingFingerprints = new Set<string>();
+    for (const question of normalizedQuestions) {
+      const existingRow = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_bank_key", (q) => q.eq("bankKey", question.bankKey))
+        .unique();
+      if (existingRow !== null) {
+        if (
+          existingRow.seedBatch !== seedBatch ||
+          existingRow.profile !== "ec-itp-level-1-aligned-v1" ||
+          existingRow.skill !== "reading" ||
+          existingRow.origin !== "bank-authored"
+        ) {
+          throw new ConvexError({ code: "READING_IMPORT_KEY_COLLISION" as const });
+        }
+        existing += 1;
+        continue;
+      }
+      if (pendingFingerprints.has(question.fingerprint)) {
+        duplicates += 1;
+        continue;
+      }
+      const fingerprintRows = await ctx.db
+        .query("assessmentQuestionBank")
+        .withIndex("by_content_fingerprint", (q) =>
+          q.eq("contentFingerprint", question.fingerprint),
+        )
+        .take(4);
+      if (fingerprintRows.some((row) => row.status !== "archived")) {
+        duplicates += 1;
+        continue;
+      }
+      pendingFingerprints.add(question.fingerprint);
+      pending.push(question);
+    }
+    if (pending.length === 0) {
+      return { inserted: 0, existing, duplicates };
+    }
+
+    const actor = await requireReadingImportAuthor(ctx);
+    const now = Date.now();
+    const { definition, version, section } = await getAuthoringLedgerSection(
+      ctx,
+      actor._id,
+      "reading",
+      now,
+      pending.length,
+    );
+    const sourceKey = `import-${topicId}-${sectionNumber}-${passageId}`;
+    const passageProvenance = JSON.stringify({
+      sourceType: "user-supplied-reading-dataset",
+      datasetChecksum,
+      topicId,
+      topicTitle,
+      sectionId,
+      sectionNumber,
+      sourceFile,
+      sourcePages: sectionPages,
+      sectionTitle,
+      passageId,
+      passagePages,
+      rightsStatus: "unverified-review-required",
+    });
+    const stimulusId = await ctx.db.insert("assessmentStimuli", {
+      versionId: version._id,
+      sectionId: section._id,
+      stimulusKey: `${sourceKey}-passage`,
+      kind: "reading",
+      order: section.itemCount,
+      title: passageTitle,
+      body: passageBody,
+      provenanceJson: passageProvenance,
+      authoredBy: actor._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const tags = normalizeQuestionBankTags([
+      "reading",
+      "read-academic-passage",
+      "imported-reading",
+      "rights-review",
+    ]);
+    for (let index = 0; index < pending.length; index += 1) {
+      const question = pending[index];
+      const itemProvenance = JSON.stringify({
+        sourceType: "user-supplied-reading-dataset",
+        datasetChecksum,
+        topicId,
+        sectionId,
+        passageId,
+        questionId: question.id,
+        questionNumber: question.number,
+        sourceFile,
+        sourcePages: sectionPages,
+        rightsStatus: "unverified-review-required",
+      });
+      const itemId = await ctx.db.insert("assessmentItems", {
+        versionId: version._id,
+        sectionId: section._id,
+        stimulusId,
+        itemKey: `${sourceKey}-${question.id}`,
+        order: section.itemCount + index,
+        prompt: question.prompt,
+        required: true,
+        explanation: question.explanation,
+        provenanceJson: itemProvenance,
+        authoredBy: actor._id,
+        createdAt: now,
+        updatedAt: now,
+        type: "single-choice",
+        options: question.options,
+      });
+      await ctx.db.insert("assessmentAnswerKeys", {
+        versionId: version._id,
+        itemId,
+        kind: "choice",
+        correctChoiceKeys: [question.correctChoiceKey],
+        scoringMode: "exact",
+        points: 1,
+      });
+      await ctx.db.insert("assessmentQuestionBank", {
+        bankKey: question.bankKey,
+        sourceDefinitionId: definition._id,
+        sourceVersionId: version._id,
+        sourceSectionId: section._id,
+        sourceItemId: itemId,
+        skill: "reading",
+        taskFamily: "read-academic-passage",
+        difficulty: difficultyForPosition(index, pending.length),
+        status: "paused",
+        profile: "ec-itp-level-1-aligned-v1",
+        fullPracticeEligible: false,
+        origin: "bank-authored",
+        contentFingerprint: question.fingerprint,
+        promptSearch: normalizeBankPrompt(question.prompt),
+        tags,
+        seedBatch,
+        createdBy: actor._id,
+        updatedBy: actor._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await Promise.all([
+      ctx.db.patch("assessmentSections", section._id, {
+        itemCount: section.itemCount + pending.length,
+      }),
+      ctx.db.patch("assessmentVersions", version._id, {
+        contentRevision: version.contentRevision + pending.length,
+        updatedAt: now,
+      }),
+      ctx.db.patch("assessmentDefinitions", definition._id, {
+        updatedBy: actor._id,
+        updatedAt: now,
+      }),
+    ]);
+    await writeAuditEvent(ctx, {
+      area: "assessment",
+      action: "create",
+      resourceType: "question-bank-reading-section",
+      resourceId: `${topicId}/${sectionId}`,
+      summary: `${pending.length} Reading questions imported for rights review`,
+      actorId: actor._id,
+    });
+    return { inserted: pending.length, existing, duplicates };
+  },
+});
+
+export const verifyReadingImport = internalQuery({
+  args: {
+    confirm: v.literal(readingImportConfirmation),
+    datasetChecksum: v.string(),
+    expectedRecords: v.number(),
+  },
+  returns: v.object({
+    total: v.number(),
+    paused: v.number(),
+    ready: v.number(),
+    archived: v.number(),
+    passages: v.number(),
+    invalidSources: v.number(),
+    byTopic: v.array(v.object({ topicId: v.string(), count: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    assertReadingImportTarget();
+    const datasetChecksum = args.datasetChecksum.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(datasetChecksum)) {
+      throw new ConvexError({ code: "READING_IMPORT_CHECKSUM_INVALID" as const });
+    }
+    const expectedRecords = requireIntegerInRange(
+      args.expectedRecords,
+      0,
+      501,
+      "expectedRecords",
+    );
+    const seedBatch = `toefl-reading:${datasetChecksum}`;
+    const rowsByStatus = await Promise.all(
+      (["paused", "ready", "archived"] as const).map(async (status) => {
+        const rows = await ctx.db
+          .query("assessmentQuestionBank")
+          .withIndex("by_seed_batch_and_status_and_updated_at", (q) =>
+            q.eq("seedBatch", seedBatch).eq("status", status),
+          )
+          .take(502);
+        if (rows.length > 501) {
+          throw new ConvexError({ code: "READING_IMPORT_LIMIT_EXCEEDED" as const });
+        }
+        return { status, rows };
+      }),
+    );
+    const rows = rowsByStatus.flatMap((entry) => entry.rows);
+    if (rows.length !== expectedRecords) {
+      throw new ConvexError({
+        code: "READING_IMPORT_COUNT_MISMATCH" as const,
+        expected: expectedRecords,
+        actual: rows.length,
+      });
+    }
+    let invalidSources = 0;
+    const passageIds = new Set<string>();
+    const topicCounts = new Map<string, number>();
+    for (const row of rows) {
+      const [item, answerKey, version, definition, section] = await Promise.all([
+        ctx.db.get("assessmentItems", row.sourceItemId),
+        ctx.db
+          .query("assessmentAnswerKeys")
+          .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+          .unique(),
+        ctx.db.get("assessmentVersions", row.sourceVersionId),
+        ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+        ctx.db.get("assessmentSections", row.sourceSectionId),
+      ]);
+      const stimulus =
+        item?.stimulusId === undefined
+          ? null
+          : await ctx.db.get("assessmentStimuli", item.stimulusId);
+      if (
+        row.skill !== "reading" ||
+        row.profile !== "ec-itp-level-1-aligned-v1" ||
+        row.origin !== "bank-authored" ||
+        item?.type !== "single-choice" ||
+        answerKey?.kind !== "choice" ||
+        answerKey.correctChoiceKeys.length !== 1 ||
+        section?.skill !== "reading" ||
+        stimulus?.kind !== "reading" ||
+        stimulus.body === undefined ||
+        !questionBankSourceIsReady(row, item, answerKey, version, definition)
+      ) {
+        invalidSources += 1;
+      }
+      if (stimulus !== null) passageIds.add(String(stimulus._id));
+      const topicId = row.bankKey.split("/")[2] ?? "invalid";
+      topicCounts.set(topicId, (topicCounts.get(topicId) ?? 0) + 1);
+    }
+    return {
+      total: rows.length,
+      paused: rowsByStatus.find((entry) => entry.status === "paused")!.rows.length,
+      ready: rowsByStatus.find((entry) => entry.status === "ready")!.rows.length,
+      archived: rowsByStatus.find((entry) => entry.status === "archived")!.rows.length,
+      passages: passageIds.size,
+      invalidSources,
+      byTopic: [...topicCounts.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([topicId, count]) => ({ topicId, count })),
+    };
+  },
+});
 
 export const createQuestion = mutation({
   args: {

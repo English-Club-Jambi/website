@@ -122,7 +122,7 @@ Journal editor content is validated structured JSON, not HTML. A revision stores
 | `assessmentStimuli` | Passage, audio, image, transcript, alt text, provenance, and optional media link | Protected/private media never resolves publicly |
 | `assessmentItems` | Ordered prompt and choices linked to version/section/stimulus | Bounded to 200 per version |
 | `assessmentAnswerKeys` | Correct answer and scoring data | Never included in a pre-submit public DTO |
-| `assessmentQuestionBank` | Reusable inventory with skill, task family, difficulty, global state, source lineage, origin, optional illustration media ID, and content fingerprint | A new admin-authored row starts paused and outside full practice; a ready row is still ineligible unless the active published format version allows it |
+| `assessmentQuestionBank` | Reusable inventory with skill, task family, difficulty, global state, source lineage, origin, optional illustration media ID, content fingerprint, and optional import batch | A new admin-authored or unreviewed imported row starts paused and outside full practice; a ready row is still ineligible unless the active published format version allows it |
 | `assessmentVersionQuestionRules` | Optional allow/disable override for one bank question in one format version | A rule change increments the working content revision and makes earlier checks/approvals stale; published rules never change in place |
 | `assessmentQuestionFlagSignals` | Aggregate current/total learner flag counts and editorial review state per format/question | Admin projections omit participant, attempt, response, and answer-key data; a later flag reopens review |
 
@@ -168,6 +168,7 @@ Attempt safeguards:
 - Each fixed Practice Format selects only ready, source-valid questions that match its profile and skill. A quick format inherits its own source pool; full practice inherits globally reviewed full-practice rows; explicit version rules may narrow or extend that default.
 - Format validation fails when any allowed skill pool is smaller than its fixed quota. A rule cannot revive a paused/archived row, missing answer key, invalid source, or unreviewed delivery media.
 - Question Bank authoring creates a real `assessmentItems` row, a separate private `assessmentAnswerKeys` row, and a paused `assessmentQuestionBank` row in one mutation. Request IDs and content fingerprints prevent retry duplicates.
+- Reading imports use `seedBatch + status + updatedAt` for bounded verification. Each source passage is one `assessmentStimuli` row shared by its questions; stable bank keys and the source checksum make retries idempotent. Unverified source rights force `paused` and `fullPracticeEligible: false`, so ingestion alone cannot change a Live Practice manifest.
 - An attached illustration must resolve to a ready public `assessment-image` R2 record with an image MIME type and positive dimensions. Questions without an illustration store no media reference and render no empty frame.
 
 Results expose `correct`, `possible`, and `omitted`, with mode, time, per-section totals, and review. They never store or return percentage-as-level, predicted/official scores, CEFR bands, certificates, placement, or admission advice.

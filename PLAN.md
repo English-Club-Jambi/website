@@ -133,6 +133,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Lock the four active Practice Formats as an internally installed catalogue: one 50/40/50 paper form plus Listening, Structure, and Reading quick forms. Retire rather than delete the earlier four-skill catalogue.
 - [x] Add versioned per-format Question Bank allow/disable rules, fixed skill quotas, structured random draws pinned at Start, shortage validation, and privacy-safe aggregate flag review.
 - [x] Add real Question Bank authoring with idempotent Convex writes, private answer keys, duplicate fingerprints, skill-grouped task families, and a paused-by-default review state.
+- [x] Add a development-locked Reading dataset importer that preserves passage relationships, rejects incomplete source choices, writes private answer keys, and keeps every unlicensed source record paused until editorial and rights review.
 - [x] Add optional Question illustration selection/direct R2 upload, validate the media contract server-side, pin its ID in each random attempt manifest, and render it accessibly in Live Session.
 - [x] Add a separate private-source/public-derivative media contract and a UI configuration gate.
 - [ ] Create and configure the separate private Assessment R2 bucket, apply exact-origin CORS, and prove checksum-aware PUT, preview, verification, and public derivative delivery against Cloudflare.

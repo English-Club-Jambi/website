@@ -238,3 +238,14 @@ This record captures the boundary that was proven before the paper-format migrat
 - Expanded the Convex regression from one quick Reading path to the full 120-question form plus Listening, Reading, Writing, and Speaking focused sprints. The test resolves every bank/source relationship and confirms exact full-form counts of 50/47/12/11.
 - Synced only the authorised development deployment. Its bank verifier returned 146 ready records, 121 selectable fingerprints, eight random sections, and eligible capacity of 51 Reading, 47 Listening, 12 Writing, and 11 Speaking questions.
 - Browser verification started the full form at desktop, Pixel 7, and 320 px, then started all four focused public routes and confirmed the first live question belonged to the route's skill. Port 3987 remained running; no production deployment was performed.
+
+## 28 August 2026 — Reading Question Bank ingestion
+
+- Audited the supplied reading bundle as 9 topics, 71 passages, and 501 source questions. One source record has five empty answer choices and is excluded rather than repaired with invented text; 500 questions remain usable.
+- Added a development-target-locked importer that preserves each passage once, writes linked single-choice items and private answer keys, fingerprints content, and records the exact source checksum without storing a workstation path.
+- Imported rows begin Paused with `fullPracticeEligible: false` because the package contains source PDF names but no redistribution licence or rights ledger. Admin review is required before a row can participate in the active Reading pool.
+- Added stable-key idempotency, collision rejection, a 50-item authoring-ledger ceiling, indexed batch verification, pure parser tests, and Convex source-graph regression coverage.
+- Synced only `dev:perfect-greyhound-270` and imported 500 rows across 71 passages. The cloud verifier returned 500 Paused, 0 Ready, 0 Archived, 0 invalid source graphs, and 0 duplicate skips; per-topic counts match the audited plan.
+- Completed a full second import against the same checksum. All 71 passage transactions resolved idempotently and the verifier returned the unchanged 500-record graph.
+- Authenticated Admin browser verification opened the Paused catalogue and a five-choice imported question with its review tags. Axe reported no serious or critical issue, the page had no horizontal overflow, and the client emitted no error.
+- Replaced the legacy all-catalogue seed-verifier ceiling with indexed Ready-pool reads per paper skill. The large Paused review inventory no longer breaks the active paper-bank verifier and cannot alter Live Practice selection.

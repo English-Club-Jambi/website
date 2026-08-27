@@ -594,6 +594,11 @@ export default defineSchema({
       "status",
       "difficulty",
       "updatedAt",
+    ])
+    .index("by_seed_batch_and_status_and_updated_at", [
+      "seedBatch",
+      "status",
+      "updatedAt",
     ]),
 
   assessmentVersionQuestionRules: defineTable({
