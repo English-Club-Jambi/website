@@ -122,8 +122,12 @@ TURNSTILE_SECRET_KEY
 Add the matching public widget key to the Next.js/Vercel environment:
 
 ```text
-NEXT_PUBLIC_TURNSTILE_SITE_KEY
+TURNSTILE_SITE_KEY
 ```
+
+`next.config.ts` explicitly maps this public site key into the browser bundle
+at build time. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` remains a supported
+compatibility alias. Redeploy after changing either name.
 
 `BREVO_REPLY_TO_EMAIL` is optional. It names the monitored inbox that receives a learner's reply. The learner's entered address is the message recipient, never the sender or reply-to address. Omit the variable if the verified sender inbox should receive replies itself.
 
@@ -472,7 +476,7 @@ TURNSTILE_SECRET_KEY
 Next.js/Vercel production environment:
 
 ```text
-NEXT_PUBLIC_TURNSTILE_SITE_KEY
+TURNSTILE_SITE_KEY
 ```
 
 Use a production-only Auth key pair, exact HTTPS origin, least-privilege bucket credentials, and independently configured public/private R2 policies.
