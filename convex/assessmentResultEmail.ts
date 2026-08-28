@@ -1,14 +1,11 @@
 "use node";
 
-import {
-  createHash,
-  createHmac,
-  randomBytes,
-  randomUUID,
-} from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as wait } from "node:timers/promises";
 
 import { ConvexError, v, type Infer } from "convex/values";
+
+import { isResultDeliveryTurnstileEnabled } from "../content/full-practice-delivery";
 
 import {
   attemptResultValidator,
@@ -131,6 +128,9 @@ function deliveryConfig() {
   const replyToEmail = env.BREVO_REPLY_TO_EMAIL?.trim() || undefined;
   const rawOrigin = env.RESULT_DELIVERY_PUBLIC_ORIGIN?.trim();
   const recipientHashKey = env.RESULT_DELIVERY_RECIPIENT_HASH_KEY?.trim();
+  const turnstileEnabled = isResultDeliveryTurnstileEnabled(
+    env.RESULT_DELIVERY_TURNSTILE_ENABLED,
+  );
   const turnstileSecretKey = env.TURNSTILE_SECRET_KEY?.trim();
   if (
     !apiKey ||
@@ -139,7 +139,7 @@ function deliveryConfig() {
     !rawOrigin ||
     !recipientHashKey ||
     recipientHashKey.length < 32 ||
-    !turnstileSecretKey ||
+    (turnstileEnabled && !turnstileSecretKey) ||
     cleanEmail(senderEmail) === null ||
     (replyToEmail !== undefined && cleanEmail(replyToEmail) === null) ||
     senderName.length > 120
@@ -164,6 +164,7 @@ function deliveryConfig() {
     senderName,
     replyToEmail,
     recipientHashKey,
+    turnstileEnabled,
     turnstileSecretKey,
     origin: origin.origin,
   };
@@ -230,10 +231,16 @@ async function postToBrevo(request: {
       const errorBody = (await response.json().catch(() => null)) as {
         code?: unknown;
       } | null;
-      if (response.status === 400 && errorBody?.code === "duplicate_parameter") {
+      if (
+        response.status === 400 &&
+        errorBody?.code === "duplicate_parameter"
+      ) {
         return { state: "uncertain" as const };
       }
-      if (attempt === 0 && (response.status === 429 || response.status >= 500)) {
+      if (
+        attempt === 0 &&
+        (response.status === 429 || response.status >= 500)
+      ) {
         await wait(700);
         continue;
       }
@@ -263,7 +270,7 @@ export const send = action({
     requestId: v.string(),
     consent: v.boolean(),
     consentVersion: v.literal(1),
-    turnstileToken: v.string(),
+    turnstileToken: v.optional(v.string()),
   },
   returns: sendResultValidator,
   handler: async (ctx, args): Promise<SendResult> => {
@@ -332,42 +339,47 @@ export const send = action({
     } catch {
       return { ok: false as const, code: "not_available" as const };
     }
-    let verificationAuthorization: {
-      state: "allowed" | "rate_limited";
-      retryAt?: number;
-    };
-    try {
-      verificationAuthorization = await ctx.runMutation(
-        internal.assessmentResultDelivery.authorizeVerification,
-        {
-          attemptId: args.attemptId,
-          ownerTokenIdentifier: identity.tokenIdentifier,
-        },
-      );
-    } catch {
-      return { ok: false as const, code: "not_available" as const };
-    }
-    if (verificationAuthorization.state === "rate_limited") {
-      return {
-        ok: false as const,
-        code: "rate_limited" as const,
-        retryAt: verificationAuthorization.retryAt,
+    let humanVerifiedAt: number | undefined;
+    if (config.turnstileEnabled) {
+      let verificationAuthorization: {
+        state: "allowed" | "rate_limited";
+        retryAt?: number;
       };
-    }
-    if (
-      !(await verifyTurnstile({
-        secret: config.turnstileSecretKey,
-        response: args.turnstileToken,
-        expectedHostname: new URL(config.origin).hostname,
-      }))
-    ) {
-      return { ok: false as const, code: "invalid" as const };
+      try {
+        verificationAuthorization = await ctx.runMutation(
+          internal.assessmentResultDelivery.authorizeVerification,
+          {
+            attemptId: args.attemptId,
+            ownerTokenIdentifier: identity.tokenIdentifier,
+          },
+        );
+      } catch {
+        return { ok: false as const, code: "not_available" as const };
+      }
+      if (verificationAuthorization.state === "rate_limited") {
+        return {
+          ok: false as const,
+          code: "rate_limited" as const,
+          retryAt: verificationAuthorization.retryAt,
+        };
+      }
+      if (
+        config.turnstileSecretKey === undefined ||
+        args.turnstileToken === undefined ||
+        !(await verifyTurnstile({
+          secret: config.turnstileSecretKey,
+          response: args.turnstileToken,
+          expectedHostname: new URL(config.origin).hostname,
+        }))
+      ) {
+        return { ok: false as const, code: "invalid" as const };
+      }
+      humanVerifiedAt = Date.now();
     }
 
     const reviewToken = randomBytes(32).toString("base64url");
     const providerAttemptId = randomUUID();
     const publicCertificateId = `EC-${randomBytes(16).toString("hex").toUpperCase()}`;
-    const humanVerifiedAt = Date.now();
     let reserve: ReserveResult;
     try {
       reserve = await ctx.runMutation(
@@ -383,7 +395,7 @@ export const send = action({
           certificateNameHash,
           tokenHash: sha256(reviewToken),
           consentVersion: args.consentVersion,
-          humanVerifiedAt,
+          ...(humanVerifiedAt === undefined ? {} : { humanVerifiedAt }),
         },
       );
     } catch {
@@ -544,8 +556,8 @@ export const send = action({
         ok: false as const,
         code:
           providerAttempt.state === "in_progress"
-            ? "in_progress" as const
-            : "provider_unavailable" as const,
+            ? ("in_progress" as const)
+            : ("provider_unavailable" as const),
       };
     }
 
@@ -572,8 +584,8 @@ export const send = action({
         ok: false as const,
         code:
           provider.state === "configuration_failed"
-            ? "configuration_unavailable" as const
-            : "provider_unavailable" as const,
+            ? ("configuration_unavailable" as const)
+            : ("provider_unavailable" as const),
       };
     }
     await ctx.runMutation(internal.assessmentResultDelivery.markAccepted, {
@@ -597,12 +609,9 @@ export const revokeReviewLinks = action({
     if (identity === null) {
       throw new ConvexError({ code: "AUTH_REQUIRED" as const });
     }
-    return await ctx.runMutation(
-      internal.assessmentResultDelivery.revokeMine,
-      {
-        attemptId: args.attemptId,
-        ownerTokenIdentifier: identity.tokenIdentifier,
-      },
-    );
+    return await ctx.runMutation(internal.assessmentResultDelivery.revokeMine, {
+      attemptId: args.attemptId,
+      ownerTokenIdentifier: identity.tokenIdentifier,
+    });
   },
 });

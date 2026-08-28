@@ -28,9 +28,7 @@ import type {
   PublicAssessmentItem,
   PublicAssessmentResponse,
 } from "./question-renderer";
-import {
-  AttemptRouteResolver,
-} from "./attempt-route-resolver";
+import { AttemptRouteResolver } from "./attempt-route-resolver";
 import { usePracticeContext } from "./practice-provider";
 import styles from "./practice.module.css";
 
@@ -44,8 +42,7 @@ type SharedReviewPage = FunctionReturnType<
   typeof api.assessmentResultDelivery.listSharedReviewPage
 >;
 type ReviewItem =
-  | OwnedReviewPage["page"][number]
-  | SharedReviewPage["page"][number];
+  OwnedReviewPage["page"][number] | SharedReviewPage["page"][number];
 
 export function formatElapsed(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds));
@@ -79,15 +76,22 @@ export function reviewResponseText(
     case "multi-choice":
       return response.selectedChoiceKeys.length === 0
         ? omittedLabel
-        : response.selectedChoiceKeys.map((key) => labelForChoice(item, key)).join(", ");
+        : response.selectedChoiceKeys
+            .map((key) => labelForChoice(item, key))
+            .join(", ");
     case "cloze":
       if (response.gapAnswers.length === 0 || item.type !== "cloze-select") {
         return omittedLabel;
       }
       return response.gapAnswers
         .map((answer) => {
-          const gap = item.gaps.find((candidate) => candidate.key === answer.gapKey);
-          return gap?.options.find((option) => option.key === answer.choiceKey)?.label ?? answer.choiceKey;
+          const gap = item.gaps.find(
+            (candidate) => candidate.key === answer.gapKey,
+          );
+          return (
+            gap?.options.find((option) => option.key === answer.choiceKey)
+              ?.label ?? answer.choiceKey
+          );
         })
         .join(" / ");
     case "token-order":
@@ -95,14 +99,22 @@ export function reviewResponseText(
         return omittedLabel;
       }
       return response.tokenOrder
-        .map((key) => item.tokens.find((token) => token.key === key)?.label ?? key)
+        .map(
+          (key) => item.tokens.find((token) => token.key === key)?.label ?? key,
+        )
         .join(" ");
     case "text":
       return response.text.trim().length === 0 ? omittedLabel : response.text;
   }
 }
 
-function SessionUnavailable({ attemptId, result }: { attemptId: string; result?: boolean }) {
+function SessionUnavailable({
+  attemptId,
+  result,
+}: {
+  attemptId: string;
+  result?: boolean;
+}) {
   const { copy } = usePracticeContext();
   return (
     <section className={styles.unavailablePage}>
@@ -110,7 +122,9 @@ function SessionUnavailable({ attemptId, result }: { attemptId: string; result?:
         <h1>{result ? copy.noResultTitle : copy.sessionUnavailableTitle}</h1>
         <p>{result ? copy.noResultBody : copy.sessionUnavailableBody}</p>
         <Link
-          href={(result ? `/practice/attempt/${attemptId}` : "/practice") as Route}
+          href={
+            (result ? `/practice/attempt/${attemptId}` : "/practice") as Route
+          }
           className={styles.primaryLink}
         >
           <ArrowLeftIcon width={19} height={19} strokeWidth={2} aria-hidden />
@@ -147,7 +161,12 @@ function ReviewStimulus({ item }: { item: ReviewItem }) {
       {stimulus.transcript !== null ? (
         <details className={styles.transcript}>
           <summary>
-            <DocumentTextIcon width={19} height={19} strokeWidth={1.9} aria-hidden />
+            <DocumentTextIcon
+              width={19}
+              height={19}
+              strokeWidth={1.9}
+              aria-hidden
+            />
             {copy.transcript}
           </summary>
           <p>{stimulus.transcript}</p>
@@ -196,26 +215,35 @@ function ReviewEntries({
     <div className={styles.reviewList} aria-busy={loading}>
       {entries.map((entry, index) => {
         const constructed = entry.item.type === "constructed-response";
-        const state = constructed && entry.answered
-          ? copy.reviewScored
-          : entry.correct
-            ? copy.reviewCorrect
-            : entry.answered
-              ? copy.reviewIncorrect
-              : copy.reviewOmitted;
-        const StateIcon = constructed && entry.answered
-          ? DocumentTextIcon
-          : entry.correct
-            ? CheckCircleIcon
-            : entry.answered
-              ? XCircleIcon
-              : MinusCircleIcon;
+        const state =
+          constructed && entry.answered
+            ? copy.reviewScored
+            : entry.correct
+              ? copy.reviewCorrect
+              : entry.answered
+                ? copy.reviewIncorrect
+                : copy.reviewOmitted;
+        const StateIcon =
+          constructed && entry.answered
+            ? DocumentTextIcon
+            : entry.correct
+              ? CheckCircleIcon
+              : entry.answered
+                ? XCircleIcon
+                : MinusCircleIcon;
         return (
           <article className={styles.reviewItem} key={entry.item.id}>
             <div className={styles.reviewItemHeading}>
-              <p>{copy.questionPrefix} {index + 1}</p>
+              <p>
+                {copy.questionPrefix} {index + 1}
+              </p>
               <span data-correct={entry.correct ? "true" : "false"}>
-                <StateIcon width={20} height={20} strokeWidth={1.9} aria-hidden />
+                <StateIcon
+                  width={20}
+                  height={20}
+                  strokeWidth={1.9}
+                  aria-hidden
+                />
                 {state}
               </span>
             </div>
@@ -224,11 +252,25 @@ function ReviewEntries({
             <dl className={styles.reviewAnswers}>
               <div>
                 <dt>{copy.yourAnswer}</dt>
-                <dd>{reviewResponseText(entry.item, entry.response, copy.reviewOmitted)}</dd>
+                <dd>
+                  {reviewResponseText(
+                    entry.item,
+                    entry.response,
+                    copy.reviewOmitted,
+                  )}
+                </dd>
               </div>
               <div>
-                <dt>{constructed ? copy.exampleResponse : copy.correctAnswer}</dt>
-                <dd>{reviewResponseText(entry.item, entry.correctAnswer, copy.reviewOmitted)}</dd>
+                <dt>
+                  {constructed ? copy.exampleResponse : copy.correctAnswer}
+                </dt>
+                <dd>
+                  {reviewResponseText(
+                    entry.item,
+                    entry.correctAnswer,
+                    copy.reviewOmitted,
+                  )}
+                </dd>
               </div>
             </dl>
             {entry.explanation !== null ? (
@@ -241,7 +283,11 @@ function ReviewEntries({
         );
       })}
       {canLoadMore ? (
-        <button type="button" className={styles.quietButton} onClick={onLoadMore}>
+        <button
+          type="button"
+          className={styles.quietButton}
+          onClick={onLoadMore}
+        >
           {copy.loadMoreReview}
         </button>
       ) : null}
@@ -349,7 +395,10 @@ function ResultReport({
   );
   const [sectionIndex, setSectionIndex] = useState(0);
   const possible = result.objective.possible;
-  const elapsed = result.sections.reduce((total, section) => total + section.elapsedSeconds, 0);
+  const elapsed = result.sections.reduce(
+    (total, section) => total + section.elapsedSeconds,
+    0,
+  );
   const selected = result.sections[sectionIndex];
   const paperEstimate =
     result.estimate?.model === "ec-paper-linear-v1" ? result.estimate : null;
@@ -361,7 +410,8 @@ function ResultReport({
     legacyEstimate?.comparableTotal ??
     result.sections[0]?.comparableScoreEstimate ??
     null;
-  const confidence = result.estimate?.confidence ?? result.sections[0]?.confidence ?? null;
+  const confidence =
+    result.estimate?.confidence ?? result.sections[0]?.confidence ?? null;
 
   async function handleDelivery(
     input: ResultEmailDeliveryInput,
@@ -378,7 +428,9 @@ function ResultReport({
         requestId: input.requestId,
         consent: input.consent,
         consentVersion: input.consentVersion,
-        turnstileToken: input.turnstileToken,
+        ...(input.turnstileToken === undefined
+          ? {}
+          : { turnstileToken: input.turnstileToken }),
       });
       if (outcome.ok) {
         return {
@@ -388,10 +440,7 @@ function ResultReport({
           reviewExpiresAt: outcome.expiresAt,
         };
       }
-      if (
-        outcome.code === "rate_limited" ||
-        outcome.code === "limit_reached"
-      ) {
+      if (outcome.code === "rate_limited" || outcome.code === "limit_reached") {
         return { status: "rejected", code: "rate_limited" };
       }
       if (outcome.code === "certificate_unavailable") {
@@ -433,38 +482,60 @@ function ResultReport({
       <div className={`page-container ${styles.resultBody}`}>
         <section className={styles.rawResult} aria-label={result.label}>
           <div className={styles.rawResultLead}>
-            <strong>{paperEstimate?.total ?? estimatedBand ?? result.objective.correct}</strong>
+            <strong>
+              {paperEstimate?.total ??
+                estimatedBand ??
+                result.objective.correct}
+            </strong>
             <span>
               {paperEstimate !== null
                 ? copy.paperEstimate
                 : estimatedBand === null
-                ? `${copy.rawCount} / ${possible}`
-                : `${copy.estimatedBand} / 6`}
+                  ? `${copy.rawCount} / ${possible}`
+                  : `${copy.estimatedBand} / 6`}
             </span>
           </div>
           <dl>
             <div>
               <dt>{copy.practicePoints}</dt>
-              <dd>{result.weighted.earned.toFixed(2)} / {result.weighted.possible.toFixed(2)}</dd>
+              <dd>
+                {result.weighted.earned.toFixed(2)} /{" "}
+                {result.weighted.possible.toFixed(2)}
+              </dd>
             </div>
             {comparableScore !== null ? (
               <div>
                 <dt>{copy.comparableScore}</dt>
-                <dd>{comparableScore} / {legacyEstimate?.comparableTotal !== null ? 120 : 30}</dd>
+                <dd>
+                  {comparableScore} /{" "}
+                  {legacyEstimate?.comparableTotal !== null ? 120 : 30}
+                </dd>
               </div>
             ) : null}
             {paperEstimate !== null ? (
               <div>
                 <dt>{copy.paperRange}</dt>
-                <dd>{paperEstimate.minimum}–{paperEstimate.maximum}</dd>
+                <dd>
+                  {paperEstimate.minimum}–{paperEstimate.maximum}
+                </dd>
               </div>
             ) : null}
-            <div><dt>{copy.omitted}</dt><dd>{result.objective.omitted}</dd></div>
-            <div><dt>{copy.timeUsed}</dt><dd>{formatElapsed(elapsed)}</dd></div>
+            <div>
+              <dt>{copy.omitted}</dt>
+              <dd>{result.objective.omitted}</dd>
+            </div>
+            <div>
+              <dt>{copy.timeUsed}</dt>
+              <dd>{formatElapsed(elapsed)}</dd>
+            </div>
             {confidence !== null ? (
               <div>
                 <dt>{copy.estimateConfidence}</dt>
-                <dd>{confidence === "moderate" ? copy.confidenceModerate : copy.confidenceLow}</dd>
+                <dd>
+                  {confidence === "moderate"
+                    ? copy.confidenceModerate
+                    : copy.confidenceLow}
+                </dd>
               </div>
             ) : null}
           </dl>
@@ -511,30 +582,47 @@ function ResultReport({
           />
         ) : null}
 
-        <section className={styles.sectionResults} aria-labelledby="section-results-title">
+        <section
+          className={styles.sectionResults}
+          aria-labelledby="section-results-title"
+        >
           <h2 id="section-results-title">{copy.sectionResults}</h2>
           <div className={styles.sectionResultRows}>
             {result.sections.map((section, index) => (
               <div key={`${section.title}-${index}`}>
                 <div>
                   <h3>{section.title}</h3>
-                  <p>{section.answered} / {section.items} {copy.answered.toLowerCase()}</p>
+                  <p>
+                    {section.answered} / {section.items}{" "}
+                    {copy.answered.toLowerCase()}
+                  </p>
                 </div>
                 <strong>
                   {section.paperSectionEstimate !== null
                     ? `${section.paperSectionEstimate} · ${copy.paperSectionEstimate}`
                     : section.bandEstimate === null
-                    ? `${section.correct} / ${section.possible}`
-                    : `${section.bandEstimate} / 6`}
+                      ? `${section.correct} / ${section.possible}`
+                      : `${section.bandEstimate} / 6`}
                 </strong>
-                <span><ClockIcon width={18} height={18} strokeWidth={1.8} aria-hidden />{formatElapsed(section.elapsedSeconds)}</span>
+                <span>
+                  <ClockIcon
+                    width={18}
+                    height={18}
+                    strokeWidth={1.8}
+                    aria-hidden
+                  />
+                  {formatElapsed(section.elapsedSeconds)}
+                </span>
               </div>
             ))}
           </div>
         </section>
 
         {selected !== undefined ? (
-          <section className={styles.answerReview} aria-labelledby="answer-review-title">
+          <section
+            className={styles.answerReview}
+            aria-labelledby="answer-review-title"
+          >
             <div className={styles.answerReviewHeading}>
               <h2 id="answer-review-title">{copy.answerReview}</h2>
               <div className={styles.reviewSectionSelect}>
@@ -569,7 +657,11 @@ function ResultReport({
   );
 }
 
-function ConnectedResult({ attemptId }: { attemptId: Id<"assessmentAttempts"> }) {
+function ConnectedResult({
+  attemptId,
+}: {
+  attemptId: Id<"assessmentAttempts">;
+}) {
   const { copy } = usePracticeContext();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const result = useQuery(
@@ -578,7 +670,11 @@ function ConnectedResult({ attemptId }: { attemptId: Id<"assessmentAttempts"> })
   );
   if (isLoading || (isAuthenticated && result === undefined)) {
     return (
-      <div className={`page-container ${styles.practiceLoading}`} aria-live="polite" aria-busy="true">
+      <div
+        className={`page-container ${styles.practiceLoading}`}
+        aria-live="polite"
+        aria-busy="true"
+      >
         <p>{copy.sessionCheck}</p>
         <div className={styles.loadingRule} />
       </div>
@@ -596,17 +692,19 @@ export function ResultView({ attemptId }: { attemptId: string }) {
   return (
     <AttemptRouteResolver
       routeAttemptId={attemptId}
-      loading={(
-        <div className={`page-container ${styles.practiceLoading}`} aria-live="polite" aria-busy="true">
+      loading={
+        <div
+          className={`page-container ${styles.practiceLoading}`}
+          aria-live="polite"
+          aria-busy="true"
+        >
           <p>{copy.sessionCheck}</p>
           <div className={styles.loadingRule} />
         </div>
-      )}
+      }
       unavailable={<SessionUnavailable attemptId={attemptId} />}
     >
-      {(resolvedAttemptId) => (
-        <ConnectedResult attemptId={resolvedAttemptId} />
-      )}
+      {(resolvedAttemptId) => <ConnectedResult attemptId={resolvedAttemptId} />}
     </AttemptRouteResolver>
   );
 }
@@ -618,7 +716,14 @@ export function SharedResultView({ token }: { token: string }) {
   );
   const [shared, setShared] = useState<
     | { kind: "loading" }
-    | { kind: "ready"; value: NonNullable<FunctionReturnType<typeof api.assessmentResultDelivery.getSharedResult>> }
+    | {
+        kind: "ready";
+        value: NonNullable<
+          FunctionReturnType<
+            typeof api.assessmentResultDelivery.getSharedResult
+          >
+        >;
+      }
     | { kind: "unavailable" }
   >({ kind: "loading" });
 
@@ -631,9 +736,7 @@ export function SharedResultView({ token }: { token: string }) {
           window.sessionStorage.removeItem("ec-practice-review-access");
         }
         setShared(
-          value === null
-            ? { kind: "unavailable" }
-            : { kind: "ready", value },
+          value === null ? { kind: "unavailable" } : { kind: "ready", value },
         );
       })
       .catch(() => {

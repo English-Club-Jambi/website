@@ -45,6 +45,7 @@ type Env = {
   readonly R2_SECRET_ACCESS_KEY: string | undefined;
   readonly RESULT_DELIVERY_PUBLIC_ORIGIN: string | undefined;
   readonly RESULT_DELIVERY_RECIPIENT_HASH_KEY: string | undefined;
+  readonly RESULT_DELIVERY_TURNSTILE_ENABLED: string | undefined;
   readonly TURNSTILE_SECRET_KEY: string | undefined;
 };
 

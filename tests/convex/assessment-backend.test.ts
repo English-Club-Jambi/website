@@ -23,7 +23,8 @@ const modules = Object.fromEntries(
 const ownerToken = "https://perfect-greyhound-270.convex.site|assessment-owner";
 const publisherToken =
   "https://perfect-greyhound-270.convex.site|assessment-publisher";
-const editorToken = "https://perfect-greyhound-270.convex.site|assessment-editor";
+const editorToken =
+  "https://perfect-greyhound-270.convex.site|assessment-editor";
 
 beforeEach(() => {
   vi.stubEnv("PRACTICE_FORMAT_CREATION_MODE", "internal-maintenance");
@@ -43,8 +44,8 @@ async function anonymousIdentity(
   t: ReturnType<typeof createHarness>,
   tokenIdentifier: string,
 ) {
-  const userId = await t.run(async (ctx) =>
-    await ctx.db.insert("users", { isAnonymous: true }),
+  const userId = await t.run(
+    async (ctx) => await ctx.db.insert("users", { isAnonymous: true }),
   );
   return t.withIdentity({
     subject: `${userId}|session`,
@@ -56,8 +57,8 @@ async function accountIdentity(
   t: ReturnType<typeof createHarness>,
   tokenIdentifier: string,
 ) {
-  const userId = await t.run(async (ctx) =>
-    await ctx.db.insert("users", { name: "Assessment learner" }),
+  const userId = await t.run(
+    async (ctx) => await ctx.db.insert("users", { name: "Assessment learner" }),
   );
   return t.withIdentity({
     subject: `${userId}|session`,
@@ -104,9 +105,7 @@ async function seedPublishedFixture(
     timed?: boolean;
     multipleSelect?: boolean;
     scorePolicy?:
-      | "raw-objective"
-      | "practice-estimate-v1"
-      | "paper-estimate-v1";
+      "raw-objective" | "practice-estimate-v1" | "paper-estimate-v1";
   } = {},
 ) {
   const now = Date.now();
@@ -139,8 +138,10 @@ async function seedPublishedFixture(
       version: 1,
       status: "published",
       title: "English Club Objective Practice",
-      summary: "Original practice for listening, structure, and reading routines.",
-      instructions: "Work independently and submit each section when you are ready.",
+      summary:
+        "Original practice for listening, structure, and reading routines.",
+      instructions:
+        "Work independently and submit each section when you are ready.",
       locale: "en",
       timePolicy: options.timed ? "per-section" : "untimed",
       allowResume: true,
@@ -398,9 +399,12 @@ describe("assessment participant authorization and response privacy", () => {
     const retry = await startAttempt(learnerA, fixture);
     expect(retry.attemptId).toEqual(started.attemptId);
 
-    const beforeBegin = await learnerA.query(api.assessmentAttempts.getAttemptState, {
-      attemptId: started.attemptId,
-    });
+    const beforeBegin = await learnerA.query(
+      api.assessmentAttempts.getAttemptState,
+      {
+        attemptId: started.attemptId,
+      },
+    );
     expect(beforeBegin.phase).toBe("section-ready");
     const begun = await learnerA.mutation(api.assessmentAttempts.beginSection, {
       attemptId: started.attemptId,
@@ -410,7 +414,10 @@ describe("assessment participant authorization and response privacy", () => {
       attemptId: started.attemptId,
     });
     expect(player?.stimulus?.transcript).toBeNull();
-    expect(player?.stimulus?.mediaUrl, JSON.stringify(player?.stimulus)).not.toBeNull();
+    expect(
+      player?.stimulus?.mediaUrl,
+      JSON.stringify(player?.stimulus),
+    ).not.toBeNull();
     expect(player?.stimulus?.mediaUrl ?? "").toContain(
       "r2.mukhtada.my.id/assessments/",
     );
@@ -459,7 +466,11 @@ describe("assessment participant authorization and response privacy", () => {
         mutationId: "save-response-0002",
         flagged: false,
       }),
-    ).resolves.toMatchObject({ ok: false, code: "conflict", currentRevision: 1 });
+    ).resolves.toMatchObject({
+      ok: false,
+      code: "conflict",
+      currentRevision: 1,
+    });
     const savedPlayer = await learnerA.query(api.assessmentAttempts.getPlayer, {
       attemptId: started.attemptId,
     });
@@ -507,13 +518,14 @@ describe("assessment lifecycle, transcript support, and review", () => {
         expectedRevision: begun.revision,
       }),
     ).rejects.toThrow();
-    const progressBefore = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentAttemptSections")
-        .withIndex("by_attempt_id_and_order", (q) =>
-          q.eq("attemptId", attempt.attemptId),
-        )
-        .collect(),
+    const progressBefore = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentAttemptSections")
+          .withIndex("by_attempt_id_and_order", (q) =>
+            q.eq("attemptId", attempt.attemptId),
+          )
+          .collect(),
     );
     expect(progressBefore.map((row) => row.status)).toEqual([
       "in-progress",
@@ -537,9 +549,12 @@ describe("assessment lifecycle, transcript support, and review", () => {
       { attemptId: attempt.attemptId, expectedRevision: 0 },
     );
     expect(transcriptRetry).toEqual(transcript);
-    const withTranscript = await learner.query(api.assessmentAttempts.getPlayer, {
-      attemptId: attempt.attemptId,
-    });
+    const withTranscript = await learner.query(
+      api.assessmentAttempts.getPlayer,
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
     expect(withTranscript?.listeningMode).toBe("transcript-supported");
     expect(withTranscript?.stimulus?.transcript).toContain("meeting begins");
 
@@ -553,16 +568,22 @@ describe("assessment lifecycle, transcript support, and review", () => {
         attemptId: attempt.attemptId,
       }),
     ).toBeNull();
-    const nextState = await learner.query(api.assessmentAttempts.getAttemptState, {
-      attemptId: attempt.attemptId,
-    });
+    const nextState = await learner.query(
+      api.assessmentAttempts.getAttemptState,
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
     expect(nextState).toMatchObject({
       phase: "section-ready",
       section: { order: 1, skill: "reading" },
     });
-    const secondBegun = await learner.mutation(api.assessmentAttempts.beginSection, {
-      attemptId: attempt.attemptId,
-    });
+    const secondBegun = await learner.mutation(
+      api.assessmentAttempts.beginSection,
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
     await learner.mutation(api.assessmentAttempts.saveResponse, {
       attemptId: attempt.attemptId,
       itemId: fixture.readingItemId,
@@ -729,7 +750,11 @@ describe("assessment lifecycle, transcript support, and review", () => {
       disclaimer:
         "This is an English Club practice result based on original questions. It is not an official or predicted score. A requested completion certificate records participation only; it does not certify proficiency or admission eligibility.",
     });
-    expect(result?.sections.every((section) => section.paperSectionEstimate === null)).toBe(true);
+    expect(
+      result?.sections.every(
+        (section) => section.paperSectionEstimate === null,
+      ),
+    ).toBe(true);
   });
 
   it("closes only the expired current section and leaves the next section unstarted", async () => {
@@ -750,22 +775,26 @@ describe("assessment lifecycle, transcript support, and review", () => {
       attemptId: started.attemptId,
     });
     vi.setSystemTime(new Date("2026-08-26T09:01:01.000Z"));
-    const lateSave = await learner.mutation(api.assessmentAttempts.saveResponse, {
-      attemptId: started.attemptId,
-      itemId: fixture.listeningItemId,
-      response: { kind: "choice", selectedChoiceKey: "b" },
-      expectedClientRevision: 0,
-      mutationId: "late-save-0001",
-      flagged: false,
-    });
+    const lateSave = await learner.mutation(
+      api.assessmentAttempts.saveResponse,
+      {
+        attemptId: started.attemptId,
+        itemId: fixture.listeningItemId,
+        response: { kind: "choice", selectedChoiceKey: "b" },
+        expectedClientRevision: 0,
+        mutationId: "late-save-0001",
+        flagged: false,
+      },
+    );
     expect(lateSave).toEqual({ ok: false, code: "section_closed" });
-    const rows = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentAttemptSections")
-        .withIndex("by_attempt_id_and_order", (q) =>
-          q.eq("attemptId", started.attemptId),
-        )
-        .collect(),
+    const rows = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentAttemptSections")
+          .withIndex("by_attempt_id_and_order", (q) =>
+            q.eq("attemptId", started.attemptId),
+          )
+          .collect(),
     );
     expect(rows.map((row) => row.status)).toEqual(["completed", "not-started"]);
   });
@@ -782,14 +811,12 @@ describe("Full Practice result delivery grants", () => {
     vi.stubEnv("BREVO_SENDER_EMAIL", "results@english-club.example");
     vi.stubEnv("BREVO_SENDER_NAME", "English Club");
     vi.stubEnv("BREVO_REPLY_TO_EMAIL", "hello@english-club.example");
-    vi.stubEnv(
-      "RESULT_DELIVERY_PUBLIC_ORIGIN",
-      "https://english-club.example",
-    );
+    vi.stubEnv("RESULT_DELIVERY_PUBLIC_ORIGIN", "https://english-club.example");
     vi.stubEnv(
       "RESULT_DELIVERY_RECIPIENT_HASH_KEY",
       "result-delivery-test-hmac-key-with-32-characters",
     );
+    vi.stubEnv("RESULT_DELIVERY_TURNSTILE_ENABLED", "true");
     vi.stubEnv("TURNSTILE_SECRET_KEY", "turnstile-test-secret");
   }
 
@@ -870,15 +897,11 @@ describe("Full Practice result delivery grants", () => {
       String(endpoint).includes("challenges.cloudflare.com"),
     );
     expect(turnstileCall).toBeDefined();
-    const turnstileBody = new URLSearchParams(
-      String(turnstileCall?.[1]?.body),
-    );
+    const turnstileBody = new URLSearchParams(String(turnstileCall?.[1]?.body));
     expect(turnstileBody.get("response")).toBe(
       "turnstile-test-token-that-is-long-enough",
     );
-    expect(turnstileBody.get("idempotency_key")).toMatch(
-      /^[0-9a-f-]{36}$/iu,
-    );
+    expect(turnstileBody.get("idempotency_key")).toMatch(/^[0-9a-f-]{36}$/iu);
     const brevoCall = providerFetch.mock.calls.find(
       ([endpoint]) => endpoint === "https://api.brevo.com/v3/smtp/email",
     );
@@ -959,6 +982,61 @@ describe("Full Practice result delivery grants", () => {
     expect(providerFetch).toHaveBeenCalledTimes(2);
   });
 
+  it("sends without Siteverify while Turnstile is deferred", async () => {
+    stubDeliveryEnvironment();
+    vi.stubEnv("RESULT_DELIVERY_TURNSTILE_ENABLED", "false");
+    const providerFetch = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ messageId: "brevo-without-turnstile" }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", providerFetch);
+
+    const t = createHarness();
+    const ownerTokenIdentifier = "delivery-without-turnstile-owner";
+    const fixture = await seedPublishedFixture(t);
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "delivery-without-turnstile-submit",
+    );
+    const outcome = await learner.action(api.assessmentResultEmail.send, {
+      attemptId: submitted.attemptId,
+      recipientName: "Alya Rahman",
+      recipientEmail: "alya.rahman@example.com",
+      certificateTemplate: "mendalo-record",
+      requestId: "delivery-without-turnstile-request",
+      consent: true,
+      consentVersion: 1,
+    });
+
+    expect(outcome).toMatchObject({ ok: true });
+    expect(providerFetch).toHaveBeenCalledOnce();
+    expect(String(providerFetch.mock.calls[0]?.[0])).toBe(
+      "https://api.brevo.com/v3/smtp/email",
+    );
+    const stored = await t.run(async (ctx) => ({
+      deliveries: await ctx.db
+        .query("assessmentResultDeliveries")
+        .withIndex("by_attempt_id_and_requested_at", (q) =>
+          q.eq("attemptId", submitted.attemptId),
+        )
+        .take(2),
+      verificationEvents: await ctx.db
+        .query("assessmentResultVerificationEvents")
+        .withIndex("by_owner_token_identifier_and_created_at", (q) =>
+          q.eq("ownerTokenIdentifier", ownerTokenIdentifier),
+        )
+        .take(2),
+    }));
+    expect(stored.deliveries).toHaveLength(1);
+    expect(stored.deliveries[0]?.humanVerifiedAt).toBeUndefined();
+    expect(stored.verificationEvents).toHaveLength(0);
+  });
+
   it("rejects unsubmitted and missing attempts before recording or fetching verification", async () => {
     stubDeliveryEnvironment();
     const providerFetch = vi.fn<typeof fetch>();
@@ -1005,8 +1083,9 @@ describe("Full Practice result delivery grants", () => {
     ).resolves.toEqual({ ok: false, code: "not_available" });
 
     expect(providerFetch).not.toHaveBeenCalled();
-    const verificationEvents = await t.run(async (ctx) =>
-      await ctx.db.query("assessmentResultVerificationEvents").take(1),
+    const verificationEvents = await t.run(
+      async (ctx) =>
+        await ctx.db.query("assessmentResultVerificationEvents").take(1),
     );
     expect(verificationEvents).toHaveLength(0);
   });
@@ -1065,17 +1144,18 @@ describe("Full Practice result delivery grants", () => {
       retryAt: Date.parse("2026-08-28T04:10:00.000Z"),
     });
     expect(providerFetch).toHaveBeenCalledTimes(6);
-    const verificationEvents = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentResultVerificationEvents")
-        .withIndex("by_owner_token_identifier_and_created_at", (q) =>
-          q.eq("ownerTokenIdentifier", "verification-rate-owner"),
-        )
-        .collect(),
+    const verificationEvents = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentResultVerificationEvents")
+          .withIndex("by_owner_token_identifier_and_created_at", (q) =>
+            q.eq("ownerTokenIdentifier", "verification-rate-owner"),
+          )
+          .collect(),
     );
     expect(verificationEvents).toHaveLength(6);
-    const deliveries = await t.run(async (ctx) =>
-      await ctx.db.query("assessmentResultDeliveries").take(1),
+    const deliveries = await t.run(
+      async (ctx) => await ctx.db.query("assessmentResultDeliveries").take(1),
     );
     expect(deliveries).toHaveLength(0);
   });
@@ -1150,8 +1230,8 @@ describe("Full Practice result delivery grants", () => {
       expect(String(providerFetch.mock.calls[0]?.[0])).toContain(
         "challenges.cloudflare.com",
       );
-      const deliveries = await t.run(async (ctx) =>
-        await ctx.db.query("assessmentResultDeliveries").take(1),
+      const deliveries = await t.run(
+        async (ctx) => await ctx.db.query("assessmentResultDeliveries").take(1),
       );
       expect(deliveries).toHaveLength(0);
     },
@@ -1206,13 +1286,14 @@ describe("Full Practice result delivery grants", () => {
     const payload = JSON.parse(brevoBodies[0]!) as {
       headers: { idempotencyKey: string };
     };
-    const stored = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentResultDeliveries")
-        .withIndex("by_attempt_id_and_requested_at", (q) =>
-          q.eq("attemptId", submitted.attemptId),
-        )
-        .unique(),
+    const stored = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentResultDeliveries")
+          .withIndex("by_attempt_id_and_requested_at", (q) =>
+            q.eq("attemptId", submitted.attemptId),
+          )
+          .unique(),
     );
     expect(stored).toMatchObject({
       status: "uncertain",
@@ -1227,7 +1308,9 @@ describe("Full Practice result delivery grants", () => {
         turnstileToken: "invalid-replay-token-is-never-submitted",
       }),
     ).resolves.toEqual({ ok: false, code: "delivery_uncertain" });
-    expect(providerFetch).toHaveBeenCalledTimes(fetchCountAfterAmbiguousProvider);
+    expect(providerFetch).toHaveBeenCalledTimes(
+      fetchCountAfterAmbiguousProvider,
+    );
   });
 
   it("binds one hashed delivery to its owner, payload, result, and expiring review", async () => {
@@ -1258,10 +1341,14 @@ describe("Full Practice result delivery grants", () => {
       request,
     );
     expect(reserved).toMatchObject({ state: "created" });
-    if (reserved.state !== "created") throw new Error("delivery was not created");
+    if (reserved.state !== "created")
+      throw new Error("delivery was not created");
 
     const stored = await t.run(async (ctx) => ({
-      delivery: await ctx.db.get("assessmentResultDeliveries", reserved.deliveryId),
+      delivery: await ctx.db.get(
+        "assessmentResultDeliveries",
+        reserved.deliveryId,
+      ),
       grant: await ctx.db.get("assessmentResultReviewGrants", reserved.grantId),
     }));
     expect(stored.delivery).toMatchObject({
@@ -1394,7 +1481,8 @@ describe("Full Practice result delivery grants", () => {
       internal.assessmentResultDelivery.reserve,
       request,
     );
-    if (reserved.state !== "created") throw new Error("delivery was not created");
+    if (reserved.state !== "created")
+      throw new Error("delivery was not created");
     await t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
       deliveryId: reserved.deliveryId,
       providerAttemptId: request.providerAttemptId,
@@ -1417,13 +1505,14 @@ describe("Full Practice result delivery grants", () => {
     await expect(
       t.action(api.assessmentResultDelivery.redeem, { token: reviewToken }),
     ).resolves.toEqual({ ok: false, code: "unavailable" });
-    const sessions = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentResultReviewSessions")
-        .withIndex("by_grant_id_and_created_at", (q) =>
-          q.eq("grantId", reserved.grantId),
-        )
-        .collect(),
+    const sessions = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentResultReviewSessions")
+          .withIndex("by_grant_id_and_created_at", (q) =>
+            q.eq("grantId", reserved.grantId),
+          )
+          .collect(),
     );
     expect(sessions).toHaveLength(5);
     for (const sessionToken of sessionTokens) {
@@ -1476,7 +1565,8 @@ describe("Full Practice result delivery grants", () => {
       internal.assessmentResultDelivery.reserve,
       request,
     );
-    if (reserved.state !== "created") throw new Error("delivery was not created");
+    if (reserved.state !== "created")
+      throw new Error("delivery was not created");
 
     await expect(
       t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
@@ -1575,7 +1665,9 @@ describe("assessment quotas, exclusions, and privacy deletion", () => {
 
   it("rejects the local-only programme quiz from the assessment attempt engine", async () => {
     const t = createHarness();
-    const fixture = await seedPublishedFixture(t, { kind: "club-program-quiz" });
+    const fixture = await seedPublishedFixture(t, {
+      kind: "club-program-quiz",
+    });
     const learner = await accountIdentity(t, "account-owner");
     await expect(startAttempt(learner, fixture)).rejects.toThrow();
   });
@@ -1662,19 +1754,19 @@ describe("assessment media boundary", () => {
       }),
     ).toThrow();
     const privateKey = privateAssessmentMediaKey({
-        definitionId: "abc_definition",
-        versionId: "abc_version",
-        mediaId: "abc_media",
-        extension: "mp3",
-      });
+      definitionId: "abc_definition",
+      versionId: "abc_version",
+      mediaId: "abc_media",
+      extension: "mp3",
+    });
     expect(privateKey).toMatch(
       /^assessment-drafts\/[a-f0-9]+\/[a-f0-9]+\/[a-f0-9]+\/source\.mp3$/,
     );
     const publicKey = publicAssessmentDerivativeKey({
-        versionId: "abc_version",
-        checksumSha256: "c".repeat(64),
-        extension: "mp3",
-      });
+      versionId: "abc_version",
+      checksumSha256: "c".repeat(64),
+      extension: "mp3",
+    });
     expect(publicKey).toMatch(
       new RegExp(`^assessments/[a-f0-9]+/${"c".repeat(64)}\\.mp3$`),
     );
@@ -1690,8 +1782,8 @@ describe("assessment media boundary", () => {
   it("never projects private, wrong-purpose, wrong-version, or unsafe media", async () => {
     const t = createHarness();
     const fixture = await seedPublishedFixture(t);
-    const valid = await t.run(async (ctx) =>
-      await ctx.db.get("mediaAssets", fixture.audioMediaId),
+    const valid = await t.run(
+      async (ctx) => await ctx.db.get("mediaAssets", fixture.audioMediaId),
     );
     const validProjection = publicAssessmentR2UrlForMedia(
       valid,
@@ -1718,7 +1810,11 @@ describe("assessment media boundary", () => {
     if (valid !== null) {
       expect(
         publicAssessmentR2UrlForMedia(
-          { ...valid, assessmentVersionId: fixture.definitionId as unknown as Id<"assessmentVersions"> },
+          {
+            ...valid,
+            assessmentVersionId:
+              fixture.definitionId as unknown as Id<"assessmentVersions">,
+          },
           fixture.versionId,
           "audio",
         ),
@@ -1736,7 +1832,8 @@ describe("assessment media boundary", () => {
       adminTitle: "Media contract check",
       title: "Media Contract Check",
       summary: "A private draft used to verify the assessment media boundary.",
-      instructions: "Review every media relationship before this draft can publish.",
+      instructions:
+        "Review every media relationship before this draft can publish.",
       locale: "en",
       timePolicy: "untimed",
       allowResume: true,
@@ -1753,7 +1850,8 @@ describe("assessment media boundary", () => {
       skill: "listening",
       order: 0,
       title: "Listening Check",
-      instructions: "Listen to each original prompt and choose the best answer.",
+      instructions:
+        "Listen to each original prompt and choose the best answer.",
       audioReplayPolicy: "unlimited",
     });
     if (!section.ok) throw new Error("section save conflicted");
@@ -1770,24 +1868,22 @@ describe("assessment media boundary", () => {
     await expect(
       editor.mutation(api.assessmentMedia.reserveUpload, validReservationArgs),
     ).rejects.toThrow();
-    const beforeConfigRows = await t.run(async (ctx) =>
-      await ctx.db
-        .query("mediaAssets")
-        .withIndex(
-          "by_assessment_version_id_and_status_and_updated_at",
-          (q) =>
-            q
-              .eq("assessmentVersionId", created.versionId)
-              .eq("status", "pending"),
-        )
-        .collect(),
+    const beforeConfigRows = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("mediaAssets")
+          .withIndex(
+            "by_assessment_version_id_and_status_and_updated_at",
+            (q) =>
+              q
+                .eq("assessmentVersionId", created.versionId)
+                .eq("status", "pending"),
+          )
+          .collect(),
     );
     expect(beforeConfigRows).toEqual([]);
     vi.stubEnv("R2_ACCOUNT_ID", "a".repeat(32));
-    vi.stubEnv(
-      "R2_API",
-      `https://${"a".repeat(32)}.r2.cloudflarestorage.com`,
-    );
+    vi.stubEnv("R2_API", `https://${"a".repeat(32)}.r2.cloudflarestorage.com`);
     vi.stubEnv("R2_ASSESSMENT_BUCKET_NAME", "assessment-private-test");
     vi.stubEnv("R2_ASSESSMENT_ACCESS_KEY_ID", "test-access-key");
     vi.stubEnv("R2_ASSESSMENT_SECRET_ACCESS_KEY", "test-secret-key");
@@ -1807,8 +1903,8 @@ describe("assessment media boundary", () => {
       api.assessmentMedia.reserveUpload,
       validReservationArgs,
     );
-    const privateRow = await t.run(async (ctx) =>
-      await ctx.db.get("mediaAssets", reserved.mediaId),
+    const privateRow = await t.run(
+      async (ctx) => await ctx.db.get("mediaAssets", reserved.mediaId),
     );
     expect(privateRow).toMatchObject({
       access: "assessment-private",
@@ -1823,7 +1919,9 @@ describe("assessment media boundary", () => {
       status: "pending",
       paginationOpts: { cursor: null, numItems: 24 },
     });
-    expect(privatePage.page.map((asset) => asset._id)).toContain(reserved.mediaId);
+    expect(privatePage.page.map((asset) => asset._id)).toContain(
+      reserved.mediaId,
+    );
 
     await expect(
       editor.mutation(api.adminAssessments.saveStimulus, {
@@ -1836,7 +1934,8 @@ describe("assessment media boundary", () => {
         title: "Private audio",
         body: null,
         mediaId: reserved.mediaId,
-        transcript: "A transcript cannot make a private draft publicly deliverable.",
+        transcript:
+          "A transcript cannot make a private draft publicly deliverable.",
         alt: "Private audio under review",
         provenanceJson: JSON.stringify({ original: true }),
       }),
@@ -1847,8 +1946,10 @@ describe("assessment media boundary", () => {
         definitionId: created.definitionId,
         status: "draft",
         title: "Unrelated media version",
-        summary: "A separate internal version used only for relationship validation.",
-        instructions: "This version must never provide media to another assessment version.",
+        summary:
+          "A separate internal version used only for relationship validation.",
+        instructions:
+          "This version must never provide media to another assessment version.",
         locale: "en",
         timePolicy: "untimed",
         allowResume: true,
@@ -1919,7 +2020,8 @@ describe("assessment media boundary", () => {
           title: "Invalid audio delivery",
           body: null,
           mediaId,
-          transcript: "This relationship must be rejected before it reaches a learner.",
+          transcript:
+            "This relationship must be rejected before it reaches a learner.",
           alt: "Invalid audio delivery",
           provenanceJson: JSON.stringify({ original: true }),
         }),
@@ -1940,20 +2042,24 @@ describe("assessment media boundary", () => {
         updatedAt: Date.now(),
       });
     });
-    const validation = await editor.mutation(api.adminAssessments.validateDraft, {
-      versionId: created.versionId,
-      expectedContentRevision: section.contentRevision,
-    });
+    const validation = await editor.mutation(
+      api.adminAssessments.validateDraft,
+      {
+        versionId: created.versionId,
+        expectedContentRevision: section.contentRevision,
+      },
+    );
     expect(validation).toMatchObject({ ok: true, status: "failed" });
-    const check = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentVersionChecks")
-        .withIndex("by_version_id_and_content_revision", (q) =>
-          q
-            .eq("versionId", created.versionId)
-            .eq("contentRevision", section.contentRevision),
-        )
-        .unique(),
+    const check = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentVersionChecks")
+          .withIndex("by_version_id_and_content_revision", (q) =>
+            q
+              .eq("versionId", created.versionId)
+              .eq("contentRevision", section.contentRevision),
+          )
+          .unique(),
     );
     expect(check?.reportJson).toContain("image-delivery:missing-image-media");
   });
@@ -1989,8 +2095,10 @@ describe("assessment administration and immutable publication", () => {
         profile: "ec-ibt-style-2026-v1",
         adminTitle: "Unplanned extra format",
         title: "Unplanned Extra Format",
-        summary: "This record must not extend the fixed catalogue from the admin UI.",
-        instructions: "Use one of the installed practice formats instead of adding another.",
+        summary:
+          "This record must not extend the fixed catalogue from the admin UI.",
+        instructions:
+          "Use one of the installed practice formats instead of adding another.",
         locale: "en",
         timePolicy: "untimed",
         allowResume: true,
@@ -2060,8 +2168,10 @@ describe("assessment administration and immutable publication", () => {
         profile: "ec-itp-level-1-aligned-v1",
         adminTitle: "Weekly objective check",
         title: "Weekly Objective Check",
-        summary: "A short original English Club practice set for weekly review.",
-        instructions: "Choose the best answer for each original practice question.",
+        summary:
+          "A short original English Club practice set for weekly review.",
+        instructions:
+          "Choose the best answer for each original practice question.",
         locale: "en",
         timePolicy: "untimed",
         allowResume: true,
@@ -2079,7 +2189,8 @@ describe("assessment administration and immutable publication", () => {
       adminTitle: "Weekly objective check",
       title: "Weekly Objective Check",
       summary: "A short original English Club practice set for weekly review.",
-      instructions: "Choose the best answer for each original practice question.",
+      instructions:
+        "Choose the best answer for each original practice question.",
       locale: "en",
       timePolicy: "untimed",
       allowResume: true,
@@ -2096,29 +2207,34 @@ describe("assessment administration and immutable publication", () => {
       skill: "reading",
       order: 0,
       title: "Reading Check",
-      instructions: "Read each original prompt and choose the strongest answer.",
+      instructions:
+        "Read each original prompt and choose the strongest answer.",
     });
     if (!section.ok) throw new Error("section save conflicted");
     let revision = section.contentRevision;
     const itemIds: Id<"assessmentItems">[] = [];
     for (let order = 0; order < 3; order += 1) {
-      const saved = await editor.mutation(api.adminAssessmentItems.saveSingleChoice, {
-        versionId: created.versionId,
-        sectionId: section.sectionId,
-        stimulusId: null,
-        expectedContentRevision: revision,
-        itemKey: `reading-${order + 1}`,
-        order,
-        prompt: `Which answer best completes original practice item ${order + 1}?`,
-        required: true,
-        explanation: "The first option follows the sentence meaning and grammar.",
-        provenanceJson: JSON.stringify({ original: true, order }),
-        options: [
-          { key: "a", label: "The well-formed answer" },
-          { key: "b", label: "The unrelated answer" },
-        ],
-        correctChoiceKey: "a",
-      });
+      const saved = await editor.mutation(
+        api.adminAssessmentItems.saveSingleChoice,
+        {
+          versionId: created.versionId,
+          sectionId: section.sectionId,
+          stimulusId: null,
+          expectedContentRevision: revision,
+          itemKey: `reading-${order + 1}`,
+          order,
+          prompt: `Which answer best completes original practice item ${order + 1}?`,
+          required: true,
+          explanation:
+            "The first option follows the sentence meaning and grammar.",
+          provenanceJson: JSON.stringify({ original: true, order }),
+          options: [
+            { key: "a", label: "The well-formed answer" },
+            { key: "b", label: "The unrelated answer" },
+          ],
+          correctChoiceKey: "a",
+        },
+      );
       if (!saved.ok) throw new Error("item save conflicted");
       revision = saved.contentRevision;
       itemIds.push(saved.itemId);
@@ -2142,7 +2258,11 @@ describe("assessment administration and immutable publication", () => {
       versionId: created.versionId,
       expectedContentRevision: revision,
     });
-    expect(checked).toMatchObject({ ok: true, status: "passed", blockingCount: 0 });
+    expect(checked).toMatchObject({
+      ok: true,
+      status: "passed",
+      blockingCount: 0,
+    });
     for (const reviewType of [
       "academic",
       "rights",
@@ -2188,9 +2308,12 @@ describe("assessment administration and immutable publication", () => {
       }),
     ).resolves.toBeNull();
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    const clonedWorkspace = await editor.query(api.adminAssessments.getWorkspace, {
-      definitionId: created.definitionId,
-    });
+    const clonedWorkspace = await editor.query(
+      api.adminAssessments.getWorkspace,
+      {
+        definitionId: created.definitionId,
+      },
+    );
     expect(clonedWorkspace?.draft).toMatchObject({
       versionId: clone.versionId,
       status: "draft",
@@ -2202,24 +2325,28 @@ describe("assessment administration and immutable publication", () => {
       paginationOpts: { cursor: null, numItems: 25 },
     });
     expect(cloneItems.page).toHaveLength(3);
-    const edited = await editor.mutation(api.adminAssessmentItems.saveSingleChoice, {
-      itemId: cloneItems.page[0].item.id,
-      versionId: clone.versionId,
-      sectionId: clonedWorkspace!.sections[0].sectionId,
-      stimulusId: null,
-      expectedContentRevision: 1,
-      itemKey: cloneItems.page[0].itemKey,
-      order: 0,
-      prompt: "Which revised answer best completes this original practice item?",
-      required: true,
-      explanation: "The revised first option follows the intended meaning.",
-      provenanceJson: JSON.stringify({ original: true, revised: true }),
-      options: [
-        { key: "a", label: "The revised well-formed answer" },
-        { key: "b", label: "The unrelated answer" },
-      ],
-      correctChoiceKey: "a",
-    });
+    const edited = await editor.mutation(
+      api.adminAssessmentItems.saveSingleChoice,
+      {
+        itemId: cloneItems.page[0].item.id,
+        versionId: clone.versionId,
+        sectionId: clonedWorkspace!.sections[0].sectionId,
+        stimulusId: null,
+        expectedContentRevision: 1,
+        itemKey: cloneItems.page[0].itemKey,
+        order: 0,
+        prompt:
+          "Which revised answer best completes this original practice item?",
+        required: true,
+        explanation: "The revised first option follows the intended meaning.",
+        provenanceJson: JSON.stringify({ original: true, revised: true }),
+        options: [
+          { key: "a", label: "The revised well-formed answer" },
+          { key: "b", label: "The unrelated answer" },
+        ],
+        correctChoiceKey: "a",
+      },
+    );
     expect(edited).toMatchObject({ ok: true, contentRevision: 2 });
     const publicAfter = await t.query(api.assessments.getPublishedBySlug, {
       slug: "weekly-objective-check",
@@ -2258,7 +2385,8 @@ describe("assessment administration and immutable publication", () => {
       adminTitle: "Draft structure maintenance",
       title: "Draft Structure Maintenance",
       summary: "An internal draft for checking safe authoring corrections.",
-      instructions: "Editors can reorder and remove mistaken draft content safely.",
+      instructions:
+        "Editors can reorder and remove mistaken draft content safely.",
       locale: "en",
       timePolicy: "untimed",
       allowResume: true,
@@ -2288,11 +2416,14 @@ describe("assessment administration and immutable publication", () => {
       instructions: "Choose the option that completes each sentence correctly.",
     });
     if (!structure.ok) throw new Error("structure section save conflicted");
-    const movedSection = await editor.mutation(api.adminAssessments.moveSection, {
-      sectionId: structure.sectionId,
-      targetOrder: 0,
-      expectedContentRevision: structure.contentRevision,
-    });
+    const movedSection = await editor.mutation(
+      api.adminAssessments.moveSection,
+      {
+        sectionId: structure.sectionId,
+        targetOrder: 0,
+        expectedContentRevision: structure.contentRevision,
+      },
+    );
     if (!movedSection.ok) throw new Error("section move conflicted");
     let revision = movedSection.contentRevision;
     const stimulusA = await editor.mutation(api.adminAssessments.saveStimulus, {
@@ -2335,41 +2466,48 @@ describe("assessment administration and immutable publication", () => {
     );
     if (!movedStimulus.ok) throw new Error("stimulus move conflicted");
     revision = movedStimulus.contentRevision;
-    const itemA = await editor.mutation(api.adminAssessmentItems.saveSingleChoice, {
-      versionId: created.versionId,
-      sectionId: reading.sectionId,
-      stimulusId: stimulusA.stimulusId,
-      expectedContentRevision: revision,
-      itemKey: "reading-a-1",
-      order: 0,
-      prompt: "What does the weekly room offer?",
-      required: true,
-      explanation: "It offers careful, low-pressure practice.",
-      provenanceJson: JSON.stringify({ original: true }),
-      options: [
-        { key: "a", label: "Low-pressure practice" },
-        { key: "b", label: "A formal admission test" },
-      ],
-      correctChoiceKey: "a",
-    });
+    const itemA = await editor.mutation(
+      api.adminAssessmentItems.saveSingleChoice,
+      {
+        versionId: created.versionId,
+        sectionId: reading.sectionId,
+        stimulusId: stimulusA.stimulusId,
+        expectedContentRevision: revision,
+        itemKey: "reading-a-1",
+        order: 0,
+        prompt: "What does the weekly room offer?",
+        required: true,
+        explanation: "It offers careful, low-pressure practice.",
+        provenanceJson: JSON.stringify({ original: true }),
+        options: [
+          { key: "a", label: "Low-pressure practice" },
+          { key: "b", label: "A formal admission test" },
+        ],
+        correctChoiceKey: "a",
+      },
+    );
     if (!itemA.ok) throw new Error("item save conflicted");
-    const itemB = await editor.mutation(api.adminAssessmentItems.saveSingleChoice, {
-      versionId: created.versionId,
-      sectionId: reading.sectionId,
-      stimulusId: null,
-      expectedContentRevision: itemA.contentRevision,
-      itemKey: "reading-a-2",
-      order: 1,
-      prompt: "Who can join the practice room?",
-      required: true,
-      explanation: "The English Club practice room is for its learners and members.",
-      provenanceJson: JSON.stringify({ original: true }),
-      options: [
-        { key: "a", label: "Club learners and members" },
-        { key: "b", label: "Only admission officers" },
-      ],
-      correctChoiceKey: "a",
-    });
+    const itemB = await editor.mutation(
+      api.adminAssessmentItems.saveSingleChoice,
+      {
+        versionId: created.versionId,
+        sectionId: reading.sectionId,
+        stimulusId: null,
+        expectedContentRevision: itemA.contentRevision,
+        itemKey: "reading-a-2",
+        order: 1,
+        prompt: "Who can join the practice room?",
+        required: true,
+        explanation:
+          "The English Club practice room is for its learners and members.",
+        provenanceJson: JSON.stringify({ original: true }),
+        options: [
+          { key: "a", label: "Club learners and members" },
+          { key: "b", label: "Only admission officers" },
+        ],
+        correctChoiceKey: "a",
+      },
+    );
     if (!itemB.ok) throw new Error("item save conflicted");
     const movedItem = await editor.mutation(api.adminAssessmentItems.moveItem, {
       itemId: itemB.itemId,
@@ -2393,18 +2531,24 @@ describe("assessment administration and immutable publication", () => {
       }),
     ).rejects.toThrow();
     for (const itemId of [itemB.itemId, itemA.itemId]) {
-      const deleted = await editor.mutation(api.adminAssessmentItems.deleteItem, {
-        itemId,
-        expectedContentRevision: revision,
-      });
+      const deleted = await editor.mutation(
+        api.adminAssessmentItems.deleteItem,
+        {
+          itemId,
+          expectedContentRevision: revision,
+        },
+      );
       if (!deleted.ok) throw new Error("item delete conflicted");
       revision = deleted.contentRevision;
     }
     for (const stimulusId of [stimulusA.stimulusId, stimulusB.stimulusId]) {
-      const deleted = await editor.mutation(api.adminAssessments.deleteStimulus, {
-        stimulusId,
-        expectedContentRevision: revision,
-      });
+      const deleted = await editor.mutation(
+        api.adminAssessments.deleteStimulus,
+        {
+          stimulusId,
+          expectedContentRevision: revision,
+        },
+      );
       if (!deleted.ok) throw new Error("stimulus delete conflicted");
       revision = deleted.contentRevision;
     }

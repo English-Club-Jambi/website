@@ -4,8 +4,7 @@ export const certificateTemplateKeys = [
   "titik-folio",
 ] as const;
 
-export type CertificateTemplateKey =
-  (typeof certificateTemplateKeys)[number];
+export type CertificateTemplateKey = (typeof certificateTemplateKeys)[number];
 
 export type CertificateTemplate = {
   key: CertificateTemplateKey;
@@ -17,8 +16,7 @@ export type CertificateTemplate = {
 export type FullPracticeTimingMode = "standard" | "extended" | "untimed";
 
 export type FullPracticeListeningMode =
-  | "audio-primary"
-  | "transcript-supported";
+  "audio-primary" | "transcript-supported";
 
 export type FullPracticeDeliverySection = {
   label: string;
@@ -71,6 +69,12 @@ export const certificateTemplates = [
 export const defaultCertificateTemplateKey: CertificateTemplateKey =
   "mendalo-record";
 
+export function isResultDeliveryTurnstileEnabled(
+  value: string | undefined,
+): boolean {
+  return value?.trim().toLowerCase() === "true";
+}
+
 export function isCertificateTemplateKey(
   value: unknown,
 ): value is CertificateTemplateKey {
@@ -83,7 +87,9 @@ export function isCertificateTemplateKey(
 export function getCertificateTemplate(
   key: CertificateTemplateKey,
 ): CertificateTemplate {
-  const template = certificateTemplates.find((candidate) => candidate.key === key);
+  const template = certificateTemplates.find(
+    (candidate) => candidate.key === key,
+  );
   if (!template) {
     throw new Error(`Unknown certificate template: ${String(key)}`);
   }

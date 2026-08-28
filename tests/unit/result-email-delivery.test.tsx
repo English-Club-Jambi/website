@@ -106,6 +106,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={vi.fn()}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -144,6 +145,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={vi.fn()}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -170,6 +172,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={onSend}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -222,6 +225,7 @@ describe("ResultEmailDelivery", () => {
       <ResultEmailDelivery
         onSend={onSend}
         onRevokeReviewLinks={onRevokeReviewLinks}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -296,6 +300,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={onSend}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -328,6 +333,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={onSend}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -358,8 +364,38 @@ describe("ResultEmailDelivery", () => {
     );
   });
 
-  it("fails closed when the public Turnstile site key is absent", () => {
-    render(<ResultEmailDelivery onSend={vi.fn()} turnstileSiteKey="" />);
+  it("sends without loading Turnstile while verification is deferred", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn().mockResolvedValue(accepted);
+    render(
+      <ResultEmailDelivery
+        onSend={onSend}
+        turnstileEnabled={false}
+        turnstileSiteKey={turnstileSiteKey}
+      />,
+    );
+
+    expect(screen.queryByText("Human verification")).not.toBeInTheDocument();
+    expect(window.turnstile!.render).not.toHaveBeenCalled();
+
+    await completeForm(user);
+    await user.click(screen.getByRole("button", { name: "Email my result" }));
+
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onSend.mock.calls[0]?.[0]).not.toHaveProperty("turnstileToken");
+    expect(
+      await screen.findByRole("heading", { name: "Your email is on its way." }),
+    ).toBeVisible();
+  });
+
+  it("fails closed when enabled without a public Turnstile site key", () => {
+    render(
+      <ResultEmailDelivery
+        onSend={vi.fn()}
+        turnstileEnabled
+        turnstileSiteKey=""
+      />,
+    );
 
     expect(
       screen.getByText("Email delivery is not configured for this site yet."),
@@ -373,6 +409,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={vi.fn()}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );
@@ -404,6 +441,7 @@ describe("ResultEmailDelivery", () => {
     render(
       <ResultEmailDelivery
         onSend={vi.fn()}
+        turnstileEnabled
         turnstileSiteKey={turnstileSiteKey}
       />,
     );

@@ -10,16 +10,16 @@ This project does not require a local Convex backend. Next.js runs locally on po
 
 ## 1. Responsibility map
 
-| System | Responsibility |
-| --- | --- |
-| Next.js | Public and admin routes, server rendering, metadata, responsive interaction, theme boot, and controlled Convex provider boundaries |
-| Convex Auth | Password identities for administrators; Anonymous identities created only after persisted Practice starts |
-| Convex database/functions | Journal, CMS copy, Members, contact submissions, administrator access, themes, Assessment authoring/attempts/results, audit, and reviewed media metadata |
-| Public R2 bucket | Reviewed public AVIF/WebP/SVG and published Assessment derivatives read through `https://r2.mukhtada.my.id` |
-| Private Assessment R2 bucket | Confidential source audio/images, server verification, and short-lived admin preview; not public and not currently configured |
-| Brevo | Transactional delivery of an opted-in Full Practice result, attached completion record, and private review link; it receives the entered recipient name and email only for that send |
-| Repository | Source, schemas, manifests, deterministic fixtures, reviewed derivatives needed for QA, tests, and documentation |
-| Local consent vault | Raw participant/photo/audio masters awaiting rights and consent review; intentionally not tracked in Git |
+| System                       | Responsibility                                                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Next.js                      | Public and admin routes, server rendering, metadata, responsive interaction, theme boot, and controlled Convex provider boundaries                                                   |
+| Convex Auth                  | Password identities for administrators; Anonymous identities created only after persisted Practice starts                                                                            |
+| Convex database/functions    | Journal, CMS copy, Members, contact submissions, administrator access, themes, Assessment authoring/attempts/results, audit, and reviewed media metadata                             |
+| Public R2 bucket             | Reviewed public AVIF/WebP/SVG and published Assessment derivatives read through `https://r2.mukhtada.my.id`                                                                          |
+| Private Assessment R2 bucket | Confidential source audio/images, server verification, and short-lived admin preview; not public and not currently configured                                                        |
+| Brevo                        | Transactional delivery of an opted-in Full Practice result, attached completion record, and private review link; it receives the entered recipient name and email only for that send |
+| Repository                   | Source, schemas, manifests, deterministic fixtures, reviewed derivatives needed for QA, tests, and documentation                                                                     |
+| Local consent vault          | Raw participant/photo/audio masters awaiting rights and consent review; intentionally not tracked in Git                                                                             |
 
 R2 stores bytes, not publication or consent state. Convex stores an immutable object key and the state needed to decide whether that key may cross a browser boundary.
 
@@ -116,18 +116,29 @@ BREVO_SENDER_EMAIL
 BREVO_SENDER_NAME=English Club
 RESULT_DELIVERY_PUBLIC_ORIGIN=https://YOUR-EXACT-PUBLIC-HTTPS-ORIGIN
 RESULT_DELIVERY_RECIPIENT_HASH_KEY
+RESULT_DELIVERY_TURNSTILE_ENABLED=false
 TURNSTILE_SECRET_KEY
 ```
 
 Add the matching public widget key to the Next.js/Vercel environment:
 
 ```text
+NEXT_PUBLIC_RESULT_DELIVERY_TURNSTILE_ENABLED=false
 TURNSTILE_SITE_KEY
 ```
 
-`next.config.ts` explicitly maps this public site key into the browser bundle
-at build time. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` remains a supported
-compatibility alias. Redeploy after changing either name.
+Turnstile is deliberately deferred for the current sprint. Both feature flags
+default to `false`: the browser omits the widget and Convex skips Siteverify.
+The existing ownership checks, indexed per-attempt and per-recipient limits,
+global delivery limit, request idempotency, and review-grant controls remain
+active. A deferred delivery does not store `humanVerifiedAt`.
+
+To restore Turnstile in a later sprint, set
+`RESULT_DELIVERY_TURNSTILE_ENABLED=true` on the selected Convex deployment and
+`NEXT_PUBLIC_RESULT_DELIVERY_TURNSTILE_ENABLED=true` in Next.js/Vercel in the
+same release. `next.config.ts` maps `TURNSTILE_SITE_KEY` into the browser bundle;
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` remains a supported compatibility alias.
+Redeploy both applications after changing the flags.
 
 `BREVO_REPLY_TO_EMAIL` is optional. It names the monitored inbox that receives a learner's reply. The learner's entered address is the message recipient, never the sender or reply-to address. Omit the variable if the verified sender inbox should receive replies itself.
 
@@ -139,7 +150,7 @@ Brevo must first verify the sender and authenticate its sending domain. The send
 
 The email carries a 256-bit access token after `/practice/review#access=`. URL fragments do not travel in the HTTP request. The review client removes the fragment before redemption, exchanges the access token for a random session token, and keeps only that session token in `sessionStorage`. Convex stores SHA-256 digests of both tokens. The access grant expires after 30 days, can be redeemed at most five times in total, and fails closed after the fifth redemption. Each redeemed session lasts no more than 30 minutes.
 
-Turnstile is mandatory for a new public send. Before Siteverify, Convex checks the owned submitted Full Practice attempt and records one bounded verification event. It permits at most six verification calls per owner and 500 across the service in ten minutes. Verification events contain only attempt ID, owner token identifier, and creation time, then the daily cleanup removes them after 24 hours in batches of at most 50. After that pre-provider gate, the server validates the token with Cloudflare and requires the action name `full-practice-result-email` plus the exact hostname from `RESULT_DELIVERY_PUBLIC_ORIGIN`. A missing server secret, missing public site key, failed check, wrong action, or wrong hostname keeps delivery disabled. The feature also applies indexed per-attempt, per-recipient-digest, and global delivery limits.
+When Turnstile is enabled, Convex checks the owned submitted Full Practice attempt before Siteverify and records one bounded verification event. It permits at most six verification calls per owner and 500 across the service in ten minutes. Verification events contain only attempt ID, owner token identifier, and creation time, then the daily cleanup removes them after 24 hours in batches of at most 50. After that pre-provider gate, the server validates the token with Cloudflare and requires the action name `full-practice-result-email` plus the exact hostname from `RESULT_DELIVERY_PUBLIC_ORIGIN`. A missing server secret, missing public site key, failed check, wrong action, or wrong hostname keeps an enabled integration closed.
 
 Cloudflare classifies `600*` widget codes, including `600010`, as retryable generic challenge failures. They are not site-key or hostname codes. Use the in-form retry once. If it fails again, test a current browser with privacy extensions and VPN disabled, then try another network. A wrong hostname returns `110200`; an invalid or missing site key returns `110100`, `110110`, or `400020`. Keep the Ray ID when reporting a repeated failure. See Cloudflare's [Turnstile error-code reference](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/).
 
@@ -472,12 +483,14 @@ BREVO_SENDER_NAME
 BREVO_REPLY_TO_EMAIL
 RESULT_DELIVERY_PUBLIC_ORIGIN=https://YOUR-EXACT-PRODUCTION-ORIGIN
 RESULT_DELIVERY_RECIPIENT_HASH_KEY
+RESULT_DELIVERY_TURNSTILE_ENABLED=false
 TURNSTILE_SECRET_KEY
 ```
 
 Next.js/Vercel production environment:
 
 ```text
+NEXT_PUBLIC_RESULT_DELIVERY_TURNSTILE_ENABLED=false
 TURNSTILE_SITE_KEY
 ```
 
@@ -502,9 +515,9 @@ The post-deploy submission and inspection workflow is documented in
 - [ ] Private bucket exact dev/prod CORS, SHA-256 metadata, PUT, verification, preview, and derivative release path pass.
 - [ ] Original Assessment content passes validation/provenance checks plus the four academic, rights, accessibility, and bias approvals.
 - [ ] Result wording shows raw counts only and no official/predicted claim.
-- [ ] Brevo sender and sending domain are authenticated, every server-only result-delivery variable is set on the approved Convex deployment, the public Turnstile key is set in Vercel, and an operator-owned mailbox smoke test proves the attachment and private HTTPS review link.
-- [ ] Turnstile accepts only the production hostname and `full-practice-result-email` action; a negative test proves a missing or invalid token cannot reserve a delivery or call Brevo.
-- [ ] The pre-Siteverify limiter proves six calls per owner and 500 global calls per ten minutes, then the daily cleanup removes verification events after 24 hours.
+- [ ] Brevo sender and sending domain are authenticated, every active server-only result-delivery variable is set on the approved Convex deployment, and an operator-owned mailbox smoke test proves the attachment and private HTTPS review link.
+- [ ] Turnstile remains explicitly disabled on both tiers for this sprint. Before re-enabling it, the production hostname and `full-practice-result-email` action pass, and a negative test proves a missing or invalid token cannot reserve a delivery or call Brevo.
+- [ ] Before Turnstile is re-enabled, its limiter proves six calls per owner and 500 global calls per ten minutes, then the daily cleanup removes verification events after 24 hours.
 - [ ] Result delivery keeps the completion-record limit visible, uses a fragment access token plus hashed 30-minute review sessions, enforces five total redemptions, expires each grant after 30 days, and removes delivery metadata after 180 days.
 - [ ] Brevo account evidence proves anonymous Transactional Email tracking or active per-contact consent handling for `contactPixelTrackingConsent: false`, an approved transactional-log retention rule, and `Never store previews`. The release record states that source code cannot enforce these provider settings, delivery webhooks are not implemented, and `uncertain` sends are never retried automatically.
 - [ ] Journal content, map, linked media, Member profiles, joined years, role assignments, and separate profile/photo consent are reviewed.

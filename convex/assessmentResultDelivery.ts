@@ -19,10 +19,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { projectAttemptResult } from "./lib/assessmentResult";
-import {
-  projectReviewItem,
-  reviewItemValidator,
-} from "./lib/assessmentReview";
+import { projectReviewItem, reviewItemValidator } from "./lib/assessmentReview";
 import { isRandomBankSection } from "./lib/assessmentQuestionBank";
 import {
   assertSha256,
@@ -105,7 +102,8 @@ const sharedResultValidator = v.object({
   expiresAt: v.number(),
   result: attemptResultValidator,
 });
-const sharedReviewPageValidator = paginationResultValidator(reviewItemValidator);
+const sharedReviewPageValidator =
+  paginationResultValidator(reviewItemValidator);
 type SharedResult = Infer<typeof sharedResultValidator>;
 type SharedReviewPage = Infer<typeof sharedReviewPageValidator>;
 const redeemResultValidator = v.union(
@@ -150,11 +148,7 @@ async function validSessionForHash(
     "assessmentResultReviewGrants",
     session.grantId,
   );
-  if (
-    grant === null ||
-    grant.status !== "active" ||
-    grant.expiresAt <= now
-  ) {
+  if (grant === null || grant.status !== "active" || grant.expiresAt <= now) {
     return null;
   }
   const attempt = await ctx.db.get("assessmentAttempts", grant.attemptId);
@@ -201,7 +195,9 @@ export const authorizeVerification = internalMutation({
       .withIndex("by_created_at", (q) => q.gte("createdAt", windowStart))
       .take(verificationGlobalLimit);
     if (recentForOwner.length >= verificationRateLimit) {
-      const oldest = Math.min(...recentForOwner.map((event) => event.createdAt));
+      const oldest = Math.min(
+        ...recentForOwner.map((event) => event.createdAt),
+      );
       return {
         state: "rate_limited" as const,
         retryAt: oldest + verificationRateWindowMs,
@@ -234,7 +230,7 @@ export const reserve = internalMutation({
     providerAttemptId: v.string(),
     publicCertificateId: v.string(),
     consentVersion: v.literal(1),
-    humanVerifiedAt: v.number(),
+    humanVerifiedAt: v.optional(v.number()),
   },
   returns: reserveResultValidator,
   handler: async (ctx, args) => {
@@ -247,7 +243,8 @@ export const reserve = internalMutation({
         args.providerAttemptId,
       ) ||
       !/^EC-[A-F0-9]{32}$/u.test(args.publicCertificateId) ||
-      !Number.isFinite(args.humanVerifiedAt)
+      (args.humanVerifiedAt !== undefined &&
+        !Number.isFinite(args.humanVerifiedAt))
     ) {
       throw new ConvexError({ code: "DELIVERY_METADATA_INVALID" as const });
     }
@@ -361,7 +358,9 @@ export const reserve = internalMutation({
       recentForRecipient.length >= deliveryRateLimit ||
       recentGlobal.length >= globalDailyLimit
     ) {
-      const oldest = Math.min(...recent.map((delivery) => delivery.requestedAt));
+      const oldest = Math.min(
+        ...recent.map((delivery) => delivery.requestedAt),
+      );
       return {
         state: "rate_limited" as const,
         retryAt:
@@ -382,7 +381,9 @@ export const reserve = internalMutation({
       recipientHash,
       certificateNameHash,
       consentVersion: args.consentVersion,
-      humanVerifiedAt: args.humanVerifiedAt,
+      ...(args.humanVerifiedAt === undefined
+        ? {}
+        : { humanVerifiedAt: args.humanVerifiedAt }),
       status: "preparing",
       requestedAt: now,
       updatedAt: now,
@@ -446,7 +447,8 @@ export const inspect = internalQuery({
         grant === null ||
         grant.status !== "active" ||
         grant.expiresAt <= args.now
-      ) return { state: "failed" as const };
+      )
+        return { state: "failed" as const };
       return { state: existing.status, expiresAt: grant.expiresAt };
     }
     if (existing.status === "failed") return { state: "failed" as const };
@@ -514,7 +516,8 @@ export const markAccepted = internalMutation({
       delivery === null ||
       delivery.status !== "sending" ||
       delivery.providerAttemptId !== args.providerAttemptId
-    ) return null;
+    )
+      return null;
     const providerMessageId = args.providerMessageId.trim().slice(0, 180);
     const now = Date.now();
     await ctx.db.patch(delivery._id, {
@@ -542,7 +545,8 @@ export const markFailed = internalMutation({
     if (
       delivery === null ||
       (delivery.status !== "preparing" && delivery.status !== "sending")
-    ) return null;
+    )
+      return null;
     const grant = await grantForDelivery(ctx, delivery._id);
     const now = Date.now();
     if (grant !== null) {
@@ -572,7 +576,8 @@ export const markUncertain = internalMutation({
       delivery === null ||
       delivery.status !== "sending" ||
       delivery.providerAttemptId !== args.providerAttemptId
-    ) return null;
+    )
+      return null;
     await ctx.db.patch(delivery._id, {
       status: "uncertain",
       failureCode: "provider_uncertain",
@@ -643,13 +648,15 @@ export const redeemGrant = internalMutation({
       grant.status !== "active" ||
       grant.expiresAt <= args.now ||
       (grant.redemptionCount ?? 0) >= reviewSessionLimit
-    ) return { ok: false as const };
+    )
+      return { ok: false as const };
     const attempt = await ctx.db.get("assessmentAttempts", grant.attemptId);
     if (
       attempt === null ||
       attempt.status !== "submitted" ||
       attempt.currentResultId !== grant.resultId
-    ) return { ok: false as const };
+    )
+      return { ok: false as const };
     const sessions = await ctx.db
       .query("assessmentResultReviewSessions")
       .withIndex("by_grant_id_and_created_at", (q) =>
@@ -769,18 +776,13 @@ export const listSharedReviewPageAt = internalQuery({
     const progress = await ctx.db
       .query("assessmentAttemptSections")
       .withIndex("by_attempt_id_and_order", (q) =>
-        q
-          .eq("attemptId", resolved.attempt._id)
-          .eq("order", args.sectionOrder),
+        q.eq("attemptId", resolved.attempt._id).eq("order", args.sectionOrder),
       )
       .unique();
     if (progress === null) {
       throw new ConvexError({ code: "INVALID_SECTION_ORDER" as const });
     }
-    const section = await ctx.db.get(
-      "assessmentSections",
-      progress.sectionId,
-    );
+    const section = await ctx.db.get("assessmentSections", progress.sectionId);
     if (section === null || section.versionId !== resolved.attempt.versionId) {
       throw new ConvexError({ code: "ASSESSMENT_STRUCTURE_INVALID" as const });
     }
@@ -789,9 +791,7 @@ export const listSharedReviewPageAt = internalQuery({
       const pageResult = await ctx.db
         .query("assessmentAttemptItems")
         .withIndex("by_attempt_id_and_section_id_and_order", (q) =>
-          q
-            .eq("attemptId", resolved.attempt._id)
-            .eq("sectionId", section._id),
+          q.eq("attemptId", resolved.attempt._id).eq("sectionId", section._id),
         )
         .paginate({ ...args.paginationOpts, maximumRowsRead: 20 });
       const page = [];
@@ -817,9 +817,7 @@ export const listSharedReviewPageAt = internalQuery({
       .paginate({ ...args.paginationOpts, maximumRowsRead: 20 });
     const page = [];
     for (const item of pageResult.page) {
-      page.push(
-        await projectReviewItem(ctx, resolved.attempt, section, item),
-      );
+      page.push(await projectReviewItem(ctx, resolved.attempt, section, item));
     }
     return { ...pageResult, page };
   },

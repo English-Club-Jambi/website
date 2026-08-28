@@ -18,6 +18,7 @@ export default defineApp({
     BREVO_REPLY_TO_EMAIL: v.optional(v.string()),
     RESULT_DELIVERY_PUBLIC_ORIGIN: v.optional(v.string()),
     RESULT_DELIVERY_RECIPIENT_HASH_KEY: v.optional(v.string()),
+    RESULT_DELIVERY_TURNSTILE_ENABLED: v.optional(v.string()),
     TURNSTILE_SECRET_KEY: v.optional(v.string()),
   },
 });

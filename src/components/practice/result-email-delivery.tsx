@@ -25,6 +25,7 @@ import {
   certificateTemplates,
   defaultCertificateTemplateKey,
   getCertificateTemplate,
+  isResultDeliveryTurnstileEnabled,
   type CertificateTemplate,
   type CertificateTemplateKey,
 } from "@content/full-practice-delivery";
@@ -37,7 +38,7 @@ export type ResultEmailDeliveryInput = {
   consent: true;
   consentVersion: 1;
   requestId: string;
-  turnstileToken: string;
+  turnstileToken?: string;
 };
 
 export type ResultEmailDeliveryFailureCode =
@@ -121,6 +122,7 @@ export type ResultEmailDeliveryProps = {
   copy?: Partial<ResultEmailDeliveryCopy>;
   privacyHref?: string;
   initialCertificateName?: string;
+  turnstileEnabled?: boolean;
   turnstileSiteKey?: string;
   disabled?: boolean;
 };
@@ -545,6 +547,9 @@ export function ResultEmailDelivery({
   copy: copyOverrides,
   privacyHref = "/privacy",
   initialCertificateName = "",
+  turnstileEnabled = isResultDeliveryTurnstileEnabled(
+    process.env.NEXT_PUBLIC_RESULT_DELIVERY_TURNSTILE_ENABLED,
+  ),
   turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   disabled = false,
 }: ResultEmailDeliveryProps) {
@@ -591,14 +596,15 @@ export function ResultEmailDelivery({
   const selected = templateByKey(selectedTemplate);
 
   useEffect(() => {
-    if (!window.turnstile) return;
+    if (!turnstileEnabled || !window.turnstile) return;
     queueMicrotask(() => setTurnstileScriptReady(true));
-  }, []);
+  }, [turnstileEnabled]);
 
   useEffect(() => {
     const host = turnstileHostRef.current;
     const turnstile = window.turnstile;
     if (
+      !turnstileEnabled ||
       !turnstileSiteKey ||
       (delivery.kind !== "idle" && delivery.kind !== "error") ||
       !turnstileScriptReady ||
@@ -633,7 +639,7 @@ export function ResultEmailDelivery({
       turnstile.remove(widgetId);
       turnstileWidgetRef.current = null;
     };
-  }, [delivery.kind, turnstileScriptReady, turnstileSiteKey]);
+  }, [delivery.kind, turnstileEnabled, turnstileScriptReady, turnstileSiteKey]);
 
   useEffect(() => {
     if (delivery.kind === "accepted") {
@@ -670,7 +676,13 @@ export function ResultEmailDelivery({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (controlsDisabled || !validate() || !turnstileToken) return;
+    if (
+      controlsDisabled ||
+      !validate() ||
+      (turnstileEnabled && !turnstileToken)
+    ) {
+      return;
+    }
 
     if (!requestIdRef.current) requestIdRef.current = newRequestId();
     setDelivery({ kind: "pending" });
@@ -683,7 +695,7 @@ export function ResultEmailDelivery({
         consent: true,
         consentVersion: 1,
         requestId: requestIdRef.current,
-        turnstileToken,
+        ...(turnstileEnabled ? { turnstileToken } : {}),
       });
       resetHumanVerification();
 
@@ -853,7 +865,7 @@ export function ResultEmailDelivery({
         noValidate
         onSubmit={(event) => void submit(event)}
       >
-        {turnstileSiteKey ? (
+        {turnstileEnabled && turnstileSiteKey ? (
           <Script
             src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
             strategy="afterInteractive"
@@ -979,46 +991,48 @@ export function ResultEmailDelivery({
           </p>
         ) : null}
 
-        <div className={styles.deliveryVerification}>
-          <span>{copy.verificationLabel}</span>
-          {turnstileSiteKey ? (
-            <div
-              className={styles.deliveryVerificationWidget}
-              ref={turnstileHostRef}
-            />
-          ) : (
-            <p role="status">{copy.verificationUnavailable}</p>
-          )}
-          {turnstileIssue ? (
-            <div className={styles.deliveryVerificationIssue}>
-              <p role="alert">
-                {turnstileIssue.kind === "failed"
-                  ? copy.verificationFailed.replace(
-                      "{code}",
-                      turnstileIssue.code,
-                    )
-                  : turnstileIssue.kind === "expired"
-                    ? copy.verificationExpired
-                    : copy.verificationUnavailable}
-              </p>
-              {turnstileIssue.kind !== "script" ? (
-                <button
-                  type="button"
-                  className={styles.quietButton}
-                  onClick={resetHumanVerification}
-                >
-                  <ArrowPathIcon
-                    width={20}
-                    height={20}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                  />
-                  {copy.verificationRetry}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        {turnstileEnabled ? (
+          <div className={styles.deliveryVerification}>
+            <span>{copy.verificationLabel}</span>
+            {turnstileSiteKey ? (
+              <div
+                className={styles.deliveryVerificationWidget}
+                ref={turnstileHostRef}
+              />
+            ) : (
+              <p role="status">{copy.verificationUnavailable}</p>
+            )}
+            {turnstileIssue ? (
+              <div className={styles.deliveryVerificationIssue}>
+                <p role="alert">
+                  {turnstileIssue.kind === "failed"
+                    ? copy.verificationFailed.replace(
+                        "{code}",
+                        turnstileIssue.code,
+                      )
+                    : turnstileIssue.kind === "expired"
+                      ? copy.verificationExpired
+                      : copy.verificationUnavailable}
+                </p>
+                {turnstileIssue.kind !== "script" ? (
+                  <button
+                    type="button"
+                    className={styles.quietButton}
+                    onClick={resetHumanVerification}
+                  >
+                    <ArrowPathIcon
+                      width={20}
+                      height={20}
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    {copy.verificationRetry}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <p className={styles.deliveryPrivacy}>
           {copy.privacyLead}{" "}
@@ -1047,7 +1061,7 @@ export function ResultEmailDelivery({
         <button
           type="submit"
           className={`${styles.primaryButton} ${styles.deliverySubmit}`}
-          disabled={controlsDisabled || !turnstileToken}
+          disabled={controlsDisabled || (turnstileEnabled && !turnstileToken)}
         >
           <PaperAirplaneIcon
             width={20}
