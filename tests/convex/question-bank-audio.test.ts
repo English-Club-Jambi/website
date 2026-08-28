@@ -44,26 +44,29 @@ async function insertAudio(
   }> = {},
 ) {
   const now = Date.now();
-  const durationMs =
-    Object.prototype.hasOwnProperty.call(overrides, "durationMs")
-      ? overrides.durationMs
-      : 12_400;
-  return await t.run(async (ctx) =>
-    await ctx.db.insert("mediaAssets", {
-      objectKey: `uploads/assessment-audio/${key}.mp3`,
-      purpose: overrides.purpose ?? "assessment-audio",
-      contentType: overrides.contentType ?? "audio/mpeg",
-      byteSize: 48_000,
-      status: overrides.status ?? "ready",
-      originalName: `${key}.mp3`,
-      alt: `Listening recording for ${key.replaceAll("-", " ")}`,
-      access: overrides.access ?? "public",
-      ...(durationMs === undefined ? {} : { durationMs }),
-      uploadedBy: ownerId,
-      verifiedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    }),
+  const durationMs = Object.prototype.hasOwnProperty.call(
+    overrides,
+    "durationMs",
+  )
+    ? overrides.durationMs
+    : 12_400;
+  return await t.run(
+    async (ctx) =>
+      await ctx.db.insert("mediaAssets", {
+        objectKey: `uploads/assessment-audio/${key}.mp3`,
+        purpose: overrides.purpose ?? "assessment-audio",
+        contentType: overrides.contentType ?? "audio/mpeg",
+        byteSize: 48_000,
+        status: overrides.status ?? "ready",
+        originalName: `${key}.mp3`,
+        alt: `Listening recording for ${key.replaceAll("-", " ")}`,
+        access: overrides.access ?? "public",
+        ...(durationMs === undefined ? {} : { durationMs }),
+        uploadedBy: ownerId,
+        verifiedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
   );
 }
 
@@ -73,23 +76,24 @@ async function insertIllustration(
   key: string,
 ) {
   const now = Date.now();
-  return await t.run(async (ctx) =>
-    await ctx.db.insert("mediaAssets", {
-      objectKey: `uploads/assessment-image/${key}.webp`,
-      purpose: "assessment-image",
-      contentType: "image/webp",
-      byteSize: 52_000,
-      status: "ready",
-      originalName: `${key}.webp`,
-      alt: `Illustration for ${key.replaceAll("-", " ")}`,
-      width: 1_200,
-      height: 800,
-      access: "public",
-      uploadedBy: ownerId,
-      verifiedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    }),
+  return await t.run(
+    async (ctx) =>
+      await ctx.db.insert("mediaAssets", {
+        objectKey: `uploads/assessment-image/${key}.webp`,
+        purpose: "assessment-image",
+        contentType: "image/webp",
+        byteSize: 52_000,
+        status: "ready",
+        originalName: `${key}.webp`,
+        alt: `Illustration for ${key.replaceAll("-", " ")}`,
+        width: 1_200,
+        height: 800,
+        access: "public",
+        uploadedBy: ownerId,
+        verifiedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
   );
 }
 
@@ -98,13 +102,16 @@ async function createRandomPractice(
   ownerId: Id<"adminUsers">,
   skill: "reading" | "listening",
   slug: string,
+  profile:
+    | "ec-itp-level-1-aligned-v1"
+    | "ec-ibt-style-2026-v1" = "ec-itp-level-1-aligned-v1",
 ) {
   const now = Date.now();
   return await t.run(async (ctx) => {
     const definitionId = await ctx.db.insert("assessmentDefinitions", {
       slug,
       kind: "full-practice",
-      profile: "ec-itp-level-1-aligned-v1",
+      profile,
       adminTitle: `${skill} bank practice`,
       nextVersion: 2,
       visibility: "published",
@@ -149,7 +156,7 @@ async function createRandomPractice(
       instructions: "Use the supplied material and choose one answer.",
       itemCount: 1,
       deliveryMode: "random-bank",
-      bankProfile: "ec-itp-level-1-aligned-v1",
+      bankProfile: profile,
       bankSelectionContract: 1,
     });
     return { definitionId, versionId };
@@ -160,8 +167,8 @@ async function createLearner(
   t: ReturnType<typeof harness>,
   tokenIdentifier: string,
 ) {
-  const authUserId = await t.run(async (ctx) =>
-    await ctx.db.insert("users", { isAnonymous: true }),
+  const authUserId = await t.run(
+    async (ctx) => await ctx.db.insert("users", { isAnonymous: true }),
   );
   return t.withIdentity({
     subject: `${authUserId}|session`,
@@ -206,7 +213,8 @@ describe("Question Bank audio and copy-on-write content", () => {
       prompt: "What should participants do before the workshop begins?",
       options: listeningOptions,
       correctChoiceKey: "c",
-      explanation: "The announcement explicitly asks participants to bring a laptop.",
+      explanation:
+        "The announcement explicitly asks participants to bring a laptop.",
       tags: ["announcement", "detail"],
       illustrationMediaId: null,
       audioMediaId: audioA,
@@ -265,7 +273,8 @@ describe("Question Bank audio and copy-on-write content", () => {
     const noAudioRow = pausedPage.page.find(
       (row) => row.bankQuestionId === noAudio.bankQuestionId,
     );
-    if (noAudioRow === undefined) throw new Error("No-audio draft was not listed.");
+    if (noAudioRow === undefined)
+      throw new Error("No-audio draft was not listed.");
     await expect(
       owner.mutation(api.adminAssessmentQuestionBank.updateMetadata, {
         bankQuestionId: noAudioRow.bankQuestionId,
@@ -283,7 +292,8 @@ describe("Question Bank audio and copy-on-write content", () => {
     const authored = pausedPage.page.find(
       (row) => row.bankQuestionId === created.bankQuestionId,
     );
-    if (authored === undefined) throw new Error("Authored question was not listed.");
+    if (authored === undefined)
+      throw new Error("Authored question was not listed.");
     expect(authored).toMatchObject({
       options: listeningOptions,
       correctChoiceKey: "c",
@@ -341,6 +351,65 @@ describe("Question Bank audio and copy-on-write content", () => {
       "listening",
       "bank-audio-live-practice",
     );
+    await expect(
+      t.query(api.adminAssessmentPools.getQuestionReview, {
+        definitionId: practice.definitionId,
+        bankQuestionId: created.bankQuestionId,
+      }),
+    ).rejects.toThrow();
+    const review = await owner.query(
+      api.adminAssessmentPools.getQuestionReview,
+      {
+        definitionId: practice.definitionId,
+        bankQuestionId: created.bankQuestionId,
+      },
+    );
+    expect(review).toMatchObject({
+      skill: "listening",
+      status: "ready",
+      content: {
+        type: "single-choice",
+        prompt: input.prompt,
+        options: listeningOptions,
+        correctChoiceKey: "c",
+        explanation: input.explanation,
+      },
+      audio: {
+        mediaId: audioA,
+        publicUrl:
+          "https://r2.mukhtada.my.id/uploads/assessment-audio/workshop-announcement-a.mp3",
+        contentType: "audio/mpeg",
+        durationMs: 12_400,
+      },
+    });
+    expect(review).not.toHaveProperty("participant");
+    expect(review).not.toHaveProperty("attempt");
+    expect(review).not.toHaveProperty("response");
+    const unrelated = await createRandomPractice(
+      t,
+      ownerId,
+      "reading",
+      "bank-audio-unrelated-reading-practice",
+    );
+    await expect(
+      owner.query(api.adminAssessmentPools.getQuestionReview, {
+        definitionId: unrelated.definitionId,
+        bankQuestionId: created.bankQuestionId,
+      }),
+    ).resolves.toBeNull();
+    const mismatchedProfile = await createRandomPractice(
+      t,
+      ownerId,
+      "listening",
+      "bank-audio-mismatched-profile-practice",
+      "ec-ibt-style-2026-v1",
+    );
+    await expect(
+      owner.query(api.adminAssessmentPools.getQuestionReview, {
+        definitionId: mismatchedProfile.definitionId,
+        bankQuestionId: created.bankQuestionId,
+      }),
+    ).resolves.toBeNull();
     const learner = await createLearner(
       t,
       "https://example.test|question-bank-audio-learner",
@@ -352,15 +421,16 @@ describe("Question Bank audio and copy-on-write content", () => {
       listeningMode: "audio-primary",
       startRequestId: "bank-audio-attempt-0001",
     });
-    const pinned = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentAttemptItems")
-        .withIndex("by_attempt_id_and_bank_question_id", (q) =>
-          q
-            .eq("attemptId", firstAttempt.attemptId)
-            .eq("bankQuestionId", created.bankQuestionId),
-        )
-        .unique(),
+    const pinned = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentAttemptItems")
+          .withIndex("by_attempt_id_and_bank_question_id", (q) =>
+            q
+              .eq("attemptId", firstAttempt.attemptId)
+              .eq("bankQuestionId", created.bankQuestionId),
+          )
+          .unique(),
     );
     expect(pinned?.audioMediaId).toBe(audioA);
     const oldItemId = pinned?.itemId;
@@ -585,15 +655,16 @@ describe("Question Bank audio and copy-on-write content", () => {
       listeningMode: "transcript-supported",
       startRequestId: "published-source-attempt-0001",
     });
-    const pinned = await t.run(async (ctx) =>
-      await ctx.db
-        .query("assessmentAttemptItems")
-        .withIndex("by_attempt_id_and_bank_question_id", (q) =>
-          q
-            .eq("attemptId", firstAttempt.attemptId)
-            .eq("bankQuestionId", source.bankQuestionId),
-        )
-        .unique(),
+    const pinned = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("assessmentAttemptItems")
+          .withIndex("by_attempt_id_and_bank_question_id", (q) =>
+            q
+              .eq("attemptId", firstAttempt.attemptId)
+              .eq("bankQuestionId", source.bankQuestionId),
+          )
+          .unique(),
     );
     expect(pinned).toMatchObject({
       itemId: source.itemId,
@@ -618,7 +689,8 @@ describe("Question Bank audio and copy-on-write content", () => {
     const row = before.page.find(
       (candidate) => candidate.bankQuestionId === source.bankQuestionId,
     );
-    if (row === undefined) throw new Error("Published bank row was not listed.");
+    if (row === undefined)
+      throw new Error("Published bank row was not listed.");
     const revisedPrompt = "Which counter handles permit renewals on Friday?";
     const revised = await owner.mutation(
       api.adminAssessmentQuestionBank.updateContent,
@@ -653,10 +725,12 @@ describe("Question Bank audio and copy-on-write content", () => {
       }),
     ).resolves.toMatchObject({ ok: false, code: "conflict" });
 
-    const originalItem = await t.run(async (ctx) =>
-      await ctx.db.get("assessmentItems", source.itemId),
+    const originalItem = await t.run(
+      async (ctx) => await ctx.db.get("assessmentItems", source.itemId),
     );
-    expect(originalItem?.prompt).toBe("When does the harbour office close on Friday?");
+    expect(originalItem?.prompt).toBe(
+      "When does the harbour office close on Friday?",
+    );
     await learner.mutation(api.assessmentAttempts.beginSection, {
       attemptId: firstAttempt.attemptId,
     });
@@ -729,15 +803,16 @@ describe("Question Bank audio and copy-on-write content", () => {
       owner.query(api.adminAssessmentQuestionBank.getSummary, {}),
     ).resolves.toMatchObject({ ready: 2, eligible: 1 });
 
-    const disabledRuleId = await t.run(async (ctx) =>
-      await ctx.db.insert("assessmentVersionQuestionRules", {
-        versionId: practice.versionId,
-        bankQuestionId: source.bankQuestionId,
-        allowed: false,
-        updatedBy: ownerId,
-        createdAt: now,
-        updatedAt: now,
-      }),
+    const disabledRuleId = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("assessmentVersionQuestionRules", {
+          versionId: practice.versionId,
+          bankQuestionId: source.bankQuestionId,
+          allowed: false,
+          updatedBy: ownerId,
+          createdAt: now,
+          updatedAt: now,
+        }),
     );
     await expect(
       learner.mutation(api.assessmentAttempts.start, {
@@ -835,13 +910,14 @@ describe("Question Bank audio and copy-on-write content", () => {
       ),
     ).toMatchObject({ ruleState: "disabled", effectiveAllowed: false });
     await expect(
-      t.run(async (ctx) =>
-        await ctx.db
-          .query("assessmentVersionQuestionRules")
-          .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
-            q.eq("versionId", draft),
-          )
-          .collect(),
+      t.run(
+        async (ctx) =>
+          await ctx.db
+            .query("assessmentVersionQuestionRules")
+            .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+              q.eq("versionId", draft),
+            )
+            .collect(),
       ),
     ).resolves.toMatchObject([
       { bankQuestionId: source.bankQuestionId, allowed: false },
@@ -857,13 +933,14 @@ describe("Question Bank audio and copy-on-write content", () => {
     );
     expect(restored).toMatchObject({ ok: true, changed: true });
     await expect(
-      t.run(async (ctx) =>
-        await ctx.db
-          .query("assessmentVersionQuestionRules")
-          .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
-            q.eq("versionId", draft),
-          )
-          .collect(),
+      t.run(
+        async (ctx) =>
+          await ctx.db
+            .query("assessmentVersionQuestionRules")
+            .withIndex("by_version_id_and_allowed_and_updated_at", (q) =>
+              q.eq("versionId", draft),
+            )
+            .collect(),
       ),
     ).resolves.toEqual([]);
   });
@@ -1248,8 +1325,8 @@ describe("Question Bank audio and copy-on-write content", () => {
         },
       );
       if (!updated.ok) throw new Error("Specialized edit conflicted.");
-      const original = await t.run(async (ctx) =>
-        await ctx.db.get("assessmentItems", fixture.itemId),
+      const original = await t.run(
+        async (ctx) => await ctx.db.get("assessmentItems", fixture.itemId),
       );
       expect(original?.prompt).toBe(row.content.prompt);
       expect(updated.sourceItemId).not.toBe(fixture.itemId);
@@ -1272,7 +1349,8 @@ describe("Question Bank audio and copy-on-write content", () => {
     const singleChoice = page.page.find(
       (row) => row.content.type === "multiple-select",
     );
-    if (singleChoice === undefined) throw new Error("Expected a multiple-select row.");
+    if (singleChoice === undefined)
+      throw new Error("Expected a multiple-select row.");
     const currentReading = await owner.query(
       api.adminAssessmentQuestionBank.listPage,
       {
@@ -1336,8 +1414,8 @@ describe("Question Bank audio and copy-on-write content", () => {
     ).resolves.toBe(
       "https://r2.mukhtada.my.id/uploads/assessment-audio/admin-upload-contract.mp3",
     );
-    const media = await t.run(async (ctx) =>
-      await ctx.db.get("mediaAssets", mediaId),
+    const media = await t.run(
+      async (ctx) => await ctx.db.get("mediaAssets", mediaId),
     );
     expect(media).toMatchObject({
       status: "ready",

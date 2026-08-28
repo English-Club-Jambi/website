@@ -8,6 +8,7 @@ import {
   CircleStackIcon,
   InformationCircleIcon,
   PlusIcon,
+  TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { FunctionReturnType } from "convex/server";
@@ -23,6 +24,7 @@ import {
 } from "@content/assessment-task-families";
 import { SelectField } from "@/components/forms/select-field";
 
+import { useAdminConfirm } from "../admin-confirm-dialog";
 import { useAdminSession } from "../admin-session";
 import { AdminWorkspaceDialog } from "../admin-workspace-dialog";
 import adminStyles from "../admin-shell.module.css";
@@ -57,6 +59,9 @@ type BankRow = FunctionReturnType<
 >["page"][number];
 type BankContent = BankRow["content"];
 type BankProfile = BankRow["profile"];
+type QuestionDeleteResult = FunctionReturnType<
+  typeof api.adminAssessmentQuestionBank.deleteQuestion
+>;
 
 const statusOptions = [
   { value: "ready", label: "Ready for selection" },
@@ -135,17 +140,72 @@ function rowSelectionState(row: BankRow) {
   return { label: "Format default", tone: "success" as const };
 }
 
+function dependencyLabel(row: BankRow) {
+  if (row.dependency == null) return null;
+  return row.dependency.role === "anchor" ? "Set anchor" : "Follow-up";
+}
+
+function deletionFailureMessage(
+  result: Exclude<QuestionDeleteResult, { ok: true }>,
+) {
+  if (result.code === "conflict") {
+    return "This question changed after the delete dialog opened. Review the latest version before trying again.";
+  }
+  return {
+    dependency_group:
+      "This question belongs to a Listening set. Remove or revise the complete set relationship before deleting it.",
+    dependent_question:
+      "Another question depends on this one. Remove that relationship before deleting the parent question.",
+    version_rule:
+      "A Practice Format revision still refers to this question. Keep the record and pause or archive it instead.",
+    flag_history:
+      "This question has learner review history. Keep the record and pause or archive it instead.",
+    attempt_history:
+      "This question has already appeared in a learner attempt. Its audit record must be retained.",
+  }[result.reason];
+}
+
+type PaginationItem = number | "gap";
+
+export function buildCursorPaginationItems(
+  currentPage: number,
+  pageCount: number,
+): PaginationItem[] {
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  const pages = Array.from(
+    new Set([1, pageCount, currentPage - 1, currentPage, currentPage + 1]),
+  )
+    .filter((page) => page >= 1 && page <= pageCount)
+    .sort((a, b) => a - b);
+
+  return pages.flatMap<PaginationItem>((page, index) => {
+    const previous = pages[index - 1];
+    return previous !== undefined && page - previous > 1
+      ? ["gap", page]
+      : [page];
+  });
+}
+
 export function QuestionBankManager() {
   const admin = useAdminSession();
+  const confirm = useAdminConfirm();
   const capabilities = getAssessmentAdminCapabilities(admin.role);
+  const deleteQuestion = useMutation(
+    api.adminAssessmentQuestionBank.deleteQuestion,
+  );
   const [status, setStatus] = useState<BankStatus>("ready");
   const [skill, setSkill] = useState<Skill | "all">("all");
   const [difficulty, setDifficulty] = useState<Difficulty | "all">("all");
   const [cursors, setCursors] = useState<Array<string | null>>([null]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogQuestionId, setDialogQuestionId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const cursor = cursors.at(-1) ?? null;
+  const [catalogueMessage, setCatalogueMessage] = useState("");
+  const cursor = cursors[currentPage - 1] ?? null;
   const summary = useQuery(api.adminAssessmentQuestionBank.getSummary, {});
   const result = useQuery(api.adminAssessmentQuestionBank.listPage, {
     status,
@@ -180,8 +240,59 @@ export function QuestionBankManager() {
 
   function resetPage() {
     setCursors([null]);
+    setCurrentPage(1);
     setSelectedId(null);
     setDialogQuestionId(null);
+  }
+
+  function goToPage(page: number) {
+    if (page < 1) return;
+
+    if (page <= cursors.length) {
+      setCurrentPage(page);
+    } else if (
+      result !== undefined &&
+      page === cursors.length + 1 &&
+      currentPage === cursors.length &&
+      !result.isDone
+    ) {
+      setCursors((current) => [...current, result.continueCursor]);
+      setCurrentPage(page);
+    } else {
+      return;
+    }
+
+    setSelectedId(null);
+    setDialogQuestionId(null);
+  }
+
+  async function requestQuestionDeletion(row: BankRow) {
+    await confirm(
+      {
+        title: "Delete this Question Bank entry?",
+        description:
+          "This permanently removes the reusable bank entry. Its source record, answer key, and media stay in the audit trail. A question used by a format, learner attempt, learner flag, or Listening set cannot be deleted.",
+        confirmLabel: "Delete question",
+        cancelLabel: "Keep question",
+      },
+      async () => {
+        const deletion = await deleteQuestion({
+          bankQuestionId: row.bankQuestionId,
+          expectedUpdatedAt: row.updatedAt,
+        });
+        if (!deletion.ok) {
+          throw new Error(deletionFailureMessage(deletion));
+        }
+        setCatalogueMessage(`Deleted “${row.prompt}” from Question Bank.`);
+        setSelectedId(null);
+        setDialogQuestionId(null);
+        if (result?.page.length === 1 && currentPage > 1) {
+          const previousPage = currentPage - 1;
+          setCursors((current) => current.slice(0, previousPage));
+          setCurrentPage(previousPage);
+        }
+      },
+    );
   }
 
   const selected =
@@ -236,6 +347,7 @@ export function QuestionBankManager() {
               setSkill("all");
               setDifficulty("all");
               setCursors([null]);
+              setCurrentPage(1);
               setSelectedId(bankQuestionId);
               setCreating(false);
             }}
@@ -333,9 +445,15 @@ export function QuestionBankManager() {
           />
           <div className={adminStyles.workspaceFact} role="status">
             <span>Page</span>
-            <strong>{cursors.length}</strong>
+            <strong>{currentPage}</strong>
           </div>
         </div>
+
+        {catalogueMessage ? (
+          <p className={styles.successNotice} role="status">
+            {catalogueMessage}
+          </p>
+        ) : null}
 
         {result === undefined ? (
           <AdminLoadingRows label="Loading question bank" />
@@ -375,6 +493,9 @@ export function QuestionBankManager() {
                           {titleCase(row.skill)} ·{" "}
                           {assessmentTaskFamilyLabelByValue[row.taskFamily]} ·{" "}
                           {titleCase(row.difficulty)}
+                          {dependencyLabel(row) === null
+                            ? null
+                            : ` · ${dependencyLabel(row)}`}
                         </small>
                       </span>
                       <AdminStatus tone={selectionState.tone}>
@@ -392,43 +513,71 @@ export function QuestionBankManager() {
               illustrationAssets={illustrationAssets}
               audioAssets={audioAssets}
               onOpenDialog={() => setDialogQuestionId(selected.bankQuestionId)}
+              canDelete={admin.role === "owner"}
+              onDelete={() => void requestQuestionDeletion(selected)}
             />
           </div>
         )}
 
-        {result && (cursors.length > 1 || !result.isDone) ? (
+        {result && result.page.length > 0 ? (
           <nav
-            className={adminStyles.listFooter}
+            className={`${adminStyles.listFooter} ${styles.bankPagination}`}
             aria-label="Question bank pages"
           >
-            <div className={adminStyles.buttonRow}>
-              <button
-                className={adminStyles.secondaryButton}
-                type="button"
-                disabled={cursors.length === 1}
-                onClick={() => {
-                  setCursors((current) =>
-                    current.slice(0, Math.max(1, current.length - 1)),
-                  );
-                  setSelectedId(null);
-                }}
-              >
-                <ChevronLeftIcon aria-hidden width={18} height={18} />
-                Previous
-              </button>
-              <button
-                className={adminStyles.secondaryButton}
-                type="button"
-                disabled={result.isDone}
-                onClick={() => {
-                  setCursors((current) => [...current, result.continueCursor]);
-                  setSelectedId(null);
-                }}
-              >
-                Next
-                <ChevronRightIcon aria-hidden width={18} height={18} />
-              </button>
-            </div>
+            <button
+              className={`${adminStyles.secondaryButton} ${styles.bankPaginationDirection}`}
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => goToPage(currentPage - 1)}
+            >
+              <ChevronLeftIcon aria-hidden width={18} height={18} />
+              Previous
+            </button>
+            <ol className={styles.bankPaginationPages}>
+              {buildCursorPaginationItems(
+                currentPage,
+                cursors.length +
+                  (currentPage === cursors.length && !result.isDone ? 1 : 0),
+              ).map((item, index) =>
+                item === "gap" ? (
+                  <li key={`gap-${index}`} className={styles.bankPaginationGap}>
+                    <span aria-hidden="true">…</span>
+                    <span className={styles.visuallyHidden}>
+                      More pages omitted
+                    </span>
+                  </li>
+                ) : (
+                  <li key={item}>
+                    <button
+                      type="button"
+                      className={styles.bankPaginationPage}
+                      data-active={item === currentPage}
+                      aria-current={item === currentPage ? "page" : undefined}
+                      aria-label={
+                        item === currentPage
+                          ? `Page ${item}, current page`
+                          : `Go to page ${item}`
+                      }
+                      onClick={() => goToPage(item)}
+                    >
+                      {item}
+                    </button>
+                  </li>
+                ),
+              )}
+            </ol>
+            <button
+              className={`${adminStyles.secondaryButton} ${styles.bankPaginationDirection}`}
+              type="button"
+              disabled={currentPage === cursors.length && result.isDone}
+              onClick={() => goToPage(currentPage + 1)}
+            >
+              Next
+              <ChevronRightIcon aria-hidden width={18} height={18} />
+            </button>
+            <p className={styles.visuallyHidden} aria-live="polite">
+              Page {currentPage}. {result.page.length} questions shown.
+            </p>
           </nav>
         ) : null}
       </AdminSection>
@@ -747,12 +896,16 @@ function QuestionBankEditor({
   illustrationAssets,
   audioAssets,
   onOpenDialog,
+  canDelete = false,
+  onDelete,
 }: {
   row: BankRow;
   canEdit: boolean;
   illustrationAssets: ReadonlyArray<QuestionIllustrationAsset>;
   audioAssets: ReadonlyArray<QuestionAudioAsset>;
   onOpenDialog?: () => void;
+  canDelete?: boolean;
+  onDelete?: () => void;
 }) {
   const updateContent = useMutation(
     api.adminAssessmentQuestionBank.updateContent,
@@ -781,9 +934,7 @@ function QuestionBankEditor({
   const pending = contentPending || settingsPending;
   const selectableIllustrationAssets =
     row.illustration !== null &&
-    !illustrationAssets.some(
-      (asset) => asset._id === row.illustration?.mediaId,
-    )
+    !illustrationAssets.some((asset) => asset._id === row.illustration?.mediaId)
       ? [
           {
             _id: row.illustration.mediaId,
@@ -933,6 +1084,9 @@ function QuestionBankEditor({
           <AdminStatus tone="neutral">
             {itemTypeLabel(row.content.type)}
           </AdminStatus>
+          {row.dependency ? (
+            <AdminStatus tone="success">{dependencyLabel(row)}</AdminStatus>
+          ) : null}
           {onOpenDialog ? (
             <button
               className={adminStyles.secondaryButton}
@@ -944,8 +1098,36 @@ function QuestionBankEditor({
               Open popup
             </button>
           ) : null}
+          {canDelete && onDelete ? (
+            <button
+              className={adminStyles.dangerButton}
+              type="button"
+              onClick={onDelete}
+            >
+              <TrashIcon aria-hidden width={18} height={18} />
+              Delete question
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {row.dependency ? (
+        <section className={styles.bankDependencyContext}>
+          <div>
+            <span>Listening set</span>
+            <strong>{dependencyLabel(row)}</strong>
+          </div>
+          <div>
+            <span>Set key</span>
+            <strong>{row.dependency.groupKey}</strong>
+          </div>
+          <p>
+            {row.dependency.role === "anchor"
+              ? "This anchor is delivered first whenever one of its follow-ups enters a session. Disabling it in a Practice Format suppresses the whole set."
+              : `This question can enter a session only after its anchor: ${row.dependency.parentPrompt ?? "the set anchor"}.`}
+          </p>
+        </section>
+      ) : null}
 
       <form className={styles.bankEditorSection} onSubmit={saveContent}>
         <div className={styles.bankEditorSectionHeading}>
@@ -1081,6 +1263,12 @@ function QuestionBankEditor({
           <dt>Points</dt>
           <dd>{formatPoints(row.points)}</dd>
         </div>
+        {row.dependency ? (
+          <div>
+            <dt>Sequence</dt>
+            <dd>{dependencyLabel(row)}</dd>
+          </div>
+        ) : null}
       </dl>
     </aside>
   );

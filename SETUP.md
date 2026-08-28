@@ -376,7 +376,7 @@ npx convex run assessmentSeed:verifyQuestionBank \
 
 The seed is checksum-bound and idempotent. It publishes one 140-question paper form, three eight-item quick forms, and the reviewed/generated Listening derivatives under `https://r2.mukhtada.my.id/assessments/`. The complete form uses `paper-estimate-v1`; quick forms use raw correct counts. This is a development operator path, not evidence that the production human-review workflow ran. A production candidate still requires the current validation/provenance check and four current-revision academic, rights, accessibility, and bias approvals.
 
-The page-copy CMS supports at most 200 entries for one page/locale. The current Practice manifest fits within that contract. A manifest change that would create entry 201 must be split or redesigned before deployment.
+The page-copy CMS supports at most 256 entries for one page/locale. The current 212-field Practice manifest fits within that contract. A manifest change that would create entry 257 must be split or redesigned before deployment.
 
 ## 11. Media workflow
 
@@ -442,7 +442,7 @@ The integrated evidence must cover:
 - touch and keyboard navigation, reusable custom selects/dialogs, reduced motion, and Axe;
 - Journal six-row cursor pages and noindex cursor variants;
 - Password sign-in, identity-only denial, owner/editor/publisher permissions, and audit writes;
-- 200-entry CMS ceiling and publication freshness;
+- 256-entry CMS ceiling and publication freshness;
 - theme save/publish/rollback and safe root serialization;
 - Anonymous identity created only after Practice Start;
 - malformed/missing/cross-owner attempt parity, answer-key privacy, final-section submit, legacy raw-result reproduction, fixed-form estimate limits, 20-item review, and owned deletion;

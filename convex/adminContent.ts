@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 
+import { PUBLIC_CONTENT_PAGE_ENTRY_LIMIT } from "../content/public-content";
+
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
@@ -7,7 +9,6 @@ import { contentKindValidator } from "./validators";
 
 const keyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const localePattern = /^[a-z]{2}(?:-[A-Z]{2})?$/;
-const MAX_CONTENT_ENTRIES_PER_PAGE = 200;
 
 const contentWorkspaceItemValidator = v.object({
   _id: v.id("siteContentEntries"),
@@ -85,8 +86,8 @@ export const getPageWorkspace = query({
       .withIndex("by_page_key_and_locale_and_content_key", (q) =>
         q.eq("pageKey", args.pageKey).eq("locale", args.locale),
       )
-      .take(MAX_CONTENT_ENTRIES_PER_PAGE + 1);
-    if (rows.length > MAX_CONTENT_ENTRIES_PER_PAGE) {
+      .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT + 1);
+    if (rows.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
       throw new Error("Content page exceeds the supported entry limit.");
     }
     return rows.map(toWorkspaceItem);
@@ -142,8 +143,8 @@ export const saveDraft = mutation({
         .withIndex("by_page_key_and_locale_and_content_key", (q) =>
           q.eq("pageKey", args.pageKey).eq("locale", args.locale),
         )
-        .take(MAX_CONTENT_ENTRIES_PER_PAGE);
-      if (pageEntries.length >= MAX_CONTENT_ENTRIES_PER_PAGE) {
+        .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT);
+      if (pageEntries.length >= PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
         throw new Error("Content page has reached its entry limit.");
       }
     }

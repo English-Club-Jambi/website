@@ -1,0 +1,246 @@
+.player {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(7rem, 1fr) auto 44px minmax(5.5rem, 7.5rem) auto;
+  grid-template-areas: "play seek time mute volume state";
+  gap: 0.7rem;
+  align-items: center;
+  border-block: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.65rem 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.player audio {
+  display: none;
+}
+
+.iconButton {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--primary-strong);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-wash);
+}
+
+.iconButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.iconButton:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.playButton {
+  grid-area: play;
+}
+
+.player[data-state="playing"] .playButton,
+.player[data-state="buffering"] .playButton {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.muteButton {
+  grid-area: mute;
+}
+
+.rangeField {
+  position: relative;
+  min-width: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  touch-action: pan-y;
+}
+
+.seekField {
+  grid-area: seek;
+}
+
+.volumeField {
+  grid-area: volume;
+}
+
+.track {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--line);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.buffered,
+.progress {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  display: block;
+}
+
+.buffered {
+  width: var(--audio-buffered);
+  background: color-mix(in oklch, var(--primary) 30%, var(--line));
+}
+
+.progress {
+  width: var(--audio-progress);
+  background: var(--primary);
+}
+
+.range {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.range:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  background: transparent;
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  border: 0;
+  background: transparent;
+}
+
+.range::-moz-range-progress {
+  height: 4px;
+  background: transparent;
+}
+
+.range::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  margin-top: -7px;
+  appearance: none;
+  background: var(--primary);
+}
+
+.range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.range:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.time {
+  grid-area: time;
+  min-width: 6.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.timeDivider {
+  padding-inline: 0.35rem;
+  color: var(--line);
+}
+
+.state {
+  grid-area: state;
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.player[data-state="playing"] .state,
+.player[data-state="buffering"] .state,
+.player[data-state="ready"] .state {
+  color: var(--primary-strong);
+}
+
+.player[data-state="error"] .state {
+  color: var(--danger);
+}
+
+@media (max-width: 48rem) {
+  .player {
+    grid-template-columns: 44px minmax(6rem, 1fr) auto 44px auto;
+    grid-template-areas: "play seek time mute state";
+  }
+
+  .volumeField {
+    display: none;
+  }
+}
+
+@media (max-width: 31rem) {
+  .player {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-areas:
+      "play seek mute"
+      "time time time"
+      "state state state";
+    gap: 0.35rem 0.6rem;
+    padding-block: 0.55rem;
+  }
+
+  .time {
+    min-width: 0;
+    justify-self: start;
+    font-size: 0.78rem;
+  }
+
+  .state {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconButton {
+    transition: none;
+  }
+}

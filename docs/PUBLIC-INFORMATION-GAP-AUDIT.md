@@ -100,7 +100,7 @@ The English Club contact form is now named as the club's working route. Email, t
 
 ## Technical content findings
 
-- Current manifest field counts remain inside the 200-entry per-page Convex limit: global 28, home 78, practice 173, about 52, activities 33, programs 24, members 44, journal 19, privacy 32, and contact 42.
+- Current manifest field counts remain inside the 256-entry per-page Convex limit: global 28, home 78, practice 212, about 52, activities 33, programs 24, members 44, journal 19, privacy 34, and contact 42.
 - About location content is editable through the existing Page Copy workflow. Coordinates, the OpenStreetMap embed, and the confirmed Google Maps destination remain code-owned to prevent arbitrary map or tracking URLs.
 - The About page emits `AboutPage`, `Organization`, `Place`, `GeoCoordinates`, and `PostalAddress` structured data. The visible address remains present without JavaScript.
 - The interactive map loads from OpenStreetMap when the section nears the viewport. The production privacy notice should name this third-party map request; the visible address and Google Maps action remain usable if the embed fails.

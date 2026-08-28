@@ -1,0 +1,431 @@
+{
+  "dataset": {
+    "id": "magoosh-toefl-listening-reference-recap-v1",
+    "title": "Listening section reference recap",
+    "created_at": "2026-08-28T23:12:00+07:00",
+    "language": "en",
+    "content_mode": "paraphrased-reference-only",
+    "question_count": 11,
+    "set_count": 2,
+    "media_count": 5
+  },
+  "rights": {
+    "attribution_in_source": "Magoosh TOEFL",
+    "copied_question_text": false,
+    "copied_option_text": false,
+    "copied_transcript": false,
+    "copied_media": false,
+    "public_seed_allowed": false,
+    "requires_rights_review": true,
+    "paraphrase_overlap_audit": {
+      "maximum_shared_contiguous_words": 5,
+      "audited_at": "2026-08-28T23:14:00+07:00"
+    },
+    "notice": "This file records structure, answer labels, media metadata, and paraphrased content summaries. It is not a republication of the source questions and must not be imported into the public Question Bank without a documented licence or a complete original rewrite."
+  },
+  "source": {
+    "document_url": "https://www.marianas.edu/media/TestingServices/TOEFL/TOEFL_Practice_Questions.pdf",
+    "document_pages": 76,
+    "listening_printed_pages": [15, 16, 17, 18, 19, 20, 21, 22],
+    "answer_printed_pages": [46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61],
+    "document_sha256": "d344c5a3d2a2bdb248c0937aeabd52815dfdc449a48344e874d541c4007340ea",
+    "verified_at": "2026-08-28T23:08:00+07:00"
+  },
+  "delivery_contract": {
+    "selection_unit": "question-set",
+    "anchor_required": true,
+    "follow_up_sampling_allowed": true,
+    "all_follow_ups_required": false,
+    "selected_members_contiguous": true,
+    "selected_members_keep_source_order": true,
+    "parent_media_must_be_available": true,
+    "replay_media_required_when_referenced": true,
+    "attempt_manifest_immutable": true,
+    "rule_summary": "A set may be sampled, but its anchor must be selected first. Any chosen follow-up stays beside that anchor in source order. A replay question also carries its own replay clip while retaining the complete parent recording."
+  },
+  "media": [
+    {
+      "id": "lecture-emdr-parent",
+      "set_id": "lecture-emdr",
+      "role": "parent-recording",
+      "source_label": "Five-minute lecture",
+      "source_url": "http://magoosh.com/toefl/files/2014/09/Test-1-Listening-A0-Lect-EMDR.mp3",
+      "source_transport": "http-as-published",
+      "http_status": 200,
+      "content_type": "audio/mpeg",
+      "content_length_bytes": 2458980,
+      "duration_ms": 306861,
+      "printed_page": 16,
+      "used_by_question_ids": [
+        "lecture-emdr-q1",
+        "lecture-emdr-q2",
+        "lecture-emdr-q3",
+        "lecture-emdr-q4",
+        "lecture-emdr-q5",
+        "lecture-emdr-q6"
+      ],
+      "ingestion_allowed": false
+    },
+    {
+      "id": "lecture-emdr-replay-q5",
+      "set_id": "lecture-emdr",
+      "role": "replay-clip",
+      "source_label": "Lecture replay for question 5",
+      "source_url": "http://magoosh.com/toefl/files/2014/09/Test-1-Listening-A5-Lect-EMDR.mp3",
+      "source_transport": "http-as-published",
+      "http_status": 200,
+      "content_type": "audio/mpeg",
+      "content_length_bytes": 206598,
+      "duration_ms": 25313,
+      "printed_page": 18,
+      "used_by_question_ids": ["lecture-emdr-q5"],
+      "ingestion_allowed": false
+    },
+    {
+      "id": "lecture-emdr-replay-q6",
+      "set_id": "lecture-emdr",
+      "role": "replay-clip",
+      "source_label": "Lecture replay for question 6",
+      "source_url": "http://magoosh.com/toefl/files/2014/09/Test-1-Listening-A6-Lect-EMDR.mp3",
+      "source_transport": "http-as-published",
+      "http_status": 200,
+      "content_type": "audio/mpeg",
+      "content_length_bytes": 125514,
+      "duration_ms": 15177,
+      "printed_page": 19,
+      "used_by_question_ids": ["lecture-emdr-q6"],
+      "ingestion_allowed": false
+    },
+    {
+      "id": "conversation-henry-parent",
+      "set_id": "conversation-henry",
+      "role": "parent-recording",
+      "source_label": "Four-minute conversation",
+      "source_url": "http://dxdo2x6i0ocgk.cloudfront.net/c4b858819472853599f0bbdd6ed25e32f3f75182-video-5722/web.mp4",
+      "source_transport": "http-as-published",
+      "http_status": 200,
+      "content_type": "video/mp4",
+      "content_length_bytes": 2399394,
+      "duration_ms": 211302,
+      "printed_page": 20,
+      "used_by_question_ids": [
+        "conversation-henry-q1",
+        "conversation-henry-q2",
+        "conversation-henry-q3",
+        "conversation-henry-q4",
+        "conversation-henry-q5"
+      ],
+      "ingestion_allowed": false
+    },
+    {
+      "id": "conversation-henry-replay-q5",
+      "set_id": "conversation-henry",
+      "role": "replay-page",
+      "source_label": "Conversation replay for question 5",
+      "source_url": "https://soundcloud.com/lucas-magoosh/test-4-listening-t5",
+      "source_transport": "https",
+      "http_status": 200,
+      "content_type": "text/html",
+      "content_length_bytes": 75907,
+      "duration_ms": 25359,
+      "printed_page": 22,
+      "used_by_question_ids": ["conversation-henry-q5"],
+      "ingestion_allowed": false
+    }
+  ],
+  "sets": [
+    {
+      "id": "lecture-emdr",
+      "kind": "academic-lecture",
+      "topic_summary": "A professor surveys EMDR as a treatment for psychological trauma, including its aims, mechanisms, limits, and possible benefits.",
+      "printed_pages": [16, 17, 18, 19],
+      "answer_printed_pages": [46, 47, 48, 49, 50, 51, 52, 53, 54],
+      "parent_media_id": "lecture-emdr-parent",
+      "anchor_question_id": "lecture-emdr-q1",
+      "question_count": 6,
+      "questions": [
+        {
+          "id": "lecture-emdr-q1",
+          "source_number": 1,
+          "printed_page": 17,
+          "dependency_role": "anchor",
+          "parent_question_id": null,
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": null,
+          "task_family": "main-idea",
+          "response_type": "single-choice",
+          "prompt_summary": "Identify the subject that best captures the lecture as a whole.",
+          "options": [
+            { "key": "A", "summary": "A narrow technical definition of the treatment" },
+            { "key": "B", "summary": "A comparison among several therapy categories" },
+            { "key": "C", "summary": "A survey of multiple unconventional trauma treatments" },
+            { "key": "D", "summary": "The purpose and practical value of EMDR" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "D",
+            "rationale_summary": "Most of the lecture explains what EMDR does and why the professor considers it useful."
+          }
+        },
+        {
+          "id": "lecture-emdr-q2",
+          "source_number": 2,
+          "printed_page": 17,
+          "dependency_role": "follow-up",
+          "parent_question_id": "lecture-emdr-q1",
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": null,
+          "task_family": "detail-definition",
+          "response_type": "single-choice",
+          "prompt_summary": "Choose the professor's intended meaning of processing a traumatic experience.",
+          "options": [
+            { "key": "A", "summary": "Describing the technical operation of EMDR" },
+            { "key": "B", "summary": "Returning mentally to the event itself" },
+            { "key": "C", "summary": "Understanding the event from a healthier mental state" },
+            { "key": "D", "summary": "Discussing the painful event during EMDR" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "C",
+            "rationale_summary": "The lecture treats processing as healthier understanding, not merely remembering or describing an event."
+          }
+        },
+        {
+          "id": "lecture-emdr-q3",
+          "source_number": 3,
+          "printed_page": 17,
+          "dependency_role": "follow-up",
+          "parent_question_id": "lecture-emdr-q1",
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": null,
+          "task_family": "speaker-attitude",
+          "response_type": "single-choice",
+          "prompt_summary": "Infer the professor's overall position toward EMDR.",
+          "options": [
+            { "key": "A", "summary": "Positive about its distinct approach, evidence, and future" },
+            { "key": "B", "summary": "Convinced that psychologists still need substantial time to understand it" },
+            { "key": "C", "summary": "Uncertain whether the benefits last" },
+            { "key": "D", "summary": "Certain it will replace most other trauma treatment" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "A",
+            "rationale_summary": "Her examples and conclusion consistently frame the treatment as distinctive and effective without claiming it will replace every alternative."
+          }
+        },
+        {
+          "id": "lecture-emdr-q4",
+          "source_number": 4,
+          "printed_page": 18,
+          "dependency_role": "follow-up",
+          "parent_question_id": "lecture-emdr-q1",
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": null,
+          "task_family": "classification",
+          "response_type": "matrix-single-choice-per-row",
+          "prompt_summary": "Classify each treatment feature as belonging to EMDR or to other therapy.",
+          "categories": [
+            { "key": "emdr", "label": "EMDR" },
+            { "key": "other", "label": "Other therapy" }
+          ],
+          "rows": [
+            {
+              "key": "A",
+              "summary": "Prioritises mental state rather than bodily response",
+              "correct_category_key": "other"
+            },
+            {
+              "key": "B",
+              "summary": "Can take longer when several layers of trauma emerge",
+              "correct_category_key": "emdr"
+            },
+            {
+              "key": "C",
+              "summary": "Uses side-to-side eye movement while following a light",
+              "correct_category_key": "emdr"
+            }
+          ],
+          "answer": {
+            "kind": "matrix",
+            "correct_row_keys_for_emdr": ["B", "C"],
+            "correct_row_keys_for_other": ["A"],
+            "rationale_summary": "The lecture contrasts the bodily element of EMDR with other therapy and explicitly assigns the layered-trauma delay and eye movement to EMDR."
+          }
+        },
+        {
+          "id": "lecture-emdr-q5",
+          "source_number": 5,
+          "printed_page": 18,
+          "dependency_role": "follow-up",
+          "parent_question_id": "lecture-emdr-q1",
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": "lecture-emdr-replay-q5",
+          "task_family": "replay-meaning",
+          "response_type": "single-choice",
+          "prompt_summary": "Interpret the professor's metaphor about a traumatic memory becoming fixed in time.",
+          "options": [
+            { "key": "A", "summary": "The original event seems to last unusually long" },
+            { "key": "B", "summary": "The unwanted memory remains present and persistent" },
+            { "key": "C", "summary": "Comparable events repeatedly occur in the person's life" },
+            { "key": "D", "summary": "The event only appears more disabling than it is" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "B",
+            "rationale_summary": "The metaphor refers to a memory that remains stuck and repeatedly returns, not to the event literally happening again."
+          }
+        },
+        {
+          "id": "lecture-emdr-q6",
+          "source_number": 6,
+          "printed_page": 19,
+          "dependency_role": "follow-up",
+          "parent_question_id": "lecture-emdr-q1",
+          "parent_media_id": "lecture-emdr-parent",
+          "replay_media_id": "lecture-emdr-replay-q6",
+          "task_family": "replay-rhetorical-purpose",
+          "response_type": "single-choice",
+          "prompt_summary": "Determine why the professor gives a caution about treatment speed and individual needs.",
+          "options": [
+            { "key": "A", "summary": "To discourage rushing treatment merely for a fast result" },
+            { "key": "B", "summary": "To define EMDR as a strictly time-limited method" },
+            { "key": "C", "summary": "To argue that every other therapy is slower and weaker" },
+            { "key": "D", "summary": "To forbid EMDR with a newly met patient" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "A",
+            "rationale_summary": "Her point is that client needs matter more than speed, not that the treatment has a fixed duration or a blanket restriction."
+          }
+        }
+      ]
+    },
+    {
+      "id": "conversation-henry",
+      "kind": "campus-conversation",
+      "topic_summary": "A student asks a professor how to turn an unfocused history lesson on Henry VIII into an engaging class presentation.",
+      "printed_pages": [20, 21, 22],
+      "answer_printed_pages": [55, 56, 57, 58, 59, 60, 61],
+      "parent_media_id": "conversation-henry-parent",
+      "anchor_question_id": "conversation-henry-q1",
+      "question_count": 5,
+      "questions": [
+        {
+          "id": "conversation-henry-q1",
+          "source_number": 1,
+          "printed_page": 21,
+          "dependency_role": "anchor",
+          "parent_question_id": null,
+          "parent_media_id": "conversation-henry-parent",
+          "replay_media_id": null,
+          "task_family": "conversation-purpose",
+          "response_type": "single-choice",
+          "prompt_summary": "Identify the student's main reason for meeting the professor.",
+          "options": [
+            { "key": "A", "summary": "To make a potentially dull lesson more engaging" },
+            { "key": "B", "summary": "To share recent personal and family news" },
+            { "key": "C", "summary": "To learn missing facts about English history" },
+            { "key": "D", "summary": "To complain about another instructor's assignment" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "A",
+            "rationale_summary": "After brief small talk, the student asks for help making a history lesson less dry."
+          }
+        },
+        {
+          "id": "conversation-henry-q2",
+          "source_number": 2,
+          "printed_page": 21,
+          "dependency_role": "follow-up",
+          "parent_question_id": "conversation-henry-q1",
+          "parent_media_id": "conversation-henry-parent",
+          "replay_media_id": null,
+          "task_family": "inference",
+          "response_type": "single-choice",
+          "prompt_summary": "Infer what the student's reference to three less-discussed English kings implies.",
+          "options": [
+            { "key": "A", "summary": "Their reigns were too short to matter" },
+            { "key": "B", "summary": "Too little evidence survives to teach them well" },
+            { "key": "C", "summary": "Historians generally dislike them" },
+            { "key": "D", "summary": "Students tend to know them less well than Henry VIII" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "D",
+            "rationale_summary": "The comparison concerns how much students learn about those rulers, not their merit, reign length, or historical record."
+          }
+        },
+        {
+          "id": "conversation-henry-q3",
+          "source_number": 3,
+          "printed_page": 21,
+          "dependency_role": "follow-up",
+          "parent_question_id": "conversation-henry-q1",
+          "parent_media_id": "conversation-henry-parent",
+          "replay_media_id": null,
+          "task_family": "speaker-belief",
+          "response_type": "single-choice",
+          "prompt_summary": "Choose the claim that reflects the student's view of Henry VIII.",
+          "options": [
+            { "key": "A", "summary": "His vivid personality is a major reason people remember him" },
+            { "key": "B", "summary": "Stories about his life are usually exaggerated" },
+            { "key": "C", "summary": "Executing his wives proves he was cruel" },
+            { "key": "D", "summary": "His legacy still directly controls European politics" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "A",
+            "rationale_summary": "The student describes striking biographical details and treats Henry as a memorable, larger-than-life figure."
+          }
+        },
+        {
+          "id": "conversation-henry-q4",
+          "source_number": 4,
+          "printed_page": 22,
+          "dependency_role": "follow-up",
+          "parent_question_id": "conversation-henry-q1",
+          "parent_media_id": "conversation-henry-parent",
+          "replay_media_id": null,
+          "task_family": "next-step",
+          "response_type": "single-choice",
+          "prompt_summary": "Identify what the student proposes doing before teaching the lesson.",
+          "options": [
+            { "key": "A", "summary": "Review the plan with a different professor" },
+            { "key": "B", "summary": "Rehearse the lecture to improve the storytelling" },
+            { "key": "C", "summary": "Find additional dramatic facts about Henry" },
+            { "key": "D", "summary": "Listen to a peer teach the same material" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "B",
+            "rationale_summary": "Near the end, the student suggests trying the lecture on someone first so the story can be delivered better."
+          }
+        },
+        {
+          "id": "conversation-henry-q5",
+          "source_number": 5,
+          "printed_page": 22,
+          "dependency_role": "follow-up",
+          "parent_question_id": "conversation-henry-q1",
+          "parent_media_id": "conversation-henry-parent",
+          "replay_media_id": "conversation-henry-replay-q5",
+          "task_family": "replay-meaning",
+          "response_type": "single-choice",
+          "prompt_summary": "Interpret why the professor reassures the student during the replayed exchange.",
+          "options": [
+            { "key": "A", "summary": "She considers the other professor unfairly intimidating" },
+            { "key": "B", "summary": "She believes the student's concern is unfounded" },
+            { "key": "C", "summary": "She invites the student to ask for guidance comfortably" },
+            { "key": "D", "summary": "She offers to help teach the lesson herself" }
+          ],
+          "answer": {
+            "kind": "choice",
+            "correct_option_key": "C",
+            "rationale_summary": "The reassurance opens space for the student to explain the problem and seek advice; it is not an offer to co-teach."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import {
   assessmentDeliveryModeValidator,
   assessmentProfileValidator,
   assessmentQuestionBankStatusValidator,
+  assessmentQuestionDependencyRoleValidator,
   assessmentQuestionDifficultyValidator,
   assessmentResponseValidator,
   assessmentReviewGrantStatusValidator,
@@ -191,10 +192,7 @@ export default defineSchema({
     updatedAt: v.number(),
     sourcePath: v.string(),
   })
-    .index("by_normalized_email_created_at", [
-      "normalizedEmail",
-      "createdAt",
-    ])
+    .index("by_normalized_email_created_at", ["normalizedEmail", "createdAt"])
     .index("by_status_created_at", ["status", "createdAt"])
     .index("by_created_at", ["createdAt"])
     .index("by_intent_and_created_at", ["intent", "createdAt"])
@@ -252,10 +250,7 @@ export default defineSchema({
       "roleLevel",
       "sortOrder",
     ])
-    .index("by_profile_status_and_updated_at", [
-      "profileStatus",
-      "updatedAt",
-    ])
+    .index("by_profile_status_and_updated_at", ["profileStatus", "updatedAt"])
     .index("by_division_id_and_role_level", ["divisionId", "roleLevel"])
     .index("by_updated_at", ["updatedAt"]),
 
@@ -274,11 +269,7 @@ export default defineSchema({
     .index("by_token_identifier", ["tokenIdentifier"])
     .index("by_auth_issuer_and_auth_user_id", ["authIssuer", "authUserId"])
     .index("by_status_and_updated_at", ["status", "updatedAt"])
-    .index("by_role_and_status_and_updated_at", [
-      "role",
-      "status",
-      "updatedAt",
-    ])
+    .index("by_role_and_status_and_updated_at", ["role", "status", "updatedAt"])
     .index("by_created_at", ["createdAt"]),
 
   cmsAuditEvents: defineTable({
@@ -364,24 +355,25 @@ export default defineSchema({
       "status",
       "updatedAt",
     ])
-    .index(
-      "by_version_access_status_updated",
-      ["assessmentVersionId", "access", "status", "updatedAt"],
-    )
-    .index(
-      "by_version_purpose_status_updated",
-      ["assessmentVersionId", "purpose", "status", "updatedAt"],
-    )
-    .index(
-      "by_version_access_purpose_status_updated",
-      [
-        "assessmentVersionId",
-        "access",
-        "purpose",
-        "status",
-        "updatedAt",
-      ],
-    ),
+    .index("by_version_access_status_updated", [
+      "assessmentVersionId",
+      "access",
+      "status",
+      "updatedAt",
+    ])
+    .index("by_version_purpose_status_updated", [
+      "assessmentVersionId",
+      "purpose",
+      "status",
+      "updatedAt",
+    ])
+    .index("by_version_access_purpose_status_updated", [
+      "assessmentVersionId",
+      "access",
+      "purpose",
+      "status",
+      "updatedAt",
+    ]),
 
   assessmentDefinitions: defineTable({
     slug: v.string(),
@@ -466,10 +458,12 @@ export default defineSchema({
     note: v.string(),
     createdAt: v.number(),
   })
-    .index(
-      "by_version_revision_review_created",
-      ["versionId", "contentRevision", "reviewType", "createdAt"],
-    )
+    .index("by_version_revision_review_created", [
+      "versionId",
+      "contentRevision",
+      "reviewType",
+      "createdAt",
+    ])
     .index("by_version_id_and_review_type_and_created_at", [
       "versionId",
       "reviewType",
@@ -512,10 +506,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_section_id_and_order", ["sectionId", "order"])
-    .index("by_version_id_and_stimulus_key", [
-      "versionId",
-      "stimulusKey",
-    ]),
+    .index("by_version_id_and_stimulus_key", ["versionId", "stimulusKey"]),
 
   assessmentItems: defineTable(assessmentItemValidator)
     .index("by_section_id_and_order", ["sectionId", "order"])
@@ -543,6 +534,9 @@ export default defineSchema({
     ),
     illustrationMediaId: v.optional(v.id("mediaAssets")),
     audioMediaId: v.optional(v.id("mediaAssets")),
+    dependencyGroupKey: v.optional(v.string()),
+    dependencyRole: v.optional(assessmentQuestionDependencyRoleValidator),
+    parentBankQuestionId: v.optional(v.id("assessmentQuestionBank")),
     contentFingerprint: v.string(),
     promptSearch: v.string(),
     tags: v.array(v.string()),
@@ -555,6 +549,11 @@ export default defineSchema({
     .index("by_bank_key", ["bankKey"])
     .index("by_source_item_id", ["sourceItemId"])
     .index("by_content_fingerprint", ["contentFingerprint"])
+    .index("by_profile_and_dependency_group_key", [
+      "profile",
+      "dependencyGroupKey",
+    ])
+    .index("by_parent_bank_question_id", ["parentBankQuestionId"])
     .index("by_profile_and_status_and_skill", ["profile", "status", "skill"])
     .index("by_profile_status_skill_and_eligibility", [
       "profile",
@@ -592,7 +591,11 @@ export default defineSchema({
       "difficulty",
       "updatedAt",
     ])
-    .index("by_skill_and_status_and_updated_at", ["skill", "status", "updatedAt"])
+    .index("by_skill_and_status_and_updated_at", [
+      "skill",
+      "status",
+      "updatedAt",
+    ])
     .index("by_skill_and_status_and_difficulty_and_updated_at", [
       "skill",
       "status",
@@ -613,6 +616,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_bank_question_id", ["bankQuestionId"])
     .index("by_version_id_and_bank_question_id", [
       "versionId",
       "bankQuestionId",
@@ -634,6 +638,7 @@ export default defineSchema({
     reviewedBy: v.optional(v.id("adminUsers")),
     reviewedAt: v.optional(v.number()),
   })
+    .index("by_bank_question_id", ["bankQuestionId"])
     .index("by_definition_id_and_bank_question_id", [
       "definitionId",
       "bankQuestionId",
@@ -682,10 +687,12 @@ export default defineSchema({
       "ownerTokenIdentifier",
       "startRequestId",
     ])
-    .index(
-      "by_owner_version_day_started",
-      ["ownerTokenIdentifier", "versionId", "startDayUtc", "startedAt"],
-    )
+    .index("by_owner_version_day_started", [
+      "ownerTokenIdentifier",
+      "versionId",
+      "startDayUtc",
+      "startedAt",
+    ])
     .index("by_version_id_and_started_at", ["versionId", "startedAt"])
     .index("by_status_and_last_activity_at", ["status", "lastActivityAt"]),
 
@@ -711,6 +718,9 @@ export default defineSchema({
     itemId: v.id("assessmentItems"),
     illustrationMediaId: v.optional(v.id("mediaAssets")),
     audioMediaId: v.optional(v.id("mediaAssets")),
+    dependencyGroupKey: v.optional(v.string()),
+    dependencyRole: v.optional(assessmentQuestionDependencyRoleValidator),
+    parentAttemptItemOrder: v.optional(v.number()),
     order: v.number(),
     selectedAt: v.number(),
     selectionContract: v.literal(1),
@@ -754,7 +764,9 @@ export default defineSchema({
     ),
     overallBandEstimate: v.optional(v.number()),
     comparableTotalEstimate: v.optional(v.number()),
-    estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
+    estimateConfidence: v.optional(
+      v.union(v.literal("low"), v.literal("moderate")),
+    ),
     paperTotalEstimate: v.optional(v.number()),
     supersedesResultId: v.optional(v.id("assessmentResults")),
     adjustmentReason: v.optional(v.string()),
@@ -778,7 +790,9 @@ export default defineSchema({
     possiblePoints: v.optional(v.number()),
     bandEstimate: v.optional(v.number()),
     comparableScoreEstimate: v.optional(v.number()),
-    estimateConfidence: v.optional(v.union(v.literal("low"), v.literal("moderate"))),
+    estimateConfidence: v.optional(
+      v.union(v.literal("low"), v.literal("moderate")),
+    ),
     paperSectionEstimate: v.optional(v.number()),
   })
     .index("by_result_id_and_section_id", ["resultId", "sectionId"])

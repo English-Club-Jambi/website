@@ -351,6 +351,9 @@ export const start = mutation({
         flaggedCount: 0,
       });
       const selection = randomSelectionPlans.get(section._id) ?? [];
+      const selectedOrderByQuestionId = new Map(
+        selection.map((question, index) => [String(question._id), index]),
+      );
       for (let order = 0; order < selection.length; order += 1) {
         const bankQuestion = selection[order];
         if (bankQuestion.skill !== section.skill) {
@@ -371,6 +374,23 @@ export const start = mutation({
         if (bankQuestion.skill === "listening" && pinnedAudio === null) {
           throw new ConvexError({ code: "QUESTION_BANK_AUDIO_REQUIRED" as const });
         }
+        const parentAttemptItemOrder =
+          bankQuestion.dependencyRole === "follow-up" &&
+          bankQuestion.parentBankQuestionId !== undefined
+            ? selectedOrderByQuestionId.get(
+                String(bankQuestion.parentBankQuestionId),
+              )
+            : undefined;
+        if (
+          bankQuestion.dependencyRole === "follow-up" &&
+          (parentAttemptItemOrder === undefined ||
+            parentAttemptItemOrder >= order)
+        ) {
+          throw new ConvexError({
+            code: "QUESTION_BANK_SELECTION_INVALID" as const,
+            skill: section.skill,
+          });
+        }
         await ctx.db.insert("assessmentAttemptItems", {
           attemptId,
           sectionId: section._id,
@@ -378,6 +398,9 @@ export const start = mutation({
           itemId: bankQuestion.sourceItemId,
           illustrationMediaId: bankQuestion.illustrationMediaId,
           audioMediaId: pinnedAudio?.mediaId,
+          dependencyGroupKey: bankQuestion.dependencyGroupKey,
+          dependencyRole: bankQuestion.dependencyRole,
+          parentAttemptItemOrder,
           order,
           selectedAt: now,
           selectionContract: 1,

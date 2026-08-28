@@ -6,7 +6,12 @@ import { ConvexError, v, type Infer } from "convex/values";
 
 import { isTaskFamilyForSkill } from "../content/assessment-task-families";
 import {
+  assertListeningDependencyGroupContent,
+  LISTENING_DEPENDENCY_SEED_BATCH,
+} from "../content/assessment-listening-dependency-groups";
+import {
   assessmentProfileValidator,
+  assessmentQuestionDependencyRoleValidator,
   clozeAnswerValidator,
   clozeGapValidator,
   constructedResponseModeValidator,
@@ -38,6 +43,7 @@ import {
   QUESTION_BANK_AUTHORING_LEDGER_SLUG,
   resolveReadyQuestionAudio,
 } from "./lib/assessmentQuestionBank";
+import { publicAssessmentDerivativeKey } from "./lib/assessmentMedia";
 import {
   normalizeBoundedText,
   normalizeKey,
@@ -115,12 +121,18 @@ const bankRowValidator = v.object({
   status: assessmentQuestionBankStatusValidator,
   profile: assessmentProfileValidator,
   fullPracticeEligible: v.boolean(),
-  origin: v.union(
-    v.literal("assessment-source"),
-    v.literal("bank-authored"),
-  ),
+  origin: v.union(v.literal("assessment-source"), v.literal("bank-authored")),
   illustration: v.union(illustrationValidator, v.null()),
   audio: v.union(questionAudioValidator, v.null()),
+  dependency: v.union(
+    v.object({
+      groupKey: v.string(),
+      role: assessmentQuestionDependencyRoleValidator,
+      parentBankQuestionId: v.union(v.id("assessmentQuestionBank"), v.null()),
+      parentPrompt: v.union(v.string(), v.null()),
+    }),
+    v.null(),
+  ),
   content: bankEditableContentValidator,
   tags: v.array(v.string()),
   prompt: v.string(),
@@ -190,10 +202,7 @@ function projectBankEditableContent(
         acceptedTokenOrders: key.acceptedTokenOrders,
       };
     case "constructed-response":
-      if (
-        key.kind !== "text-rubric" ||
-        key.rubricMode !== item.responseMode
-      ) {
+      if (key.kind !== "text-rubric" || key.rubricMode !== item.responseMode) {
         break;
       }
       return {
@@ -246,6 +255,14 @@ async function projectBankRow(
     throw new ConvexError({ code: "QUESTION_BANK_SOURCE_MISSING" as const });
   }
   const audio = await resolveReadyQuestionAudio(ctx, row, item);
+  const parentRow =
+    row.parentBankQuestionId === undefined
+      ? null
+      : await ctx.db.get("assessmentQuestionBank", row.parentBankQuestionId);
+  const parentItem =
+    parentRow === null
+      ? null
+      : await ctx.db.get("assessmentItems", parentRow.sourceItemId);
   const options =
     item.type === "single-choice" || item.type === "multiple-select"
       ? item.options
@@ -267,6 +284,15 @@ async function projectBankRow(
     origin: row.origin ?? "assessment-source",
     illustration,
     audio,
+    dependency:
+      row.dependencyGroupKey === undefined || row.dependencyRole === undefined
+        ? null
+        : {
+            groupKey: row.dependencyGroupKey,
+            role: row.dependencyRole,
+            parentBankQuestionId: row.parentBankQuestionId ?? null,
+            parentPrompt: parentItem?.prompt ?? null,
+          },
     content,
     tags: row.tags,
     prompt: item.prompt,
@@ -486,7 +512,8 @@ async function getAuthoringLedgerSection(
     if (sections.length > 5) {
       throw new ConvexError({ code: "QUESTION_BANK_LEDGER_INVALID" as const });
     }
-    const section = sections.find((candidate) => candidate.skill === skill) ?? null;
+    const section =
+      sections.find((candidate) => candidate.skill === skill) ?? null;
     if (section !== null && section.itemCount + requiredSlots <= 50) {
       return { definition, version, section };
     }
@@ -514,7 +541,9 @@ function normalizeAuthoredQuestion(args: {
   const prompt = normalizeBoundedText(args.prompt, "prompt", 2, 4_000);
   const options = normalizeOptions(args.options);
   if (options.length !== 4) {
-    throw new ConvexError({ code: "QUESTION_BANK_OPTION_COUNT_INVALID" as const });
+    throw new ConvexError({
+      code: "QUESTION_BANK_OPTION_COUNT_INVALID" as const,
+    });
   }
   const normalizedLabels = options.map((option) =>
     option.label.toLocaleLowerCase("en"),
@@ -696,7 +725,9 @@ function normalizeEditableContent(content: BankEditableContent) {
           new Set(normalized).size !== normalized.length ||
           normalized.some((key) => !tokenKeySet.has(key))
         ) {
-          throw new ConvexError({ code: "QUESTION_BANK_TOKENS_INVALID" as const });
+          throw new ConvexError({
+            code: "QUESTION_BANK_TOKENS_INVALID" as const,
+          });
         }
         return normalized;
       },
@@ -747,7 +778,10 @@ function normalizeEditableContent(content: BankEditableContent) {
   const targetTerms = content.rubric.targetTerms.map((term, index) =>
     normalizeBoundedText(term, `rubric.targetTerms.${index}`, 1, 100),
   );
-  if (new Set(targetTerms.map((term) => term.toLowerCase())).size !== targetTerms.length) {
+  if (
+    new Set(targetTerms.map((term) => term.toLowerCase())).size !==
+    targetTerms.length
+  ) {
     throw new ConvexError({ code: "QUESTION_BANK_RUBRIC_INVALID" as const });
   }
   return {
@@ -762,7 +796,10 @@ function normalizeEditableContent(content: BankEditableContent) {
       content.preparationSeconds,
       "preparationSeconds",
     ),
-    responseSeconds: optionalSeconds(content.responseSeconds, "responseSeconds"),
+    responseSeconds: optionalSeconds(
+      content.responseSeconds,
+      "responseSeconds",
+    ),
     rubric: {
       maxPoints: requireIntegerInRange(
         content.rubric.maxPoints,
@@ -832,6 +869,47 @@ async function validateQuestionMedia(
   return audio;
 }
 
+async function synchronizeDependencyGroupAudio(
+  ctx: MutationCtx,
+  row: Doc<"assessmentQuestionBank">,
+  audioMediaId: Id<"mediaAssets"> | undefined,
+  actorId: Id<"adminUsers">,
+  updatedAt: number,
+) {
+  if (row.dependencyGroupKey === undefined) return;
+  const group = await ctx.db
+    .query("assessmentQuestionBank")
+    .withIndex("by_profile_and_dependency_group_key", (q) =>
+      q
+        .eq("profile", row.profile)
+        .eq("dependencyGroupKey", row.dependencyGroupKey),
+    )
+    .take(22);
+  if (
+    group.length < 2 ||
+    group.length > 21 ||
+    group.some(
+      (candidate) =>
+        candidate.skill !== row.skill ||
+        candidate.dependencyGroupKey !== row.dependencyGroupKey,
+    )
+  ) {
+    throw new ConvexError({
+      code: "QUESTION_BANK_DEPENDENCY_GROUP_INVALID" as const,
+    });
+  }
+  for (const candidate of group) {
+    if (candidate.audioMediaId === audioMediaId && candidate._id !== row._id) {
+      continue;
+    }
+    await ctx.db.patch("assessmentQuestionBank", candidate._id, {
+      audioMediaId,
+      updatedBy: actorId,
+      updatedAt,
+    });
+  }
+}
+
 async function insertAuthoringSource(
   ctx: MutationCtx,
   args: {
@@ -858,7 +936,9 @@ async function insertAuthoringSource(
     .replace(/^-+|-+$/g, "")
     .slice(0, 72);
   if (safeSourceKey.length < 3) {
-    throw new ConvexError({ code: "QUESTION_BANK_SOURCE_KEY_INVALID" as const });
+    throw new ConvexError({
+      code: "QUESTION_BANK_SOURCE_KEY_INVALID" as const,
+    });
   }
   let stimulusId: Id<"assessmentStimuli"> | undefined;
   if (args.skill === "listening" && args.audioMediaId !== undefined) {
@@ -955,7 +1035,9 @@ async function insertEditableContentSource(
     .replace(/^-+|-+$/g, "")
     .slice(0, 72);
   if (safeSourceKey.length < 3) {
-    throw new ConvexError({ code: "QUESTION_BANK_SOURCE_KEY_INVALID" as const });
+    throw new ConvexError({
+      code: "QUESTION_BANK_SOURCE_KEY_INVALID" as const,
+    });
   }
   let stimulusId: Id<"assessmentStimuli"> | undefined;
   if (args.skill === "listening" && args.audioMediaId !== undefined) {
@@ -1006,7 +1088,9 @@ async function insertEditableContentSource(
   switch (args.content.type) {
     case "single-choice":
       if (args.previousKey.kind !== "choice") {
-        throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+        });
       }
       itemId = await ctx.db.insert("assessmentItems", {
         ...itemBase,
@@ -1026,7 +1110,9 @@ async function insertEditableContentSource(
       break;
     case "multiple-select":
       if (args.previousKey.kind !== "multi-choice") {
-        throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+        });
       }
       itemId = await ctx.db.insert("assessmentItems", {
         ...itemBase,
@@ -1048,7 +1134,9 @@ async function insertEditableContentSource(
       break;
     case "cloze-select":
       if (args.previousKey.kind !== "cloze") {
-        throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+        });
       }
       itemId = await ctx.db.insert("assessmentItems", {
         ...itemBase,
@@ -1069,7 +1157,9 @@ async function insertEditableContentSource(
       break;
     case "sentence-build":
       if (args.previousKey.kind !== "token-order") {
-        throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+        });
       }
       itemId = await ctx.db.insert("assessmentItems", {
         ...itemBase,
@@ -1092,7 +1182,9 @@ async function insertEditableContentSource(
         args.previousKey.kind !== "text-rubric" ||
         args.previousKey.rubricMode !== args.content.responseMode
       ) {
-        throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+        });
       }
       itemId = await ctx.db.insert("assessmentItems", {
         ...itemBase,
@@ -1172,19 +1264,31 @@ export const importReadingSection = internalMutation({
     assertReadingImportTarget();
     const datasetChecksum = args.datasetChecksum.trim().toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(datasetChecksum)) {
-      throw new ConvexError({ code: "READING_IMPORT_CHECKSUM_INVALID" as const });
+      throw new ConvexError({
+        code: "READING_IMPORT_CHECKSUM_INVALID" as const,
+      });
     }
     if (args.questions.length < 1 || args.questions.length > 20) {
       throw new ConvexError({ code: "READING_IMPORT_BATCH_INVALID" as const });
     }
-    if (args.passage.paragraphs.length < 1 || args.passage.paragraphs.length > 30) {
-      throw new ConvexError({ code: "READING_IMPORT_PASSAGE_INVALID" as const });
+    if (
+      args.passage.paragraphs.length < 1 ||
+      args.passage.paragraphs.length > 30
+    ) {
+      throw new ConvexError({
+        code: "READING_IMPORT_PASSAGE_INVALID" as const,
+      });
     }
 
     const topicId = normalizeReadingImportId(args.topic.id, "topic.id");
     const sectionId = normalizeReadingImportId(args.section.id, "section.id");
     const passageId = normalizeReadingImportId(args.passage.id, "passage.id");
-    const topicTitle = normalizeBoundedText(args.topic.title, "topic.title", 2, 160);
+    const topicTitle = normalizeBoundedText(
+      args.topic.title,
+      "topic.title",
+      2,
+      160,
+    );
     const sourceFile = normalizeBoundedText(
       args.topic.sourceFile,
       "topic.sourceFile",
@@ -1219,7 +1323,10 @@ export const importReadingSection = internalMutation({
     );
     const paragraphs = [...args.passage.paragraphs]
       .map((paragraph, index) => ({
-        id: normalizeReadingImportId(paragraph.id, `passage.paragraphs.${index}.id`),
+        id: normalizeReadingImportId(
+          paragraph.id,
+          `passage.paragraphs.${index}.id`,
+        ),
         order: requireIntegerInRange(
           paragraph.order,
           1,
@@ -1241,10 +1348,13 @@ export const importReadingSection = internalMutation({
       }))
       .sort((left, right) => left.order - right.order);
     if (
-      new Set(paragraphs.map((paragraph) => paragraph.id)).size !== paragraphs.length ||
+      new Set(paragraphs.map((paragraph) => paragraph.id)).size !==
+        paragraphs.length ||
       paragraphs.some((paragraph, index) => paragraph.order !== index + 1)
     ) {
-      throw new ConvexError({ code: "READING_IMPORT_PASSAGE_INVALID" as const });
+      throw new ConvexError({
+        code: "READING_IMPORT_PASSAGE_INVALID" as const,
+      });
     }
     const passageBody = normalizeBoundedText(
       paragraphs
@@ -1329,7 +1439,9 @@ export const importReadingSection = internalMutation({
           existingRow.skill !== "reading" ||
           existingRow.origin !== "bank-authored"
         ) {
-          throw new ConvexError({ code: "READING_IMPORT_KEY_COLLISION" as const });
+          throw new ConvexError({
+            code: "READING_IMPORT_KEY_COLLISION" as const,
+          });
         }
         existing += 1;
         continue;
@@ -1503,7 +1615,9 @@ export const verifyReadingImport = internalQuery({
     assertReadingImportTarget();
     const datasetChecksum = args.datasetChecksum.trim().toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(datasetChecksum)) {
-      throw new ConvexError({ code: "READING_IMPORT_CHECKSUM_INVALID" as const });
+      throw new ConvexError({
+        code: "READING_IMPORT_CHECKSUM_INVALID" as const,
+      });
     }
     const expectedRecords = requireIntegerInRange(
       args.expectedRecords,
@@ -1521,7 +1635,9 @@ export const verifyReadingImport = internalQuery({
           )
           .take(502);
         if (rows.length > 501) {
-          throw new ConvexError({ code: "READING_IMPORT_LIMIT_EXCEEDED" as const });
+          throw new ConvexError({
+            code: "READING_IMPORT_LIMIT_EXCEEDED" as const,
+          });
         }
         return { status, rows };
       }),
@@ -1538,16 +1654,18 @@ export const verifyReadingImport = internalQuery({
     const passageIds = new Set<string>();
     const topicCounts = new Map<string, number>();
     for (const row of rows) {
-      const [item, answerKey, version, definition, section] = await Promise.all([
-        ctx.db.get("assessmentItems", row.sourceItemId),
-        ctx.db
-          .query("assessmentAnswerKeys")
-          .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
-          .unique(),
-        ctx.db.get("assessmentVersions", row.sourceVersionId),
-        ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
-        ctx.db.get("assessmentSections", row.sourceSectionId),
-      ]);
+      const [item, answerKey, version, definition, section] = await Promise.all(
+        [
+          ctx.db.get("assessmentItems", row.sourceItemId),
+          ctx.db
+            .query("assessmentAnswerKeys")
+            .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+            .unique(),
+          ctx.db.get("assessmentVersions", row.sourceVersionId),
+          ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+          ctx.db.get("assessmentSections", row.sourceSectionId),
+        ],
+      );
       const stimulus =
         item?.stimulusId === undefined
           ? null
@@ -1572,9 +1690,12 @@ export const verifyReadingImport = internalQuery({
     }
     return {
       total: rows.length,
-      paused: rowsByStatus.find((entry) => entry.status === "paused")!.rows.length,
-      ready: rowsByStatus.find((entry) => entry.status === "ready")!.rows.length,
-      archived: rowsByStatus.find((entry) => entry.status === "archived")!.rows.length,
+      paused: rowsByStatus.find((entry) => entry.status === "paused")!.rows
+        .length,
+      ready: rowsByStatus.find((entry) => entry.status === "ready")!.rows
+        .length,
+      archived: rowsByStatus.find((entry) => entry.status === "archived")!.rows
+        .length,
       passages: passageIds.size,
       invalidSources,
       byTopic: [...topicCounts.entries()]
@@ -1648,7 +1769,8 @@ export const createQuestion = mutation({
     if (duplicates.length > 2) {
       throw new ConvexError({ code: "QUESTION_BANK_DUPLICATE_LIMIT" as const });
     }
-    const duplicate = duplicates.find((candidate) => candidate.status !== "archived") ?? null;
+    const duplicate =
+      duplicates.find((candidate) => candidate.status !== "archived") ?? null;
     if (duplicate !== null) {
       throw new ConvexError({
         code: "QUESTION_BANK_DUPLICATE" as const,
@@ -1755,7 +1877,9 @@ export const updateContent = mutation({
       previousKey.versionId !== row.sourceVersionId ||
       previousItem.type !== args.content.type
     ) {
-      throw new ConvexError({ code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const });
+      throw new ConvexError({
+        code: "QUESTION_BANK_ITEM_TYPE_MISMATCH" as const,
+      });
     }
     const content = normalizeEditableContent(args.content);
     const illustrationMediaId = args.illustrationMediaId ?? undefined;
@@ -1765,11 +1889,7 @@ export const updateContent = mutation({
       illustrationMediaId,
       audioMediaId,
     });
-    if (
-      row.skill === "listening" &&
-      row.status === "ready" &&
-      audio === null
-    ) {
+    if (row.skill === "listening" && row.status === "ready" && audio === null) {
       throw new ConvexError({ code: "QUESTION_BANK_AUDIO_REQUIRED" as const });
     }
     const fingerprint = questionContentFingerprint(
@@ -1820,6 +1940,13 @@ export const updateContent = mutation({
       updatedBy: actor._id,
       updatedAt: now,
     });
+    await synchronizeDependencyGroupAudio(
+      ctx,
+      row,
+      audioMediaId,
+      actor._id,
+      now,
+    );
     await writeAuditEvent(ctx, {
       area: "assessment",
       action: "update",
@@ -1856,9 +1983,7 @@ export const listPage = query({
         ? await ctx.db
             .query("assessmentQuestionBank")
             .withIndex("by_profile_and_status_and_updated_at", (q) =>
-              q
-                .eq("profile", profile)
-                .eq("status", args.status),
+              q.eq("profile", profile).eq("status", args.status),
             )
             .order("desc")
             .paginate({ ...args.paginationOpts, maximumRowsRead: 20 })
@@ -2043,20 +2168,22 @@ export const updateMetadata = mutation({
         ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
       ]);
       if (!questionBankSourceIsReady(row, item, key, version, definition)) {
-        throw new ConvexError({ code: "QUESTION_BANK_SOURCE_MISSING" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_SOURCE_MISSING" as const,
+        });
       }
       sourceItem = item;
     }
-    if (
-      row.skill === "listening" &&
-      args.status === "ready"
-    ) {
+    if (row.skill === "listening" && args.status === "ready") {
       sourceItem ??= await ctx.db.get("assessmentItems", row.sourceItemId);
       const rowWithAudio = { ...row, audioMediaId };
       if (
-        (await resolveReadyQuestionAudio(ctx, rowWithAudio, sourceItem)) === null
+        (await resolveReadyQuestionAudio(ctx, rowWithAudio, sourceItem)) ===
+        null
       ) {
-        throw new ConvexError({ code: "QUESTION_BANK_AUDIO_REQUIRED" as const });
+        throw new ConvexError({
+          code: "QUESTION_BANK_AUDIO_REQUIRED" as const,
+        });
       }
     }
     const updatedAt = Date.now();
@@ -2071,6 +2198,15 @@ export const updateMetadata = mutation({
       updatedBy: actor._id,
       updatedAt,
     });
+    if (args.audioMediaId !== undefined) {
+      await synchronizeDependencyGroupAudio(
+        ctx,
+        row,
+        audioMediaId,
+        actor._id,
+        updatedAt,
+      );
+    }
     await writeAuditEvent(ctx, {
       area: "assessment",
       action: args.status === "archived" ? "archive" : "update",
@@ -2080,5 +2216,702 @@ export const updateMetadata = mutation({
       actorId: actor._id,
     });
     return { ok: true as const, updatedAt };
+  },
+});
+
+const questionDeleteBlockedReasonValidator = v.union(
+  v.literal("dependency_group"),
+  v.literal("dependent_question"),
+  v.literal("version_rule"),
+  v.literal("flag_history"),
+  v.literal("attempt_history"),
+);
+
+/**
+ * Permanently removes an unused Question Bank row. The immutable authoring
+ * source, answer key, and media records are intentionally retained.
+ */
+export const deleteQuestion = mutation({
+  args: {
+    bankQuestionId: v.id("assessmentQuestionBank"),
+    expectedUpdatedAt: v.number(),
+  },
+  returns: v.union(
+    v.object({
+      ok: v.literal(true),
+      deletedBankQuestionId: v.id("assessmentQuestionBank"),
+    }),
+    v.object({
+      ok: v.literal(false),
+      code: v.literal("conflict"),
+      currentUpdatedAt: v.number(),
+    }),
+    v.object({
+      ok: v.literal(false),
+      code: v.literal("blocked"),
+      reason: questionDeleteBlockedReasonValidator,
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx, "admin:manage");
+    const row = await ctx.db.get("assessmentQuestionBank", args.bankQuestionId);
+    if (row === null) {
+      throw new ConvexError({ code: "QUESTION_BANK_NOT_FOUND" as const });
+    }
+    if (row.updatedAt !== args.expectedUpdatedAt) {
+      return {
+        ok: false as const,
+        code: "conflict" as const,
+        currentUpdatedAt: row.updatedAt,
+      };
+    }
+    if (
+      row.dependencyGroupKey !== undefined ||
+      row.dependencyRole !== undefined ||
+      row.parentBankQuestionId !== undefined
+    ) {
+      return {
+        ok: false as const,
+        code: "blocked" as const,
+        reason: "dependency_group" as const,
+      };
+    }
+
+    const [dependentQuestion, versionRule, flagSignal, attemptItem] =
+      await Promise.all([
+        ctx.db
+          .query("assessmentQuestionBank")
+          .withIndex("by_parent_bank_question_id", (q) =>
+            q.eq("parentBankQuestionId", row._id),
+          )
+          .first(),
+        ctx.db
+          .query("assessmentVersionQuestionRules")
+          .withIndex("by_bank_question_id", (q) =>
+            q.eq("bankQuestionId", row._id),
+          )
+          .first(),
+        ctx.db
+          .query("assessmentQuestionFlagSignals")
+          .withIndex("by_bank_question_id", (q) =>
+            q.eq("bankQuestionId", row._id),
+          )
+          .first(),
+        ctx.db
+          .query("assessmentAttemptItems")
+          .withIndex("by_bank_question_id_and_selected_at", (q) =>
+            q.eq("bankQuestionId", row._id),
+          )
+          .first(),
+      ]);
+    const blockedReason =
+      dependentQuestion !== null
+        ? ("dependent_question" as const)
+        : versionRule !== null
+          ? ("version_rule" as const)
+          : flagSignal !== null
+            ? ("flag_history" as const)
+            : attemptItem !== null
+              ? ("attempt_history" as const)
+              : null;
+    if (blockedReason !== null) {
+      return {
+        ok: false as const,
+        code: "blocked" as const,
+        reason: blockedReason,
+      };
+    }
+
+    await ctx.db.delete("assessmentQuestionBank", row._id);
+    await writeAuditEvent(ctx, {
+      area: "assessment",
+      action: "delete",
+      resourceType: "question-bank-entry",
+      resourceId: row._id,
+      summary: `${row.skill} ${row.taskFamily} Question Bank entry permanently deleted`,
+      actorId: actor._id,
+    });
+    return {
+      ok: true as const,
+      deletedBankQuestionId: row._id,
+    };
+  },
+});
+
+const listeningDependencySeedConfirmation =
+  "seed-ec-listening-dependency-groups-v1" as const;
+
+const listeningDependencyAudioPlanValidator = v.object({
+  groupKey: v.string(),
+  versionId: v.id("assessmentVersions"),
+  stimulusId: v.id("assessmentStimuli"),
+  stimulusKey: v.string(),
+  title: v.string(),
+  transcript: v.string(),
+  description: v.string(),
+});
+
+const listeningDependencyAudioAssetValidator = v.object({
+  groupKey: v.string(),
+  versionId: v.id("assessmentVersions"),
+  stimulusId: v.id("assessmentStimuli"),
+  objectKey: v.string(),
+  checksumSha256: v.string(),
+  byteSize: v.number(),
+  durationMs: v.number(),
+});
+
+function listeningDependencyGroupKey(groupKey: string) {
+  return `ec-listening/${groupKey}/v1`;
+}
+
+function listeningDependencyBankKey(groupKey: string, questionKey: string) {
+  return `seed/listening-groups/v1/${groupKey}/${questionKey}`;
+}
+
+function assertListeningDependencySeedTarget() {
+  assertReadingImportTarget();
+}
+
+async function listeningDependencyAudioPlan(
+  ctx: MutationCtx,
+  group: ReturnType<typeof assertListeningDependencyGroupContent>[number],
+  anchor: Doc<"assessmentQuestionBank">,
+) {
+  const item = await ctx.db.get("assessmentItems", anchor.sourceItemId);
+  if (item === null || item.stimulusId === undefined) {
+    throw new ConvexError({
+      code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+    });
+  }
+  const stimulus = await ctx.db.get("assessmentStimuli", item.stimulusId);
+  if (
+    stimulus === null ||
+    stimulus.kind !== "audio" ||
+    stimulus.versionId !== anchor.sourceVersionId ||
+    stimulus.sectionId !== anchor.sourceSectionId ||
+    stimulus.transcript === undefined
+  ) {
+    throw new ConvexError({
+      code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+    });
+  }
+  return {
+    groupKey: group.key,
+    versionId: stimulus.versionId,
+    stimulusId: stimulus._id,
+    stimulusKey: stimulus.stimulusKey,
+    title: stimulus.title ?? group.title,
+    transcript: stimulus.transcript,
+    description: stimulus.alt ?? group.audioDescription,
+  };
+}
+
+/**
+ * Creates two rights-cleared original Listening sets inside the internal
+ * Question Bank ledger. Rows remain paused until their parent recordings have
+ * been uploaded and verified by attachListeningDependencyAudio.
+ */
+export const prepareListeningDependencyGroups = internalMutation({
+  args: { confirm: v.literal(listeningDependencySeedConfirmation) },
+  returns: v.object({
+    inserted: v.number(),
+    existing: v.number(),
+    audio: v.array(listeningDependencyAudioPlanValidator),
+  }),
+  handler: async (ctx) => {
+    assertListeningDependencySeedTarget();
+    const groups = assertListeningDependencyGroupContent();
+    const expectedCount = groups.reduce(
+      (total, group) => total + group.questions.length,
+      0,
+    );
+    const expectedRows = await Promise.all(
+      groups.flatMap((group) =>
+        group.questions.map(async (question) => ({
+          group,
+          question,
+          row: await ctx.db
+            .query("assessmentQuestionBank")
+            .withIndex("by_bank_key", (q) =>
+              q.eq(
+                "bankKey",
+                listeningDependencyBankKey(group.key, question.key),
+              ),
+            )
+            .unique(),
+        })),
+      ),
+    );
+    const existingCount = expectedRows.filter(
+      (entry) => entry.row !== null,
+    ).length;
+    if (existingCount > 0 && existingCount !== expectedCount) {
+      throw new ConvexError({
+        code: "LISTENING_DEPENDENCY_SEED_PARTIAL" as const,
+        expected: expectedCount,
+        actual: existingCount,
+      });
+    }
+
+    if (existingCount === expectedCount) {
+      const audio = [];
+      for (const group of groups) {
+        const groupRows = expectedRows.filter(
+          (entry) => entry.group.key === group.key,
+        );
+        const anchor = groupRows.find(
+          (entry) => entry.question.role === "anchor",
+        )?.row;
+        if (anchor === null || anchor === undefined) {
+          throw new ConvexError({
+            code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+          });
+        }
+        const stableGroupKey = listeningDependencyGroupKey(group.key);
+        for (const entry of groupRows) {
+          const row = entry.row!;
+          if (
+            row.seedBatch !== LISTENING_DEPENDENCY_SEED_BATCH ||
+            row.origin !== "bank-authored" ||
+            row.profile !== "ec-itp-level-1-aligned-v1" ||
+            row.skill !== "listening" ||
+            row.dependencyGroupKey !== stableGroupKey ||
+            row.dependencyRole !== entry.question.role ||
+            (entry.question.role === "anchor"
+              ? row.parentBankQuestionId !== undefined
+              : row.parentBankQuestionId !== anchor._id)
+          ) {
+            throw new ConvexError({
+              code: "LISTENING_DEPENDENCY_SEED_COLLISION" as const,
+            });
+          }
+        }
+        if ((await resolveReadyQuestionAudio(ctx, anchor)) === null) {
+          audio.push(await listeningDependencyAudioPlan(ctx, group, anchor));
+        }
+      }
+      return { inserted: 0, existing: expectedCount, audio };
+    }
+
+    const actor = await requireReadingImportAuthor(ctx);
+    const now = Date.now();
+    const { definition, version, section } = await getAuthoringLedgerSection(
+      ctx,
+      actor._id,
+      "listening",
+      now,
+      expectedCount,
+    );
+    const audio = [];
+    let inserted = 0;
+    for (const group of groups) {
+      const stableGroupKey = listeningDependencyGroupKey(group.key);
+      const stimulusId = await ctx.db.insert("assessmentStimuli", {
+        versionId: version._id,
+        sectionId: section._id,
+        stimulusKey: `dependency-${group.key}`,
+        kind: "audio",
+        order: section.itemCount + inserted,
+        title: group.title,
+        transcript: group.transcript,
+        alt: group.audioDescription,
+        provenanceJson: JSON.stringify({
+          ...group.provenance,
+          seedBatch: LISTENING_DEPENDENCY_SEED_BATCH,
+        }),
+        authoredBy: actor._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      let anchorBankQuestionId: Id<"assessmentQuestionBank"> | undefined;
+      for (const question of group.questions) {
+        const options = question.options.map((option) => ({ ...option }));
+        const fingerprint = questionContentFingerprint(
+          "listening",
+          question.prompt,
+          options.map((option) => option.label),
+        );
+        const duplicates = await ctx.db
+          .query("assessmentQuestionBank")
+          .withIndex("by_content_fingerprint", (q) =>
+            q.eq("contentFingerprint", fingerprint),
+          )
+          .take(2);
+        if (duplicates.some((row) => row.status !== "archived")) {
+          throw new ConvexError({
+            code: "LISTENING_DEPENDENCY_SEED_DUPLICATE" as const,
+            questionKey: question.key,
+          });
+        }
+        const itemId = await ctx.db.insert("assessmentItems", {
+          versionId: version._id,
+          sectionId: section._id,
+          stimulusId,
+          itemKey: `dependency-${group.key}-${question.key}`,
+          order: section.itemCount + inserted,
+          prompt: question.prompt,
+          required: true,
+          explanation: question.explanation,
+          provenanceJson: JSON.stringify({
+            ...group.provenance,
+            seedBatch: LISTENING_DEPENDENCY_SEED_BATCH,
+            dependencyGroupKey: stableGroupKey,
+            dependencyRole: question.role,
+            questionKey: question.key,
+          }),
+          authoredBy: actor._id,
+          createdAt: now,
+          updatedAt: now,
+          type: "single-choice",
+          options,
+        });
+        await ctx.db.insert("assessmentAnswerKeys", {
+          versionId: version._id,
+          itemId,
+          kind: "choice",
+          correctChoiceKeys: [question.correctChoiceKey],
+          scoringMode: "exact",
+          points: 1,
+        });
+        if (
+          question.role === "follow-up" &&
+          anchorBankQuestionId === undefined
+        ) {
+          throw new ConvexError({
+            code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+          });
+        }
+        const bankQuestionId = await ctx.db.insert("assessmentQuestionBank", {
+          bankKey: listeningDependencyBankKey(group.key, question.key),
+          sourceDefinitionId: definition._id,
+          sourceVersionId: version._id,
+          sourceSectionId: section._id,
+          sourceItemId: itemId,
+          skill: "listening",
+          taskFamily: group.taskFamily,
+          difficulty: question.difficulty,
+          status: "paused",
+          profile: "ec-itp-level-1-aligned-v1",
+          fullPracticeEligible: false,
+          origin: "bank-authored",
+          dependencyGroupKey: stableGroupKey,
+          dependencyRole: question.role,
+          ...(question.role === "follow-up"
+            ? { parentBankQuestionId: anchorBankQuestionId! }
+            : {}),
+          contentFingerprint: fingerprint,
+          promptSearch: normalizeBankPrompt(question.prompt),
+          tags: normalizeQuestionBankTags([
+            "listening",
+            group.taskFamily,
+            "original-question",
+            "rights-cleared",
+            question.role === "anchor" ? "set-anchor" : "set-follow-up",
+          ]),
+          seedBatch: LISTENING_DEPENDENCY_SEED_BATCH,
+          createdBy: actor._id,
+          updatedBy: actor._id,
+          createdAt: now,
+          updatedAt: now,
+        });
+        if (question.role === "anchor") {
+          anchorBankQuestionId = bankQuestionId;
+        }
+        inserted += 1;
+      }
+      if (anchorBankQuestionId === undefined) {
+        throw new ConvexError({
+          code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+        });
+      }
+      const anchor = await ctx.db.get(
+        "assessmentQuestionBank",
+        anchorBankQuestionId,
+      );
+      if (anchor === null) {
+        throw new ConvexError({
+          code: "LISTENING_DEPENDENCY_SEED_SOURCE_INVALID" as const,
+        });
+      }
+      audio.push(await listeningDependencyAudioPlan(ctx, group, anchor));
+    }
+    await Promise.all([
+      ctx.db.patch("assessmentSections", section._id, {
+        itemCount: section.itemCount + inserted,
+      }),
+      ctx.db.patch("assessmentVersions", version._id, {
+        contentRevision: version.contentRevision + inserted,
+        updatedAt: now,
+      }),
+      ctx.db.patch("assessmentDefinitions", definition._id, {
+        updatedBy: actor._id,
+        updatedAt: now,
+      }),
+    ]);
+    await writeAuditEvent(ctx, {
+      area: "assessment",
+      action: "create",
+      resourceType: "question-bank-listening-sets",
+      resourceId: LISTENING_DEPENDENCY_SEED_BATCH,
+      summary: `${inserted} original Listening set questions prepared`,
+      actorId: actor._id,
+    });
+    return { inserted, existing: 0, audio };
+  },
+});
+
+export const attachListeningDependencyAudio = internalMutation({
+  args: {
+    confirm: v.literal(listeningDependencySeedConfirmation),
+    assets: v.array(listeningDependencyAudioAssetValidator),
+  },
+  returns: v.object({
+    attached: v.number(),
+    skipped: v.number(),
+    readyQuestions: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    assertListeningDependencySeedTarget();
+    if (args.assets.length < 1 || args.assets.length > 2) {
+      throw new ConvexError({
+        code: "LISTENING_DEPENDENCY_AUDIO_BATCH_INVALID" as const,
+      });
+    }
+    const actor = await requireReadingImportAuthor(ctx);
+    const now = Date.now();
+    let attached = 0;
+    let skipped = 0;
+    for (const asset of args.assets) {
+      if (
+        !/^[a-f0-9]{64}$/.test(asset.checksumSha256) ||
+        !Number.isInteger(asset.byteSize) ||
+        asset.byteSize < 1 ||
+        asset.byteSize > 25 * 1024 * 1024 ||
+        !Number.isInteger(asset.durationMs) ||
+        asset.durationMs < 1 ||
+        asset.durationMs > 15 * 60 * 1_000 ||
+        asset.objectKey !==
+          publicAssessmentDerivativeKey({
+            versionId: asset.versionId,
+            checksumSha256: asset.checksumSha256,
+            extension: "mp3",
+          })
+      ) {
+        throw new ConvexError({
+          code: "LISTENING_DEPENDENCY_AUDIO_INVALID" as const,
+        });
+      }
+      const [version, stimulus] = await Promise.all([
+        ctx.db.get("assessmentVersions", asset.versionId),
+        ctx.db.get("assessmentStimuli", asset.stimulusId),
+      ]);
+      const provenance =
+        stimulus === null
+          ? null
+          : (JSON.parse(stimulus.provenanceJson) as {
+              seedBatch?: unknown;
+            });
+      if (
+        version === null ||
+        version.status !== "ready" ||
+        stimulus === null ||
+        stimulus.versionId !== version._id ||
+        stimulus.kind !== "audio" ||
+        stimulus.transcript === undefined ||
+        provenance?.seedBatch !== LISTENING_DEPENDENCY_SEED_BATCH ||
+        stimulus.stimulusKey !== `dependency-${asset.groupKey}`
+      ) {
+        throw new ConvexError({
+          code: "LISTENING_DEPENDENCY_AUDIO_RELATIONSHIP_INVALID" as const,
+        });
+      }
+      const existing = await ctx.db
+        .query("mediaAssets")
+        .withIndex("by_object_key", (q) => q.eq("objectKey", asset.objectKey))
+        .unique();
+      let mediaId: Id<"mediaAssets">;
+      if (existing === null) {
+        mediaId = await ctx.db.insert("mediaAssets", {
+          objectKey: asset.objectKey,
+          purpose: "assessment-audio",
+          contentType: "audio/mpeg",
+          byteSize: asset.byteSize,
+          status: "ready",
+          originalName: `${stimulus.stimulusKey}.mp3`,
+          alt: stimulus.alt ?? `Original Listening set: ${stimulus.title}`,
+          access: "public",
+          durationMs: asset.durationMs,
+          checksumSha256: asset.checksumSha256,
+          assessmentVersionId: version._id,
+          uploadedBy: actor._id,
+          verifiedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+        attached += 1;
+      } else {
+        if (
+          existing.status !== "ready" ||
+          existing.purpose !== "assessment-audio" ||
+          existing.contentType !== "audio/mpeg" ||
+          existing.access !== "public" ||
+          existing.assessmentVersionId !== version._id ||
+          existing.checksumSha256 !== asset.checksumSha256 ||
+          existing.byteSize !== asset.byteSize ||
+          existing.durationMs !== asset.durationMs
+        ) {
+          throw new ConvexError({
+            code: "LISTENING_DEPENDENCY_AUDIO_COLLISION" as const,
+          });
+        }
+        mediaId = existing._id;
+        skipped += 1;
+      }
+      if (stimulus.mediaId !== mediaId) {
+        await ctx.db.patch("assessmentStimuli", stimulus._id, {
+          mediaId,
+          updatedAt: now,
+        });
+      }
+    }
+
+    const rows = (
+      await Promise.all(
+        (["paused", "ready"] as const).map((status) =>
+          ctx.db
+            .query("assessmentQuestionBank")
+            .withIndex("by_seed_batch_and_status_and_updated_at", (q) =>
+              q
+                .eq("seedBatch", LISTENING_DEPENDENCY_SEED_BATCH)
+                .eq("status", status),
+            )
+            .take(12),
+        ),
+      )
+    ).flat();
+    if (rows.length !== 11) {
+      throw new ConvexError({
+        code: "LISTENING_DEPENDENCY_SEED_COUNT_INVALID" as const,
+        actual: rows.length,
+      });
+    }
+    let readyQuestions = 0;
+    for (const row of rows) {
+      const [item, key, version, definition] = await Promise.all([
+        ctx.db.get("assessmentItems", row.sourceItemId),
+        ctx.db
+          .query("assessmentAnswerKeys")
+          .withIndex("by_item_id", (q) => q.eq("itemId", row.sourceItemId))
+          .unique(),
+        ctx.db.get("assessmentVersions", row.sourceVersionId),
+        ctx.db.get("assessmentDefinitions", row.sourceDefinitionId),
+      ]);
+      if (
+        !questionBankSourceIsReady(row, item, key, version, definition) ||
+        (await resolveReadyQuestionAudio(ctx, row, item)) === null
+      ) {
+        continue;
+      }
+      if (row.status !== "ready" || row.fullPracticeEligible !== true) {
+        await ctx.db.patch("assessmentQuestionBank", row._id, {
+          status: "ready",
+          fullPracticeEligible: true,
+          updatedBy: actor._id,
+          updatedAt: now,
+        });
+      }
+      readyQuestions += 1;
+    }
+    if (readyQuestions !== 11) {
+      throw new ConvexError({
+        code: "LISTENING_DEPENDENCY_AUDIO_INCOMPLETE" as const,
+        readyQuestions,
+      });
+    }
+    return { attached, skipped, readyQuestions };
+  },
+});
+
+export const verifyListeningDependencyGroups = internalQuery({
+  args: { confirm: v.literal(listeningDependencySeedConfirmation) },
+  returns: v.object({
+    total: v.number(),
+    anchors: v.number(),
+    followUps: v.number(),
+    audioReady: v.number(),
+    selectable: v.number(),
+    orphans: v.number(),
+    groups: v.array(
+      v.object({
+        groupKey: v.string(),
+        questions: v.number(),
+        anchorBankQuestionId: v.id("assessmentQuestionBank"),
+      }),
+    ),
+  }),
+  handler: async (ctx) => {
+    assertListeningDependencySeedTarget();
+    const groups = assertListeningDependencyGroupContent();
+    const rows = (
+      await Promise.all(
+        (["paused", "ready", "archived"] as const).map((status) =>
+          ctx.db
+            .query("assessmentQuestionBank")
+            .withIndex("by_seed_batch_and_status_and_updated_at", (q) =>
+              q
+                .eq("seedBatch", LISTENING_DEPENDENCY_SEED_BATCH)
+                .eq("status", status),
+            )
+            .take(12),
+        ),
+      )
+    ).flat();
+    let audioReady = 0;
+    let selectable = 0;
+    let orphans = 0;
+    const summaries = [];
+    for (const group of groups) {
+      const stableGroupKey = listeningDependencyGroupKey(group.key);
+      const groupRows = rows.filter(
+        (row) => row.dependencyGroupKey === stableGroupKey,
+      );
+      const anchor = groupRows.find((row) => row.dependencyRole === "anchor");
+      if (anchor === undefined) {
+        throw new ConvexError({
+          code: "LISTENING_DEPENDENCY_VERIFY_INVALID" as const,
+          groupKey: group.key,
+        });
+      }
+      for (const row of groupRows) {
+        if (
+          row.dependencyRole === "follow-up" &&
+          row.parentBankQuestionId !== anchor._id
+        ) {
+          orphans += 1;
+        }
+        if ((await resolveReadyQuestionAudio(ctx, row)) !== null) {
+          audioReady += 1;
+        }
+        if (await questionBankRowIsReadyForSelection(ctx, row)) {
+          selectable += 1;
+        }
+      }
+      summaries.push({
+        groupKey: stableGroupKey,
+        questions: groupRows.length,
+        anchorBankQuestionId: anchor._id,
+      });
+    }
+    return {
+      total: rows.length,
+      anchors: rows.filter((row) => row.dependencyRole === "anchor").length,
+      followUps: rows.filter((row) => row.dependencyRole === "follow-up")
+        .length,
+      audioReady,
+      selectable,
+      orphans,
+      groups: summaries,
+    };
   },
 });

@@ -591,7 +591,7 @@ An administrator edits seven structured OKLCH anchors for both modes. Convex der
 - Member taxonomy contains exactly role codes `0` through `4`, every supplied subtype, and no invented UPA expansion.
 - Member labels and assignment formatting preserve the user-supplied public vocabulary.
 - Member showcase contains 15 unique slugs, names, and portrait cells, covers all five role codes and every supplied assignment, and passes the same assignment guard.
-- Public content manifest has unique keys, valid defaults, and every page remains at or below the 200-entry backend ceiling.
+- Public content manifest has unique keys, valid defaults, and every page remains at or below the 256-entry backend ceiling.
 - Theme normalization accepts finite structured OKLCH only, serializes an allowlist, and reports blocking contrast pairs.
 - Programme quiz is derived from Activities copy and creates no identity.
 - Assessment question renderers, result labels, dialogs, elapsed-time formatting, and malformed route handling remain accessible and bounded.
@@ -656,7 +656,7 @@ Member extension sequence:
 Admin and Assessment integration sequence:
 
 1. Add Convex Auth, server permission checks, admin/CMS/media/theme tables, and a protected reusable admin shell.
-2. Add public manifest delivery, structured journal revisions, reviewed browser uploads, theme versioning, and the 200-entry page ceiling.
+2. Add public manifest delivery, structured journal revisions, reviewed browser uploads, theme versioning, and the 256-entry page ceiling.
 3. Add the assessment schema, Anonymous ownership, participant lifecycle, authoring/review/publish flow, and strict media projections.
 4. Add `/practice`, full/quick briefings, runner, result/review, Home programme quiz, and the Assessment admin workspaces.
 5. Keep confidential upload disabled until a separate private R2 bucket and exact-origin CORS are available.

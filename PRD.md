@@ -326,7 +326,7 @@ Acceptance:
 - Keep future event storage ready while hiding the route until verified records exist.
 - Store member profiles in an additive table with role, subtype, profile status, separate profile and photo consent states, optional R2 portrait metadata, sort order, and audit timestamps.
 - Provide an internal reviewed upsert and one public bounded query. Enforce role/subtype rules in both the write path and public projection.
-- Keep each manifest-bound CMS page at no more than 200 entries. Read 201 rows to detect an invalid overflow and refuse the 201st insert.
+- Keep each manifest-bound CMS page at no more than 256 entries. Read 257 rows to detect an invalid overflow and refuse the 257th insert.
 - Store immutable post revisions and publish one reviewed revision pointer; journal bodies use validated Tiptap JSON with a plain-text projection, never arbitrary HTML.
 
 Acceptance:
@@ -416,7 +416,7 @@ Acceptance:
 
 Acceptance:
 
-- Public copy reads no more than the 200-entry page contract and cannot execute HTML or scripts.
+- Public copy reads no more than the 256-entry page contract and cannot execute HTML or scripts.
 - Journal media cannot publish while unverified, private, wrong-purpose, or unrelated to the selected revision.
 - Theme Publish is disabled while local values differ from the saved draft, preventing publication of stale Convex state.
 - Visitor light and dark choices remain separate from the administrator's published colour recipes.

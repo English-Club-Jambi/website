@@ -1,6 +1,6 @@
 # Active delivery tracker
 
-Last updated: 26 August 2026, Asia/Jakarta
+Last updated: 29 August 2026, Asia/Jakarta
 
 This file is the release checklist for the English Club website. A task is marked complete only when the source, persistent data contract, and proportional verification agree. Public demo records are stored in Convex; runtime pages do not depend on hardcoded fallback rosters, posts, programmes, themes, or practice questions.
 
@@ -45,18 +45,42 @@ This file is the release checklist for the English Club website. A task is marke
 
 ## Practice and Question Bank: verified
 
-- [x] Add the public Practice menu, quick Listening/Reading/Writing/Speaking routes, full practice, attempts, results, and the Home programme quiz.
+- [x] Add the public Practice menu, quick Listening/Structure/Reading routes, paper-based full practice, attempts, results, and the Home programme quiz.
 - [x] Persist attempts under authenticated ownership and keep answers private.
 - [x] Build a real Convex Question Bank and random, duplicate-free immutable attempt manifests.
 - [x] Enforce and prove skill-scoped random Question Bank selection for every Full and Quick Live Practice section.
 - [x] Seed a sufficiently large original demonstration bank into the development database.
-- [x] Add grouped Task Family dropdown sections for Reading, Listening, Writing, and Speaking.
+- [x] Add grouped Task Family dropdown sections for Reading, Listening, and Structure and Written Expression; keep retired skills out of public Practice Formats.
 - [x] Add the Question Bank `Add question` entry point and private answer-key authoring.
 - [x] Support an optional reviewed R2 illustration on a bank question and render it in Live Practice.
 - [x] Render cloze choices at word level so the surrounding sentence remains intact.
 - [x] Fix rapid question navigation so every mutation carries the latest attempt revision.
 - [x] Fix the stuck `Preparing` state and verify the start flow against the cloud development deployment.
 - [x] Keep practice results clearly labelled as English Club estimates, not official ETS scores or certificates.
+
+## Listening stimulus sets: active delivery
+
+- [x] Audit the supplied 76-page practice PDF, its Listening pages, linked parent media, replay clips, question counts, and parent/follow-up relationships.
+- [x] Store a machine-readable, rights-aware JSON recap of all 11 Listening questions, five media links, answer labels, and parent/replay relationships without copying the source wording or media.
+- [x] Record the copyright boundary: use the document as a structural reference, but do not copy its attributed third-party question text or audio into the public Question Bank without a licence.
+- [x] Add optional dependency metadata to Question Bank rows and immutable attempt items.
+- [x] Replace item-only random selection with a set-aware algorithm: an eligible follow-up can appear only when its eligible anchor is selected first; follow-ups may be sampled; selected set members remain contiguous.
+- [x] Make an explicit Practice Format disable on an anchor suppress every follow-up in that set, while disabling a follow-up leaves the anchor and other follow-ups available.
+- [x] Seed two rights-cleared original Listening sets into Convex: one academic talk with six questions and one campus conversation with five questions.
+- [x] Generate and upload one complete parent recording per set to the reviewed public R2 assessment-audio path; never reuse the linked reference audio.
+- [x] Surface anchor/follow-up context in Practice Builder and pin it into every new Full or Quick Practice manifest.
+- [x] Verify source integrity, dependency closure, parent-first ordering, contiguous delivery, explicit format overrides, idempotent seeding, and immutable active attempts with Convex tests.
+- [x] Push only to `dev:perfect-greyhound-270`, seed idempotently, then prove Full and Quick Listening flows in the browser at desktop, Pixel 7, and 320 px with audio, touch, Axe, console, and overflow checks.
+- [x] Inspect the final diff, preserve unrelated concurrent edits, run release-proportional checks, and commit only the files belonging to this delivery.
+
+## Custom Live Practice audio player: active delivery
+
+- [x] Replace the browser-native audio controls with one reusable English Club player for every question-level and stimulus-level recording.
+- [x] Keep native audio semantics underneath the custom controls and support play, pause, seek, elapsed/duration, mute, volume, loading, ended, and recoverable error states.
+- [x] Use existing Bricolage typography, cobalt/chalk/carbon tokens, Signal Orange only for an active response, Heroicons, 8 px public-control radius, and no decorative card or glow treatment.
+- [x] Preserve keyboard access, visible focus, a minimum 44 px touch target, screen-reader state, reduced motion, and dark-theme parity.
+- [x] Verify reusable-component behavior with unit tests and prove real R2 playback in Full and Quick Listening on desktop, Pixel 7, and 320 px without console errors or overflow.
+- [x] Review screenshots against `DESIGN.md`, repair the short-recording and hidden-engine QA assumptions, and rerun the complete 18-case player plus Listening dependency matrix.
 
 ## Practice and Question Bank: current release blockers
 
@@ -71,8 +95,16 @@ This file is the release checklist for the English Club website. A task is marke
 - [x] Treat reviewed compatible questions as allowed by default for Practice Formats; store only explicit per-format allow/disable overrides.
 - [x] Verify that Practice Builder capacity and rules match the exact random pool used by public Live Practice.
 - [x] Prove an explicitly disabled question is never selected while default-allowed questions can be selected.
+- [x] Add owner-only Question Bank deletion with optimistic concurrency, indexed reference guards, retained source/key/media history, and a shared confirmation dialog.
+- [x] Add numbered cursor pagination to Question Bank without inventing a database-wide page total; reset the cursor horizon after filter changes and terminal-row deletion.
+- [x] Add an on-demand protected Review dialog to every Practice Format pool row, including private answer details, source context, flags, dependencies, imagery, and native Listening audio controls.
+- [x] Show the full enforced constructed-response contract in Review, including minimum/recommended length, character limit, rubric threshold, and preparation/response timing.
 - [x] Add a real browser regression that types a full Writing response character by character on desktop, Pixel 7, and 320 px while focus, save state, Axe, console, and overflow checks remain clean.
 - [x] Seed or update the cloud development records needed to demonstrate the final audio/edit/format flow.
+
+### Practice Format capacity migration
+
+- [ ] Replace the shared 200-row pool scan with a maintained capacity projection plus a dependency-aware paginated selection contract. The admin revision page and live attempt selector must move together so the UI never promises a scale the runtime cannot deliver.
 
 ## Release gates
 

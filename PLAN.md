@@ -113,7 +113,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Build the protected `/admin` shell, Pages, Journal, Contact desk, Members, Media, Appearance, Assessments, and Activity workspaces.
 - [x] Connect the three public Contact intents to a private admin Contact desk with separate queues, bounded pagination, explicit work status, email handoff, optimistic concurrency, and PII-safe audit events.
 - [x] Replace code-only journal maintenance with immutable structured revisions, reviewed covers/inline media, safe coordinate map nodes, publish, archive, and cursor pagination.
-- [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 200 entries per page and locale.
+- [x] Add the public-copy manifest and Convex draft/published version flow with a hard ceiling of 256 entries per page and locale.
 - [x] Add reviewed media upload through a validated same-origin streaming relay, Convex metadata verification, immutable object keys, and the `r2.mukhtada.my.id` public read projection.
 - [x] Add structured public theme drafts, server-side OKLCH derivation and contrast validation, immutable versions, atomic publish/rollback pointers, and a checked-in fallback.
 - [x] Keep admin symbols on Heroicons, controls at least 44px, dialogs focus-contained, and motion reduced under `prefers-reduced-motion`.
@@ -302,7 +302,7 @@ Exit condition: source, cloud behavior, documents, and evidence describe the sam
 | Anonymous attempts outlive the promised retention period | Medium | High | Do not promise automatic deletion; approve and test cleanup before public launch |
 | Public result-email action is abused or sends from an unauthenticated domain | Medium | High | Verify Brevo sender/domain, keep the dedicated digest key server-only, require exact-host Turnstile validation, and retain bounded per-attempt, recipient-digest, and global limits |
 | A provider timeout causes a duplicate result email | Medium | Medium | Keep the same Brevo JSON idempotency UUID for the exact retry, record the outcome as `uncertain`, and require the learner to request a separate copy instead of retrying automatically |
-| CMS page growth truncates Practice copy | Low | Medium | Indexed read of 201, explicit failure above 200, and refusal to create a 201st entry |
+| CMS page growth truncates Practice copy | Low | Medium | Indexed read of 257, explicit failure above 256, and refusal to create a 257th entry |
 
 ## Release boundaries
 

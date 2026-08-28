@@ -595,6 +595,8 @@
 .iconButton,
 .mobileMenuTrigger {
   width: 44px;
+  min-width: 44px;
+  flex: 0 0 44px;
   padding: 0;
 }
 
@@ -1037,7 +1039,11 @@
 }
 
 .dataTable tbody tr:hover {
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 50%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 50%,
+    var(--admin-paper)
+  );
 }
 
 .dataTable td strong,
@@ -1357,7 +1363,11 @@
 
 .workflowRow:hover {
   padding-left: 1.4rem;
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 58%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 58%,
+    var(--admin-paper)
+  );
 }
 
 .workflowRow > svg {
@@ -1451,7 +1461,10 @@
   min-width: 0;
   min-height: 98px;
   display: grid;
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(16rem, 1.2fr) minmax(10rem, auto);
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(16rem, 1.2fr) minmax(
+      10rem,
+      auto
+    );
   align-items: center;
   gap: 1.25rem;
   padding: 1rem 1.15rem;
@@ -1465,7 +1478,11 @@
 }
 
 .journalAdminRow:hover {
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 55%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 55%,
+    var(--admin-paper)
+  );
 }
 
 .journalAdminRow > div:first-child {
@@ -1571,7 +1588,11 @@
 }
 
 .contactIntentButton:hover {
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 52%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 52%,
+    var(--admin-paper)
+  );
 }
 
 .contactIntentButton[aria-pressed="true"] {
@@ -1603,7 +1624,10 @@
 .contactToolbar {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(12rem, 0.65fr) minmax(8rem, auto) minmax(16rem, 1.35fr);
+  grid-template-columns: minmax(12rem, 0.65fr) minmax(8rem, auto) minmax(
+      16rem,
+      1.35fr
+    );
   align-items: center;
   gap: 0.75rem;
   border-bottom: 2px solid var(--admin-line);
@@ -1680,7 +1704,11 @@
 }
 
 .contactListRow:hover {
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 42%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 42%,
+    var(--admin-paper)
+  );
 }
 
 .contactListRow[data-active="true"] {
@@ -1859,7 +1887,11 @@
   gap: 0.75rem;
   border-top: 2px solid var(--admin-line);
   padding: 0.6rem 1rem;
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 34%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 34%,
+    var(--admin-paper)
+  );
 }
 
 .contactActionRow > p {
@@ -2368,7 +2400,11 @@
   gap: 0.65rem;
   border-bottom: 1px solid var(--admin-soft-line);
   padding: 0.65rem 0.9rem;
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 42%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 42%,
+    var(--admin-paper)
+  );
 }
 
 .memberDrawerStatus > span:first-child {
@@ -2385,7 +2421,11 @@
   gap: 1rem;
   border-bottom: 2px solid var(--admin-line);
   padding: 1rem 1.15rem;
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 68%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 68%,
+    var(--admin-paper)
+  );
 }
 
 .programEditorHeader > div {
@@ -2711,7 +2751,11 @@
   gap: 0.8rem;
   border-bottom: 2px solid var(--admin-line);
   padding: 1rem 1.15rem 1.15rem;
-  background: color-mix(in oklch, var(--admin-cobalt-wash) 52%, var(--admin-paper));
+  background: color-mix(
+    in oklch,
+    var(--admin-cobalt-wash) 52%,
+    var(--admin-paper)
+  );
 }
 
 .themePresetIntro {
@@ -3359,7 +3403,8 @@
     justify-content: space-between;
     gap: 1rem;
     border-bottom: 2px solid var(--admin-line);
-    padding: 0.65rem max(0.8rem, env(safe-area-inset-right)) 0.65rem max(0.8rem, env(safe-area-inset-left));
+    padding: 0.65rem max(0.8rem, env(safe-area-inset-right)) 0.65rem
+      max(0.8rem, env(safe-area-inset-left));
     background: var(--admin-paper);
   }
 

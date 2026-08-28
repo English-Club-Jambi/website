@@ -2572,11 +2572,11 @@ describe("assessment administration and immutable publication", () => {
     ]);
   });
 
-  it("returns every published Practice CMS field beyond the old 120-row ceiling", async () => {
+  it("returns every published Practice CMS field beyond the old 200-row ceiling", async () => {
     const t = createHarness();
     const { ownerId, editor } = await bootstrapAdmins(t);
     await t.run(async (ctx) => {
-      for (let index = 0; index < 142; index += 1) {
+      for (let index = 0; index < 212; index += 1) {
         const contentKey = `practice-field-${String(index).padStart(3, "0")}`;
         const entryId = await ctx.db.insert("siteContentEntries", {
           pageKey: "practice",
@@ -2608,20 +2608,20 @@ describe("assessment administration and immutable publication", () => {
         pageKey: "practice",
         locale: "en",
       }),
-    ).resolves.toHaveLength(142);
+    ).resolves.toHaveLength(212);
     await expect(
       editor.query(api.adminContent.getPageWorkspace, {
         pageKey: "practice",
         locale: "en",
       }),
-    ).resolves.toHaveLength(142);
+    ).resolves.toHaveLength(212);
   });
 
-  it("refuses a 201st CMS key instead of silently starving known page fields", async () => {
+  it("refuses a 257th CMS key instead of silently starving known page fields", async () => {
     const t = createHarness();
     const { ownerId, editor } = await bootstrapAdmins(t);
     await t.run(async (ctx) => {
-      for (let index = 0; index < 200; index += 1) {
+      for (let index = 0; index < 256; index += 1) {
         await ctx.db.insert("siteContentEntries", {
           pageKey: "practice",
           locale: "en",
@@ -2642,7 +2642,7 @@ describe("assessment administration and immutable publication", () => {
         pageKey: "practice",
         locale: "en",
       }),
-    ).resolves.toHaveLength(200);
+    ).resolves.toHaveLength(256);
     await expect(
       editor.mutation(api.adminContent.saveDraft, {
         pageKey: "practice",
@@ -2665,8 +2665,8 @@ describe("assessment administration and immutable publication", () => {
         draftRevision: 1,
         createdBy: ownerId,
         updatedBy: ownerId,
-        createdAt: 201,
-        updatedAt: 201,
+        createdAt: 257,
+        updatedAt: 257,
       });
     });
     await expect(

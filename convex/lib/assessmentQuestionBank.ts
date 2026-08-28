@@ -39,6 +39,9 @@ export type DeliveredAssessmentItem = {
   bankQuestionId?: Id<"assessmentQuestionBank">;
   illustrationMediaId?: Id<"mediaAssets">;
   audioMediaId?: Id<"mediaAssets">;
+  dependencyGroupKey?: string;
+  dependencyRole?: "anchor" | "follow-up";
+  parentAttemptItemOrder?: number;
 };
 
 const taskFamilyByPrefix: ReadonlyArray<
@@ -329,6 +332,9 @@ export async function deliveredItemAt(
       bankQuestionId: selection.bankQuestionId,
       illustrationMediaId: selection.illustrationMediaId,
       audioMediaId: selection.audioMediaId,
+      dependencyGroupKey: selection.dependencyGroupKey,
+      dependencyRole: selection.dependencyRole,
+      parentAttemptItemOrder: selection.parentAttemptItemOrder,
     };
   }
 
@@ -373,6 +379,9 @@ export async function listDeliveredSectionItems(
         bankQuestionId: selection.bankQuestionId,
         illustrationMediaId: selection.illustrationMediaId,
         audioMediaId: selection.audioMediaId,
+        dependencyGroupKey: selection.dependencyGroupKey,
+        dependencyRole: selection.dependencyRole,
+        parentAttemptItemOrder: selection.parentAttemptItemOrder,
       });
     }
     return result;
@@ -421,12 +430,162 @@ export async function assertDeliveredItem(
 }
 
 export function shuffled<T>(values: readonly T[]) {
+  return shuffledWithRandom(values, Math.random);
+}
+
+export function shuffledWithRandom<T>(
+  values: readonly T[],
+  random: () => number,
+) {
   const result = [...values];
   for (let index = result.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const swapIndex = Math.floor(random() * (index + 1));
     [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
   }
   return result;
+}
+
+type StructuredBankRow = Pick<
+  Doc<"assessmentQuestionBank">,
+  "_id" | "dependencyGroupKey" | "dependencyRole" | "parentBankQuestionId"
+>;
+
+/**
+ * Selects an exact item count while preserving dependency closure. Follow-ups
+ * may be sampled, but their anchor is inserted once and every selected group
+ * is recomposed into one contiguous, parent-first block.
+ */
+export function selectStructuredQuestionBankRows<T extends StructuredBankRow>(
+  values: readonly T[],
+  itemCount: number,
+  random: () => number = Math.random,
+) {
+  if (!Number.isInteger(itemCount) || itemCount < 1) return [];
+  const rowsById = new Map(values.map((row) => [String(row._id), row]));
+  const selected: T[] = [];
+  const selectedIds = new Set<string>();
+
+  function add(row: T) {
+    const id = String(row._id);
+    if (selectedIds.has(id) || selected.length >= itemCount) return false;
+    selected.push(row);
+    selectedIds.add(id);
+    return true;
+  }
+
+  for (const row of shuffledWithRandom(values, random)) {
+    if (selected.length >= itemCount) break;
+    if (row.dependencyRole !== "follow-up") {
+      add(row);
+      continue;
+    }
+    if (row.parentBankQuestionId === undefined) continue;
+    const parent = rowsById.get(String(row.parentBankQuestionId));
+    if (
+      parent === undefined ||
+      parent.dependencyRole !== "anchor" ||
+      parent.dependencyGroupKey === undefined ||
+      parent.dependencyGroupKey !== row.dependencyGroupKey
+    ) {
+      continue;
+    }
+    if (!selectedIds.has(String(parent._id))) {
+      if (itemCount - selected.length < 2) continue;
+      add(parent);
+    }
+    add(row);
+  }
+
+  if (selected.length !== itemCount) return [];
+  const orderById = new Map(
+    selected.map((row, index) => [String(row._id), index]),
+  );
+  const emittedGroups = new Set<string>();
+  const recomposed: T[] = [];
+  for (const row of selected) {
+    const groupKey = row.dependencyGroupKey;
+    if (groupKey === undefined) {
+      recomposed.push(row);
+      continue;
+    }
+    if (emittedGroups.has(groupKey)) continue;
+    emittedGroups.add(groupKey);
+    const groupRows = selected
+      .filter((candidate) => candidate.dependencyGroupKey === groupKey)
+      .sort((left, right) => {
+        if (left.dependencyRole === "anchor") return -1;
+        if (right.dependencyRole === "anchor") return 1;
+        return (
+          (orderById.get(String(left._id)) ?? 0) -
+          (orderById.get(String(right._id)) ?? 0)
+        );
+      });
+    recomposed.push(...groupRows);
+  }
+  return recomposed;
+}
+
+function dependencyMetadataIsIndependent(row: StructuredBankRow) {
+  return (
+    row.dependencyGroupKey === undefined &&
+    row.dependencyRole === undefined &&
+    row.parentBankQuestionId === undefined
+  );
+}
+
+async function dependencyMetadataIsReady(
+  ctx: AssessmentReadCtx,
+  row: Doc<"assessmentQuestionBank">,
+  eligibleById: ReadonlyMap<string, Doc<"assessmentQuestionBank">>,
+  itemCache: Map<string, Doc<"assessmentItems"> | null>,
+) {
+  if (dependencyMetadataIsIndependent(row)) return true;
+  const groupKey = row.dependencyGroupKey?.trim();
+  if (groupKey === undefined || groupKey.length < 3 || groupKey.length > 120) {
+    return false;
+  }
+  if (row.dependencyRole === "anchor") {
+    return row.parentBankQuestionId === undefined;
+  }
+  if (
+    row.dependencyRole !== "follow-up" ||
+    row.parentBankQuestionId === undefined ||
+    String(row.parentBankQuestionId) === String(row._id)
+  ) {
+    return false;
+  }
+  const parent = eligibleById.get(String(row.parentBankQuestionId));
+  if (
+    parent === undefined ||
+    parent.dependencyRole !== "anchor" ||
+    parent.parentBankQuestionId !== undefined ||
+    parent.dependencyGroupKey !== row.dependencyGroupKey ||
+    parent.profile !== row.profile ||
+    parent.skill !== row.skill
+  ) {
+    return false;
+  }
+
+  async function getItem(question: Doc<"assessmentQuestionBank">) {
+    const key = String(question.sourceItemId);
+    if (!itemCache.has(key)) {
+      itemCache.set(key, await ctx.db.get("assessmentItems", question.sourceItemId));
+    }
+    return itemCache.get(key) ?? null;
+  }
+  const [item, parentItem] = await Promise.all([getItem(row), getItem(parent)]);
+  if (item === null || parentItem === null) return false;
+  if (row.skill === "listening") {
+    const [audio, parentAudio] = await Promise.all([
+      resolveReadyQuestionAudio(ctx, row, item),
+      resolveReadyQuestionAudio(ctx, parent, parentItem),
+    ]);
+    return audio !== null && parentAudio !== null && audio.mediaId === parentAudio.mediaId;
+  }
+  return (
+    item.stimulusId !== undefined &&
+    item.stimulusId === parentItem.stimulusId
+  );
 }
 
 export async function listEligibleBankQuestionsForSection(
@@ -493,7 +652,7 @@ export async function listEligibleBankQuestionsForSection(
       current === false || rule.allowed === false ? false : true,
     );
   }
-  const eligible: Array<Doc<"assessmentQuestionBank">> = [];
+  const sourceReady: Array<Doc<"assessmentQuestionBank">> = [];
   const fingerprints = new Set<string>();
   const orderedRows = [...rows].sort(
     (left, right) =>
@@ -511,7 +670,17 @@ export async function listEligibleBankQuestionsForSection(
     if (fingerprints.has(row.contentFingerprint)) continue;
     if (!(await questionBankRowIsReadyForSelection(ctx, row))) continue;
     fingerprints.add(row.contentFingerprint);
-    eligible.push(row);
+    sourceReady.push(row);
+  }
+  const sourceReadyById = new Map(
+    sourceReady.map((row) => [String(row._id), row]),
+  );
+  const itemCache = new Map<string, Doc<"assessmentItems"> | null>();
+  const eligible: Array<Doc<"assessmentQuestionBank">> = [];
+  for (const row of sourceReady) {
+    if (await dependencyMetadataIsReady(ctx, row, sourceReadyById, itemCache)) {
+      eligible.push(row);
+    }
   }
   return eligible;
 }
@@ -535,17 +704,39 @@ export async function prepareRandomSelectionPlans(
         available: eligible.length,
       });
     }
-    const selected = shuffled(eligible).slice(0, section.itemCount);
+    const selected = selectStructuredQuestionBankRows(
+      eligible,
+      section.itemCount,
+    );
     const fingerprints = new Set(
       selected.map((question) => question.contentFingerprint),
+    );
+    const selectedOrderById = new Map(
+      selected.map((question, index) => [String(question._id), index]),
     );
     if (
       selected.length !== section.itemCount ||
       fingerprints.size !== selected.length ||
       selected.some(
-        (question) =>
-          question.skill !== section.skill ||
-          !isTaskFamilyForSkill(question.skill, question.taskFamily),
+        (question, index) => {
+          if (
+            question.skill !== section.skill ||
+            !isTaskFamilyForSkill(question.skill, question.taskFamily)
+          ) {
+            return true;
+          }
+          if (question.dependencyRole !== "follow-up") return false;
+          const parentOrder =
+            question.parentBankQuestionId === undefined
+              ? undefined
+              : selectedOrderById.get(String(question.parentBankQuestionId));
+          return (
+            parentOrder === undefined ||
+            parentOrder >= index ||
+            selected[parentOrder]?.dependencyGroupKey !==
+              question.dependencyGroupKey
+          );
+        },
       )
     ) {
       throw new ConvexError({

@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Id } from "../../convex/_generated/dataModel";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   phase: "question" as "question" | "section-ready",
@@ -218,8 +218,14 @@ import { PracticeProvider } from "@/components/practice/practice-provider";
 const copy = getPublicContentDefaults("practice");
 const attemptId = "assessmentattempt00000000001" as Id<"assessmentAttempts">;
 
+beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => undefined);
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+});
+
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   mocks.phase = "question";
   mocks.resolvedAttemptId = "assessmentattempt00000000001";
   mocks.queryNames.length = 0;
@@ -346,6 +352,10 @@ describe("AttemptRunner reactive boundaries", () => {
 
     const audio = container.querySelectorAll("audio");
     expect(audio).toHaveLength(1);
+    expect(container.querySelectorAll("[data-practice-audio-player]")).toHaveLength(1);
+    expect(audio[0]).toHaveAttribute("data-practice-audio-engine");
+    expect(audio[0]).not.toHaveAttribute("controls");
+    expect(audio[0]).not.toHaveAttribute("autoplay");
     expect(audio[0]).toHaveAttribute(
       "src",
       "https://r2.mukhtada.my.id/assessments/question-recording.mp3",
@@ -360,6 +370,9 @@ describe("AttemptRunner reactive boundaries", () => {
 
     const audio = container.querySelectorAll("audio");
     expect(audio).toHaveLength(1);
+    expect(container.querySelectorAll("[data-practice-audio-player]")).toHaveLength(1);
+    expect(audio[0]).toHaveAttribute("data-practice-audio-engine");
+    expect(audio[0]).not.toHaveAttribute("controls");
     expect(audio[0]).toHaveAttribute(
       "src",
       "https://r2.mukhtada.my.id/assessments/legacy-stimulus.mp3",

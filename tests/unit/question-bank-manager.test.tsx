@@ -6,12 +6,22 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { QuestionBankManager } from "@/components/admin/assessments/question-bank-manager";
 
 const useQueryMock = vi.fn();
 const mutationMock = vi.fn();
+const confirmMock = vi.fn();
+let adminRole: "editor" | "publisher" | "owner" = "owner";
 
 vi.mock("convex/react", async () => {
   const actual =
@@ -25,7 +35,11 @@ vi.mock("convex/react", async () => {
 });
 
 vi.mock("@/components/admin/admin-session", () => ({
-  useAdminSession: () => ({ role: "owner" }),
+  useAdminSession: () => ({ role: adminRole }),
+}));
+
+vi.mock("@/components/admin/admin-confirm-dialog", () => ({
+  useAdminConfirm: () => confirmMock,
 }));
 
 const choiceOptions = [
@@ -125,6 +139,7 @@ function resultForQuery(args: Record<string, unknown> | undefined) {
 }
 
 beforeEach(() => {
+  adminRole = "owner";
   currentRow = baseRow;
   useQueryMock.mockImplementation(
     (_reference: unknown, args: Record<string, unknown> | undefined) =>
@@ -136,6 +151,13 @@ beforeEach(() => {
     updatedAt: 11,
     sourceItemId: "item-two",
   });
+  confirmMock.mockReset();
+  confirmMock.mockImplementation(
+    async (_request: unknown, execute?: () => Promise<void>) => {
+      await execute?.();
+      return true;
+    },
+  );
 });
 
 afterEach(() => {
@@ -144,6 +166,76 @@ afterEach(() => {
 });
 
 describe("QuestionBankManager", () => {
+  it("lets an owner permanently delete an unused bank entry through the shared confirmation flow", async () => {
+    const user = userEvent.setup();
+    mutationMock.mockResolvedValueOnce({
+      ok: true,
+      deletedBankQuestionId: "bank-one",
+    });
+    render(<QuestionBankManager />);
+
+    await user.click(screen.getByRole("button", { name: "Delete question" }));
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Delete this Question Bank entry?",
+        confirmLabel: "Delete question",
+        cancelLabel: "Keep question",
+      }),
+      expect.any(Function),
+    );
+    expect(mutationMock).toHaveBeenCalledWith({
+      bankQuestionId: "bank-one",
+      expectedUpdatedAt: 10,
+    });
+    expect(
+      screen.getByText(
+        "Deleted “When should members meet outside the language room?” from Question Bank.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("does not expose permanent deletion to editors or publishers", () => {
+    adminRole = "publisher";
+    render(<QuestionBankManager />);
+
+    expect(
+      screen.queryByRole("button", { name: "Delete question" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a protected question and explains why deletion is blocked", async () => {
+    const user = userEvent.setup();
+    let confirmationError: unknown;
+    mutationMock.mockResolvedValueOnce({
+      ok: false,
+      code: "blocked",
+      reason: "attempt_history",
+    });
+    confirmMock.mockImplementation(
+      async (_request: unknown, execute?: () => Promise<void>) => {
+        try {
+          await execute?.();
+        } catch (error) {
+          confirmationError = error;
+        }
+        return false;
+      },
+    );
+    render(<QuestionBankManager />);
+
+    await user.click(screen.getByRole("button", { name: "Delete question" }));
+
+    expect(confirmationError).toEqual(
+      new Error(
+        "This question has already appeared in a learner attempt. Its audit record must be retained.",
+      ),
+    );
+    expect(
+      screen.queryByText(/Deleted “When should members meet/i),
+    ).not.toBeInTheDocument();
+  });
+
   it("edits a published-source question directly and keeps format rules explicit", async () => {
     const user = userEvent.setup();
     render(<QuestionBankManager />);
@@ -199,9 +291,9 @@ describe("QuestionBankManager", () => {
     render(<QuestionBankManager />);
 
     const inlineEditor = screen.getByLabelText("Selected question editor");
-    expect(
-      within(inlineEditor).getByLabelText("Question prompt"),
-    ).toHaveValue(baseRow.content.prompt);
+    expect(within(inlineEditor).getByLabelText("Question prompt")).toHaveValue(
+      baseRow.content.prompt,
+    );
 
     const openPopup = within(inlineEditor).getByRole("button", {
       name: "Open popup",
@@ -210,12 +302,14 @@ describe("QuestionBankManager", () => {
     const popup = screen.getByRole("dialog", {
       name: "Edit question in a focused workspace",
     });
+    expect(within(popup).getByLabelText("Question prompt")).toHaveValue(
+      baseRow.content.prompt,
+    );
     expect(
-      within(popup).getByLabelText("Question prompt"),
-    ).toHaveValue(baseRow.content.prompt);
-    expect(within(popup).getByRole("button", {
-      name: "Save question revision",
-    })).toBeEnabled();
+      within(popup).getByRole("button", {
+        name: "Save question revision",
+      }),
+    ).toBeEnabled();
 
     const popupPrompt = within(popup).getByLabelText("Question prompt");
     await user.clear(popupPrompt);

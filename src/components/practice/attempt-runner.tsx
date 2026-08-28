@@ -11,7 +11,6 @@ import {
   FlagIcon,
   ListBulletIcon,
   PlayIcon,
-  SpeakerWaveIcon,
   StopIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -40,6 +39,10 @@ import {
   type AttemptPlayer,
   type PublicAssessmentResponse,
 } from "./question-renderer";
+import {
+  CustomAudioPlayer,
+  type CustomAudioPlayerCopy,
+} from "./custom-audio-player";
 import { usePracticeContext } from "./practice-provider";
 import styles from "./practice.module.css";
 
@@ -52,6 +55,26 @@ function mutationId(prefix: string) {
 }
 
 export { isPlausibleAttemptId };
+
+function playerCopy(
+  copy: ReturnType<typeof usePracticeContext>["copy"],
+): CustomAudioPlayerCopy {
+  return {
+    play: copy.playRecording,
+    pause: copy.pauseRecording,
+    replay: copy.replayRecording,
+    mute: copy.muteRecording,
+    unmute: copy.unmuteRecording,
+    seek: copy.recordingPosition,
+    loading: copy.loadingRecording,
+    buffering: copy.bufferingRecording,
+    finished: copy.recordingFinished,
+    unavailable: copy.playbackUnavailable,
+    retry: copy.retryRecording,
+    durationUnavailable: copy.durationUnavailable,
+    volume: copy.recordingVolume,
+  };
+}
 
 export function QuestionIllustration({
   illustration,
@@ -76,15 +99,15 @@ export function QuestionAudio({ audio }: { audio: AttemptPlayer["audio"] | undef
   const { copy } = usePracticeContext();
   if (audio == null) return null;
   return (
-    <section className={styles.questionAudio} aria-label={audio.description}>
-      <SpeakerWaveIcon width={25} height={25} strokeWidth={1.8} aria-hidden />
-      <div>
-        <p>{audio.description}</p>
-        <audio controls preload="metadata" src={audio.publicUrl}>
-          {copy.audioUnavailable}
-        </audio>
-      </div>
-    </section>
+    <div className={styles.questionAudio}>
+      <p>{audio.description}</p>
+      <CustomAudioPlayer
+        src={audio.publicUrl}
+        label={audio.description}
+        copy={playerCopy(copy)}
+        showVolume
+      />
+    </div>
   );
 }
 
@@ -228,11 +251,13 @@ function Stimulus({
 
       {stimulus.kind === "audio" && player.audio == null ? (
         <div className={styles.audioStimulus}>
-          <SpeakerWaveIcon width={25} height={25} strokeWidth={1.8} aria-hidden />
           {stimulus.mediaUrl !== null ? (
-            <audio controls preload="metadata" src={stimulus.mediaUrl}>
-              {copy.audioUnavailable}
-            </audio>
+            <CustomAudioPlayer
+              src={stimulus.mediaUrl}
+              label={stimulus.title ?? player.section.title}
+              copy={playerCopy(copy)}
+              showVolume
+            />
           ) : (
             stimulus.transcript === null ? (
               <p>{copy.audioUnavailable}</p>

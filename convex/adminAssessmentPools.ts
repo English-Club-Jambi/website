@@ -2,14 +2,21 @@ import { ConvexError, v } from "convex/values";
 
 import {
   assessmentFlagReviewStatusValidator,
+  assessmentOptionValidator,
   assessmentProfileValidator,
   assessmentQuestionBankStatusValidator,
+  assessmentQuestionDependencyRoleValidator,
   assessmentQuestionDifficultyValidator,
   assessmentSkillValidator,
   assessmentTaskFamilyValidator,
   assessmentVersionStatusValidator,
   assessmentVisibilityValidator,
+  clozeAnswerValidator,
+  clozeGapValidator,
+  constructedResponseModeValidator,
   itemTypeValidator,
+  questionAudioValidator,
+  stimulusKindValidator,
 } from "./assessmentValidators";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
@@ -22,8 +29,10 @@ import {
   listEligibleBankQuestionsForSection,
   questionAllowedByDefaultForFormat,
   questionBankRowIsReadyForSelection,
+  resolveReadyQuestionAudio,
 } from "./lib/assessmentQuestionBank";
 import { requireAdmin, writeAuditEvent } from "./lib/adminAuth";
+import { projectReadyQuestionIllustration } from "./lib/media";
 
 const poolSectionValidator = v.object({
   sectionId: v.id("assessmentSections"),
@@ -60,6 +69,14 @@ const poolQuestionValidator = v.object({
     v.literal("disabled"),
   ),
   effectiveAllowed: v.boolean(),
+  dependency: v.union(
+    v.object({
+      groupKey: v.string(),
+      role: assessmentQuestionDependencyRoleValidator,
+      parentBankQuestionId: v.union(v.id("assessmentQuestionBank"), v.null()),
+    }),
+    v.null(),
+  ),
   flagSignal: v.union(flagSignalValidator, v.null()),
 });
 
@@ -95,6 +112,103 @@ const ruleMutationResultValidator = v.union(
   }),
 );
 
+const reviewImageValidator = v.object({
+  mediaId: v.id("mediaAssets"),
+  publicUrl: v.string(),
+  alt: v.string(),
+  width: v.number(),
+  height: v.number(),
+});
+
+const reviewContentBaseValidator = v.object({
+  prompt: v.string(),
+  explanation: v.union(v.string(), v.null()),
+});
+
+const reviewContentValidator = v.union(
+  reviewContentBaseValidator.extend({
+    type: v.literal("single-choice"),
+    options: v.array(assessmentOptionValidator),
+    correctChoiceKey: v.string(),
+  }),
+  reviewContentBaseValidator.extend({
+    type: v.literal("multiple-select"),
+    options: v.array(assessmentOptionValidator),
+    selectionMin: v.number(),
+    selectionMax: v.number(),
+    correctChoiceKeys: v.array(v.string()),
+  }),
+  reviewContentBaseValidator.extend({
+    type: v.literal("cloze-select"),
+    stemParts: v.array(v.string()),
+    gaps: v.array(clozeGapValidator),
+    correctGapAnswers: v.array(clozeAnswerValidator),
+  }),
+  reviewContentBaseValidator.extend({
+    type: v.literal("sentence-build"),
+    tokens: v.array(assessmentOptionValidator),
+    acceptedTokenOrders: v.array(v.array(v.string())),
+  }),
+  reviewContentBaseValidator.extend({
+    type: v.literal("constructed-response"),
+    responseMode: constructedResponseModeValidator,
+    minimumWords: v.number(),
+    recommendedWords: v.number(),
+    maximumCharacters: v.number(),
+    preparationSeconds: v.union(v.number(), v.null()),
+    responseSeconds: v.union(v.number(), v.null()),
+    rubric: v.object({
+      maxPoints: v.number(),
+      minimumWords: v.number(),
+      targetTerms: v.array(v.string()),
+      sampleResponse: v.string(),
+    }),
+  }),
+);
+
+const questionReviewValidator = v.object({
+  bankQuestionId: v.id("assessmentQuestionBank"),
+  bankKey: v.string(),
+  skill: assessmentSkillValidator,
+  taskFamily: assessmentTaskFamilyValidator,
+  difficulty: assessmentQuestionDifficultyValidator,
+  status: assessmentQuestionBankStatusValidator,
+  profile: assessmentProfileValidator,
+  fullPracticeEligible: v.boolean(),
+  origin: v.union(v.literal("assessment-source"), v.literal("bank-authored")),
+  tags: v.array(v.string()),
+  content: reviewContentValidator,
+  source: v.object({
+    title: v.string(),
+    visibility: assessmentVisibilityValidator,
+    versionStatus: assessmentVersionStatusValidator,
+    sectionTitle: v.string(),
+    itemKey: v.string(),
+  }),
+  stimulus: v.union(
+    v.object({
+      kind: stimulusKindValidator,
+      title: v.union(v.string(), v.null()),
+      body: v.union(v.string(), v.null()),
+      transcript: v.union(v.string(), v.null()),
+      alt: v.union(v.string(), v.null()),
+      image: v.union(reviewImageValidator, v.null()),
+    }),
+    v.null(),
+  ),
+  illustration: v.union(reviewImageValidator, v.null()),
+  audio: v.union(questionAudioValidator, v.null()),
+  dependency: v.union(
+    v.object({
+      groupKey: v.string(),
+      role: assessmentQuestionDependencyRoleValidator,
+      parentPrompt: v.union(v.string(), v.null()),
+    }),
+    v.null(),
+  ),
+  updatedAt: v.number(),
+});
+
 type PoolQuestionView = {
   bankQuestionId: Id<"assessmentQuestionBank">;
   skill: Doc<"assessmentQuestionBank">["skill"];
@@ -107,6 +221,11 @@ type PoolQuestionView = {
   allowedByDefault: boolean;
   ruleState: "inherit" | "allowed" | "disabled";
   effectiveAllowed: boolean;
+  dependency: null | {
+    groupKey: string;
+    role: "anchor" | "follow-up";
+    parentBankQuestionId: Id<"assessmentQuestionBank"> | null;
+  };
   flagSignal: null | {
     activeCount: number;
     totalEvents: number;
@@ -115,6 +234,74 @@ type PoolQuestionView = {
     reviewedAt: number | null;
   };
 };
+
+function projectReviewContent(
+  item: Doc<"assessmentItems">,
+  key: Doc<"assessmentAnswerKeys">,
+) {
+  const base = {
+    prompt: item.prompt,
+    explanation: item.explanation ?? null,
+  };
+  switch (item.type) {
+    case "single-choice":
+      if (key.kind !== "choice" || key.correctChoiceKeys.length !== 1) break;
+      return {
+        ...base,
+        type: item.type,
+        options: item.options,
+        correctChoiceKey: key.correctChoiceKeys[0],
+      };
+    case "multiple-select":
+      if (key.kind !== "multi-choice") break;
+      return {
+        ...base,
+        type: item.type,
+        options: item.options,
+        selectionMin: item.selectionMin,
+        selectionMax: item.selectionMax,
+        correctChoiceKeys: key.correctChoiceKeys,
+      };
+    case "cloze-select":
+      if (key.kind !== "cloze") break;
+      return {
+        ...base,
+        type: item.type,
+        stemParts: item.stemParts,
+        gaps: item.gaps,
+        correctGapAnswers: key.correctGapAnswers,
+      };
+    case "sentence-build":
+      if (key.kind !== "token-order") break;
+      return {
+        ...base,
+        type: item.type,
+        tokens: item.tokens,
+        acceptedTokenOrders: key.acceptedTokenOrders,
+      };
+    case "constructed-response":
+      if (key.kind !== "text-rubric" || key.rubricMode !== item.responseMode) {
+        break;
+      }
+      return {
+        ...base,
+        type: item.type,
+        responseMode: item.responseMode,
+        minimumWords: item.minimumWords,
+        recommendedWords: item.recommendedWords,
+        maximumCharacters: item.maximumCharacters,
+        preparationSeconds: item.preparationSeconds ?? null,
+        responseSeconds: item.responseSeconds ?? null,
+        rubric: {
+          maxPoints: key.maxPoints,
+          minimumWords: key.minimumWords,
+          targetTerms: key.targetTerms,
+          sampleResponse: key.sampleResponse,
+        },
+      };
+  }
+  throw new ConvexError({ code: "QUESTION_BANK_SOURCE_MISSING" as const });
+}
 
 function isLegacyClonedPoolSection(section: Doc<"assessmentSections">) {
   return (
@@ -131,7 +318,9 @@ async function repairInheritedPoolSections(
   sections: readonly Doc<"assessmentSections">[],
   skill: Doc<"assessmentQuestionBank">["skill"],
 ) {
-  const matchingSections = sections.filter((section) => section.skill === skill);
+  const matchingSections = sections.filter(
+    (section) => section.skill === skill,
+  );
   let hasRandomBankSection = matchingSections.some(isRandomBankSection);
   let repairedCount = 0;
 
@@ -202,7 +391,8 @@ export const getOverview = query({
       definition.draftVersionId ?? definition.publishedVersionId;
     if (versionId === undefined) return null;
     const version = await ctx.db.get("assessmentVersions", versionId);
-    if (version === null || version.definitionId !== definition._id) return null;
+    if (version === null || version.definitionId !== definition._id)
+      return null;
 
     const [sections, bankRows, rules, signals] = await Promise.all([
       ctx.db
@@ -349,6 +539,15 @@ export const getOverview = query({
         effectiveAllowed: effectivelyAllowedFingerprints.has(
           row.contentFingerprint,
         ),
+        dependency:
+          row.dependencyGroupKey === undefined ||
+          row.dependencyRole === undefined
+            ? null
+            : {
+                groupKey: row.dependencyGroupKey,
+                role: row.dependencyRole,
+                parentBankQuestionId: row.parentBankQuestionId ?? null,
+              },
         flagSignal:
           latestSignal === undefined
             ? null
@@ -411,6 +610,179 @@ export const getOverview = query({
   },
 });
 
+export const getQuestionReview = query({
+  args: {
+    definitionId: v.id("assessmentDefinitions"),
+    bankQuestionId: v.id("assessmentQuestionBank"),
+  },
+  returns: v.union(v.null(), questionReviewValidator),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, "assessment:read");
+    const [definition, question] = await Promise.all([
+      ctx.db.get("assessmentDefinitions", args.definitionId),
+      ctx.db.get("assessmentQuestionBank", args.bankQuestionId),
+    ]);
+    if (
+      definition === null ||
+      question === null ||
+      question.status !== "ready" ||
+      question.profile !== definition.profile
+    ) {
+      return null;
+    }
+
+    const versionId =
+      definition.draftVersionId ?? definition.publishedVersionId;
+    if (versionId === undefined) {
+      return null;
+    }
+    const [version, sections] = await Promise.all([
+      ctx.db.get("assessmentVersions", versionId),
+      ctx.db
+        .query("assessmentSections")
+        .withIndex("by_version_id_and_order", (q) =>
+          q.eq("versionId", versionId),
+        )
+        .take(9),
+    ]);
+    if (
+      version === null ||
+      version.definitionId !== definition._id ||
+      sections.length > 8 ||
+      !sections.some(
+        (section) =>
+          section.skill === question.skill && isRandomBankSection(section),
+      )
+    ) {
+      return null;
+    }
+
+    const [
+      item,
+      answerKey,
+      sourceDefinition,
+      sourceVersion,
+      sourceSection,
+      illustration,
+    ] = await Promise.all([
+      ctx.db.get("assessmentItems", question.sourceItemId),
+      ctx.db
+        .query("assessmentAnswerKeys")
+        .withIndex("by_item_id", (q) => q.eq("itemId", question.sourceItemId))
+        .unique(),
+      ctx.db.get("assessmentDefinitions", question.sourceDefinitionId),
+      ctx.db.get("assessmentVersions", question.sourceVersionId),
+      ctx.db.get("assessmentSections", question.sourceSectionId),
+      projectReadyQuestionIllustration(ctx, question.illustrationMediaId),
+    ]);
+    if (
+      item === null ||
+      answerKey === null ||
+      sourceDefinition === null ||
+      sourceVersion === null ||
+      sourceSection === null ||
+      item.versionId !== question.sourceVersionId ||
+      item.sectionId !== question.sourceSectionId ||
+      answerKey.versionId !== question.sourceVersionId ||
+      sourceVersion.definitionId !== question.sourceDefinitionId ||
+      sourceSection.versionId !== question.sourceVersionId ||
+      sourceSection.skill !== question.skill ||
+      sourceDefinition.profile !== question.profile
+    ) {
+      return null;
+    }
+
+    const stimulus =
+      item.stimulusId === undefined
+        ? null
+        : await ctx.db.get("assessmentStimuli", item.stimulusId);
+    if (
+      item.stimulusId !== undefined &&
+      (stimulus === null ||
+        stimulus.versionId !== item.versionId ||
+        stimulus.sectionId !== item.sectionId)
+    ) {
+      return null;
+    }
+    const stimulusImage =
+      stimulus?.kind === "image"
+        ? await projectReadyQuestionIllustration(ctx, stimulus.mediaId)
+        : null;
+    const audio = await resolveReadyQuestionAudio(ctx, question, item);
+    const parentQuestion =
+      question.parentBankQuestionId === undefined
+        ? null
+        : await ctx.db.get(
+            "assessmentQuestionBank",
+            question.parentBankQuestionId,
+          );
+    const parentItem =
+      parentQuestion === null ||
+      question.dependencyGroupKey === undefined ||
+      parentQuestion.profile !== question.profile ||
+      parentQuestion.skill !== question.skill ||
+      parentQuestion.dependencyGroupKey !== question.dependencyGroupKey ||
+      parentQuestion.dependencyRole !== "anchor"
+        ? null
+        : await ctx.db.get("assessmentItems", parentQuestion.sourceItemId);
+    const parentPrompt =
+      parentQuestion !== null &&
+      parentItem !== null &&
+      parentItem._id === parentQuestion.sourceItemId &&
+      parentItem.versionId === parentQuestion.sourceVersionId &&
+      parentItem.sectionId === parentQuestion.sourceSectionId
+        ? parentItem.prompt
+        : null;
+
+    return {
+      bankQuestionId: question._id,
+      bankKey: question.bankKey,
+      skill: question.skill,
+      taskFamily: question.taskFamily,
+      difficulty: question.difficulty,
+      status: question.status,
+      profile: question.profile,
+      fullPracticeEligible: question.fullPracticeEligible,
+      origin: question.origin ?? "assessment-source",
+      tags: question.tags,
+      content: projectReviewContent(item, answerKey),
+      source: {
+        title:
+          question.origin === "bank-authored"
+            ? "Question Bank original"
+            : sourceDefinition.adminTitle,
+        visibility: sourceDefinition.visibility,
+        versionStatus: sourceVersion.status,
+        sectionTitle: sourceSection.title,
+        itemKey: item.itemKey,
+      },
+      stimulus:
+        stimulus === null
+          ? null
+          : {
+              kind: stimulus.kind,
+              title: stimulus.title ?? null,
+              body: stimulus.body ?? null,
+              transcript: stimulus.transcript ?? null,
+              alt: stimulus.alt ?? null,
+              image: stimulusImage,
+            },
+      illustration,
+      audio,
+      dependency:
+        question.dependencyGroupKey === undefined ||
+        question.dependencyRole === undefined
+          ? null
+          : {
+              groupKey: question.dependencyGroupKey,
+              role: question.dependencyRole,
+              parentPrompt,
+            },
+      updatedAt: question.updatedAt,
+    };
+  },
+});
+
 export const setQuestionAllowed = mutation({
   args: {
     definitionId: v.id("assessmentDefinitions"),
@@ -425,10 +797,7 @@ export const setQuestionAllowed = mutation({
       "assessmentDefinitions",
       args.definitionId,
     );
-    if (
-      definition === null ||
-      definition.draftVersionId === undefined
-    ) {
+    if (definition === null || definition.draftVersionId === undefined) {
       throw new ConvexError({ code: "DRAFT_NOT_AVAILABLE" as const });
     }
     const { version } = await getMutableAssessmentVersion(
@@ -456,7 +825,9 @@ export const setQuestionAllowed = mutation({
       )
       .take(201);
     if (duplicateRows.length > 200) {
-      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      throw new ConvexError({
+        code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const,
+      });
     }
     const questionGroup = duplicateRows
       .filter(
@@ -476,7 +847,10 @@ export const setQuestionAllowed = mutation({
         readyQuestionGroup.push(candidate);
       }
     }
-    if (questionGroup.length === 0 || (args.allowed && readyQuestionGroup.length === 0)) {
+    if (
+      questionGroup.length === 0 ||
+      (args.allowed && readyQuestionGroup.length === 0)
+    ) {
       throw new ConvexError({ code: "QUESTION_BANK_NOT_AVAILABLE" as const });
     }
     const sections = await ctx.db
@@ -486,7 +860,9 @@ export const setQuestionAllowed = mutation({
       )
       .take(9);
     if (sections.length > 8) {
-      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      throw new ConvexError({
+        code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const,
+      });
     }
     const poolConfiguration = await repairInheritedPoolSections(
       ctx,
@@ -505,7 +881,9 @@ export const setQuestionAllowed = mutation({
       )
       .take(201);
     if (allRules.length > 200) {
-      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      throw new ConvexError({
+        code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const,
+      });
     }
     const groupIds = new Set(questionGroup.map((candidate) => candidate._id));
     const existingRules = allRules.filter((rule) =>
@@ -629,7 +1007,9 @@ export const reviewFlagSignal = mutation({
         .take(201),
     ]);
     if (duplicateRows.length > 200 || definitionSignals.length > 200) {
-      throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      throw new ConvexError({
+        code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const,
+      });
     }
     const groupIds = new Set(
       duplicateRows

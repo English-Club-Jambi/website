@@ -973,17 +973,6 @@
 }
 
 .audioStimulus {
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: center;
-  border-block: 1px solid var(--practice-rule);
-  padding-block: 0.8rem;
-}
-
-.audioStimulus audio,
-.reviewStimulus audio {
   width: 100%;
   min-width: 0;
 }
@@ -1105,20 +1094,7 @@
 
 .questionAudio {
   width: min(100%, 48rem);
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: center;
-  border-block: 1px solid var(--practice-rule);
   margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
-  padding-block: 0.8rem;
-}
-
-.questionAudio div,
-.questionAudio audio {
-  width: 100%;
-  min-width: 0;
 }
 
 .questionAudio p {

@@ -7,6 +7,7 @@ import { seedPosts } from "../content/seed-posts";
 import { checkedInPrograms } from "../content/programs";
 import {
   getPublicContentManifestPages,
+  PUBLIC_CONTENT_PAGE_ENTRY_LIMIT,
   publicContentLocale,
 } from "../content/public-content";
 import {
@@ -645,7 +646,7 @@ export const seedPublicContentPage = internalMutation({
     }
     const author = await requireSeedAuthor(ctx);
     const fields = Object.values(page.fields);
-    if (fields.length > 200) {
+    if (fields.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
       throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_LIMIT" as const });
     }
     const currentRows = await ctx.db
@@ -653,8 +654,8 @@ export const seedPublicContentPage = internalMutation({
       .withIndex("by_page_key_and_locale_and_content_key", (q) =>
         q.eq("pageKey", page.pageKey).eq("locale", publicContentLocale),
       )
-      .take(201);
-    if (currentRows.length > 200) {
+      .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT + 1);
+    if (currentRows.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
       throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_LIMIT" as const });
     }
     const currentByKey = new Map(
@@ -766,8 +767,8 @@ export const migratePaperPracticeCopy = internalMutation({
       .withIndex("by_page_key_and_locale_and_content_key", (q) =>
         q.eq("pageKey", "practice").eq("locale", publicContentLocale),
       )
-      .take(201);
-    if (rows.length > 200) {
+      .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT + 1);
+    if (rows.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
       throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_LIMIT" as const });
     }
     const byKey = new Map(rows.map((row) => [row.contentKey, row]));
@@ -947,8 +948,8 @@ export const verify = internalQuery({
         .withIndex("by_page_key_and_locale_and_content_key", (q) =>
           q.eq("pageKey", page.pageKey).eq("locale", publicContentLocale),
         )
-        .take(201);
-      if (rows.length > 200) {
+        .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT + 1);
+      if (rows.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
         throw new ConvexError({ code: "DEVELOPMENT_SEED_CONTENT_LIMIT" as const });
       }
       const byKey = new Map(rows.map((entry) => [entry.contentKey, entry]));

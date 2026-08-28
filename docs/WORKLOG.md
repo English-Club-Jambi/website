@@ -25,7 +25,7 @@ The repository now contains two major product lanes beyond the public organisati
 - Provisioned administrators are bound through the Auth issuer plus Auth user ID, with the legacy complete-token lookup retained for existing records. An identity with no active `adminUsers` row receives no protected data.
 - Server-owned roles are `editor`, `publisher`, and `owner`. Publishers can publish general content and review/publish Assessments but cannot author Assessment questions; owners also manage administrators.
 - The workspace contains Overview, Pages, Journal, Assessments, Members, Media, Appearance, and Activity. It uses a rounded semi-neobrutal register with reusable custom selects, dialogs, pagination, status chips, and short supporting motion.
-- Page copy keeps code-owned keys/component structure and supports at most 200 entries per page/locale. Convex rejects entry 201 and detects an already-invalid 201-row page.
+- Page copy keeps code-owned keys/component structure and supports at most 256 entries per page/locale. Convex rejects entry 257 and detects an already-invalid 257-row page.
 - Journal editing stores validated Tiptap JSON plus plain text, supports reviewed cover/inline media and structured map data, and limits one revision to 40 unique inline images.
 - Appearance publishes seven semantic anchors per light/dark scheme as one validated immutable snapshot. Public state advances through one pointer; rollback records a new event.
 

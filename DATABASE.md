@@ -109,7 +109,7 @@ The development seed contains 15 fictional public-facing profiles and the five i
 | `siteContentVersions` | Immutable published value for an entry revision | Published pointer lives on the entry |
 | `mediaAssets` | R2 object key, purpose, content type, bytes, status, alt text, dimensions, access, duration, checksum, Assessment version, and source derivative linkage | One object key; no signed URL or credential |
 
-The CMS limit is 200 entries per `pageKey`/locale page. Reads take 201 and fail if storage already violates the contract; new writes read 200 and reject the 201st entry. This is a deliberate integrity ceiling, not a pagination size.
+The CMS limit is 256 entries per `pageKey`/locale page. Reads take 257 and fail if storage already violates the contract; new writes read 256 and reject the 257th entry. This is a deliberate integrity ceiling, not a pagination size.
 
 Journal editor content is validated structured JSON, not HTML. A revision stores the editor JSON and a plain-text projection. It may reference at most 40 unique reviewed inline media records. Optional maps are stored as validated structured data in the document rather than executable embed markup.
 
@@ -235,7 +235,7 @@ Every protected function calls `requireAdmin(permission)`, which resolves the cu
 
 ### Public CMS and theme
 
-- `siteContent.getPublishedPage(...)` returns only published values for recognized keys within the 200-entry contract.
+- `siteContent.getPublishedPage(...)` returns only published values for recognized keys within the 256-entry contract.
 - Public theme queries return the active validated snapshot, never a draft recipe or administrator identity.
 
 ### Public Assessment

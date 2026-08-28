@@ -525,5 +525,5 @@ Reject before review:
 - [ ] Full Practice result delivery shows an inline consent form, progressive certificate choice, exact-host human verification, accepted/uncertain/failed copy, review-link revocation, and readable 320px reflow. A configured operator-owned send, pre-Siteverify bounds, PDF attachment, fragment scrub, 30-minute session expiry, expired grant check, and Brevo anonymous/per-contact tracking plus `Never store previews` evidence remain required before release.
 - [x] Assessment authoring uses reusable order controls, a reusable confirmation dialog, version-scoped media selectors, and visible clone/configuration states.
 - [x] Public theme drafts, immutable versions, validation, publish, rollback, and checked-in fallback use one semantic contract.
-- [x] CMS public/admin reads fail explicitly above 200 entries and refuse a 201st new key.
+- [x] CMS public/admin reads fail explicitly above 256 entries and refuse a 257th new key.
 - [ ] Private Assessment R2 CORS, checksum PUT, signed preview, verification, and derivative creation require a real Cloudflare smoke test before release.

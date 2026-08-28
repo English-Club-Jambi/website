@@ -65,6 +65,11 @@ export const assessmentQuestionBankStatusValidator = v.union(
   v.literal("archived"),
 );
 
+export const assessmentQuestionDependencyRoleValidator = v.union(
+  v.literal("anchor"),
+  v.literal("follow-up"),
+);
+
 export const assessmentFlagReviewStatusValidator = v.union(
   v.literal("open"),
   v.literal("reviewed"),

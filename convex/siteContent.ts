@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 
+import { PUBLIC_CONTENT_PAGE_ENTRY_LIMIT } from "../content/public-content";
+
 import { query } from "./_generated/server";
 import { contentKindValidator } from "./validators";
 
@@ -13,7 +15,6 @@ const publishedContentValidator = v.object({
 
 const keyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const localePattern = /^[a-z]{2}(?:-[A-Z]{2})?$/;
-const MAX_CONTENT_ENTRIES_PER_PAGE = 200;
 
 export const getPublishedPage = query({
   args: { pageKey: v.string(), locale: v.string() },
@@ -33,8 +34,8 @@ export const getPublishedPage = query({
       .withIndex("by_page_key_and_locale_and_content_key", (q) =>
         q.eq("pageKey", args.pageKey).eq("locale", args.locale),
       )
-      .take(MAX_CONTENT_ENTRIES_PER_PAGE + 1);
-    if (entries.length > MAX_CONTENT_ENTRIES_PER_PAGE) {
+      .take(PUBLIC_CONTENT_PAGE_ENTRY_LIMIT + 1);
+    if (entries.length > PUBLIC_CONTENT_PAGE_ENTRY_LIMIT) {
       throw new Error("Content page exceeds the supported entry limit.");
     }
     const published = await Promise.all(

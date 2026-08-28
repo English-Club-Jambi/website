@@ -1,4 +1,5 @@
 export const publicContentLocale = "en" as const;
+export const PUBLIC_CONTENT_PAGE_ENTRY_LIMIT = 256;
 
 export type PublicContentKind = "plain-text";
 
@@ -808,6 +809,84 @@ export const publicContentManifest = {
       "Unavailable audio message",
       "The audio file is not available. Use transcript support to continue.",
       160,
+    ),
+    playRecording: text(
+      "play-recording",
+      "Audio player play button",
+      "Play recording",
+      40,
+    ),
+    pauseRecording: text(
+      "pause-recording",
+      "Audio player pause button",
+      "Pause recording",
+      40,
+    ),
+    replayRecording: text(
+      "replay-recording",
+      "Audio player replay button",
+      "Play recording again",
+      50,
+    ),
+    muteRecording: text(
+      "mute-recording",
+      "Audio player mute button",
+      "Mute recording",
+      40,
+    ),
+    unmuteRecording: text(
+      "unmute-recording",
+      "Audio player unmute button",
+      "Unmute recording",
+      40,
+    ),
+    recordingPosition: text(
+      "recording-position",
+      "Audio player timeline label",
+      "Recording position",
+      50,
+    ),
+    loadingRecording: text(
+      "loading-recording",
+      "Audio player loading status",
+      "Loading recording",
+      50,
+    ),
+    bufferingRecording: text(
+      "buffering-recording",
+      "Audio player buffering status",
+      "Buffering recording",
+      50,
+    ),
+    recordingFinished: text(
+      "recording-finished",
+      "Audio player finished status",
+      "Recording finished",
+      50,
+    ),
+    playbackUnavailable: text(
+      "playback-unavailable",
+      "Audio player unavailable status",
+      "Recording unavailable",
+      60,
+    ),
+    retryRecording: text(
+      "retry-recording",
+      "Audio player retry button",
+      "Try recording again",
+      50,
+    ),
+    durationUnavailable: text(
+      "duration-unavailable",
+      "Audio player unknown-duration label",
+      "Duration unavailable",
+      60,
+    ),
+    recordingVolume: text(
+      "recording-volume",
+      "Audio player volume control",
+      "Recording volume",
+      50,
     ),
     playPracticeAudio: text(
       "play-practice-audio",

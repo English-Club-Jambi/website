@@ -214,7 +214,7 @@ Deployment policy until a cleanup job is approved:
 
 ## CMS page bound
 
-The Practice manifest has 142 editable fields. Public and admin page reads now support at most 200 entries. A new key is refused when a page already has 200 entries; a legacy page with more than 200 fails explicitly instead of returning a truncated list.
+The Practice manifest has 212 editable fields. Public and admin page reads support at most 256 entries. A new key is refused when a page already has 256 entries; a legacy page with more than 256 fails explicitly instead of returning a truncated list.
 
 ## Verification
 
@@ -244,6 +244,6 @@ Focused evidence in `tests/convex/assessment-backend.test.ts` covers:
 - legacy raw-result wording and fixed-form estimate wording as separate result contracts;
 - safe delete/reorder authoring contracts;
 - React-hook-shaped pagination with server hard caps;
-- 142-field Practice CMS reads and the 200-entry ceiling.
+- 212-field Practice CMS reads and the 256-entry ceiling.
 
 No deployment, environment mutation, database seed, or public question publication is part of this runbook.
