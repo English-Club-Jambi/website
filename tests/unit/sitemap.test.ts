@@ -29,7 +29,7 @@ describe("sitemap", () => {
     expect(paths.some((path) => path.startsWith("/practice/result/"))).toBe(false);
     expect(
       entries.every(
-        (entry) => new URL(entry.url).origin === "https://englishclub.mukhtada.my.id",
+        (entry) => new URL(entry.url).origin === "https://englishclubjambi.my.id",
       ),
     ).toBe(true);
   });
@@ -65,7 +65,7 @@ describe("sitemap", () => {
       ]),
     );
     expect(robots().sitemap).toBe(
-      "https://englishclub.mukhtada.my.id/sitemap.xml",
+      "https://englishclubjambi.my.id/sitemap.xml",
     );
   });
 });

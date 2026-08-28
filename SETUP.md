@@ -17,6 +17,7 @@ This project does not require a local Convex backend. Next.js runs locally on po
 | Convex database/functions | Journal, CMS copy, Members, contact submissions, administrator access, themes, Assessment authoring/attempts/results, audit, and reviewed media metadata |
 | Public R2 bucket | Reviewed public AVIF/WebP/SVG and published Assessment derivatives read through `https://r2.mukhtada.my.id` |
 | Private Assessment R2 bucket | Confidential source audio/images, server verification, and short-lived admin preview; not public and not currently configured |
+| Brevo | Transactional delivery of an opted-in Full Practice result, attached completion record, and private review link; it receives the entered recipient name and email only for that send |
 | Repository | Source, schemas, manifests, deterministic fixtures, reviewed derivatives needed for QA, tests, and documentation |
 | Local consent vault | Raw participant/photo/audio masters awaiting rights and consent review; intentionally not tracked in Git |
 
@@ -104,6 +105,45 @@ Rules:
 - `R2_AUTH_TOKEN` is an optional Cloudflare management token for operators. Application upload functions use S3 credentials and do not read it.
 - `R2_PUBLIC_DEV` is a development fallback only. Production public reads use the custom domain.
 - Never copy `.env.local`, `convex env list` output, or generated Auth key material into issues, screenshots, commits, or chat.
+
+### Full Practice result delivery with Brevo
+
+The result-email feature uses Brevo's transactional-email REST endpoint. It does not read SMTP settings. Add these server-only values to the selected Convex Cloud deployment with `npx convex env set` through a non-logging operator workflow:
+
+```text
+BREVO_API_KEY
+BREVO_SENDER_EMAIL
+BREVO_SENDER_NAME=English Club
+RESULT_DELIVERY_PUBLIC_ORIGIN=https://YOUR-EXACT-PUBLIC-HTTPS-ORIGIN
+RESULT_DELIVERY_RECIPIENT_HASH_KEY
+TURNSTILE_SECRET_KEY
+```
+
+Add the matching public widget key to the Next.js/Vercel environment:
+
+```text
+NEXT_PUBLIC_TURNSTILE_SITE_KEY
+```
+
+`BREVO_REPLY_TO_EMAIL` is optional. It names the monitored inbox that receives a learner's reply. The learner's entered address is the message recipient, never the sender or reply-to address. Omit the variable if the verified sender inbox should receive replies itself.
+
+Brevo must first verify the sender and authenticate its sending domain. The sender email must be an address approved in Brevo. Configure the domain records Brevo provides before enabling a public send path. The current implementation sends a PDF attachment and a private review link through the REST API. It does not use `BREVO_SMTP_SERVER`, `BREVO_SMTP_PORT`, `BREVO_SMTP_LOGIN`, or `BREVO_SMTP_PASSWORD`.
+
+`RESULT_DELIVERY_PUBLIC_ORIGIN` must be one exact HTTPS origin with no path, query string, fragment, or credentials. The action refuses a missing or malformed configuration rather than constructing a review link from the browser request. Cloudflare Turnstile must allow that origin's exact hostname. Use separate Turnstile widgets for local development and production.
+
+`RESULT_DELIVERY_RECIPIENT_HASH_KEY` must be an independent random secret of at least 32 characters. Convex uses it for HMAC-SHA256 recipient and certificate-name digests; do not reuse the Brevo API key, Auth key, or any R2 secret. The database stores those digests for rate control and certificate-name locking. It does not persist the submitted name, plain email address, plain access token, plain review-session token, or certificate PDF.
+
+The email carries a 256-bit access token after `/practice/review#access=`. URL fragments do not travel in the HTTP request. The review client removes the fragment before redemption, exchanges the access token for a random session token, and keeps only that session token in `sessionStorage`. Convex stores SHA-256 digests of both tokens. The access grant expires after 30 days, can be redeemed at most five times in total, and fails closed after the fifth redemption. Each redeemed session lasts no more than 30 minutes.
+
+Turnstile is mandatory for a new public send. Before Siteverify, Convex checks the owned submitted Full Practice attempt and records one bounded verification event. It permits at most six verification calls per owner and 500 across the service in ten minutes. Verification events contain only attempt ID, owner token identifier, and creation time, then the daily cleanup removes them after 24 hours in batches of at most 50. After that pre-provider gate, the server validates the token with Cloudflare and requires the action name `full-practice-result-email` plus the exact hostname from `RESULT_DELIVERY_PUBLIC_ORIGIN`. A missing server secret, missing public site key, failed check, wrong action, or wrong hostname keeps delivery disabled. The feature also applies indexed per-attempt, per-recipient-digest, and global delivery limits.
+
+Brevo request idempotency uses a stable UUID in the transactional payload's JSON `headers.idempotencyKey` field. It is not an HTTP `Idempotency-Key` header. Convex tracks `preparing`, `sending`, `accepted`, `uncertain`, and `failed`; it does not automatically send again when the provider outcome is uncertain. The current path records Brevo acceptance and the provider message ID when returned, but it does not consume delivery webhooks. Delivery metadata is removed after 180 days in a bounded daily cleanup. Brevo's transactional-log retention remains a separate operator setting.
+
+The code sends `contactPixelTrackingConsent: false`, but Brevo states that this field is ignored unless the per-contact pixel-tracking consent feature is enabled for the account. Before production, prove one account-level privacy path: enable anonymous email tracking for Transactional Emails, or enable per-contact pixel-tracking consent for transactional API sends and verify that `false` prevents identifiable open/click tracking. The application cannot enforce either Brevo dashboard setting.
+
+Brevo stores transactional logs and email previews indefinitely by default. Set an approved log-retention rule and select `Never store previews` before the mailbox smoke test. Brevo permits a one-month minimum log-retention period and says preview changes apply only to future messages. The emailed review fragment is private bearer material inside the message body, so delete any earlier provider preview created during testing and record the final dashboard settings as release evidence.
+
+Use Brevo's [getting-started guide](https://developers.brevo.com/docs/getting-started) and [transactional-email endpoint reference](https://developers.brevo.com/reference/send-transac-email) for the provider account and API key. Use Brevo's [domain authentication guide](https://help.brevo.com/hc/en-us/articles/12163873383186-Authenticate-your-domain-with-Brevo-Brevo-code-DKIM-DMARC) before enabling the public sender. The production privacy gate follows Brevo's official guidance for [anonymous tracking](https://help.brevo.com/hc/en-us/articles/11643306229906-Can-I-anonymize-the-tracking-of-opens-and-clicks-for-my-emails), [per-contact pixel consent](https://help.brevo.com/hc/en-us/articles/37113920427922-About-email-tracking-pixels-and-the-CNIL-recommendation-in-Brevo), and [transactional log and preview retention](https://help.brevo.com/hc/en-us/articles/4415743225746-Configure-a-custom-retention-period-for-your-transactional-logs-and-email-previews).
 
 ## 5. Configure Convex Auth
 
@@ -420,6 +460,19 @@ R2_API
 R2_ASSESSMENT_BUCKET_NAME
 R2_ASSESSMENT_ACCESS_KEY_ID
 R2_ASSESSMENT_SECRET_ACCESS_KEY
+BREVO_API_KEY
+BREVO_SENDER_EMAIL
+BREVO_SENDER_NAME
+BREVO_REPLY_TO_EMAIL
+RESULT_DELIVERY_PUBLIC_ORIGIN=https://YOUR-EXACT-PRODUCTION-ORIGIN
+RESULT_DELIVERY_RECIPIENT_HASH_KEY
+TURNSTILE_SECRET_KEY
+```
+
+Next.js/Vercel production environment:
+
+```text
+NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ```
 
 Use a production-only Auth key pair, exact HTTPS origin, least-privilege bucket credentials, and independently configured public/private R2 policies.
@@ -443,6 +496,11 @@ The post-deploy submission and inspection workflow is documented in
 - [ ] Private bucket exact dev/prod CORS, SHA-256 metadata, PUT, verification, preview, and derivative release path pass.
 - [ ] Original Assessment content passes validation/provenance checks plus the four academic, rights, accessibility, and bias approvals.
 - [ ] Result wording shows raw counts only and no official/predicted claim.
+- [ ] Brevo sender and sending domain are authenticated, every server-only result-delivery variable is set on the approved Convex deployment, the public Turnstile key is set in Vercel, and an operator-owned mailbox smoke test proves the attachment and private HTTPS review link.
+- [ ] Turnstile accepts only the production hostname and `full-practice-result-email` action; a negative test proves a missing or invalid token cannot reserve a delivery or call Brevo.
+- [ ] The pre-Siteverify limiter proves six calls per owner and 500 global calls per ten minutes, then the daily cleanup removes verification events after 24 hours.
+- [ ] Result delivery keeps the completion-record limit visible, uses a fragment access token plus hashed 30-minute review sessions, enforces five total redemptions, expires each grant after 30 days, and removes delivery metadata after 180 days.
+- [ ] Brevo account evidence proves anonymous Transactional Email tracking or active per-contact consent handling for `contactPixelTrackingConsent: false`, an approved transactional-log retention rule, and `Never store previews`. The release record states that source code cannot enforce these provider settings, delivery webhooks are not implemented, and `uncertain` sends are never retried automatically.
 - [ ] Journal content, map, linked media, Member profiles, joined years, role assignments, and separate profile/photo consent are reviewed.
 - [ ] Raw masters remain outside Git and no held media is served.
 - [ ] Contact, Assessment, media, and audit retention policies are approved.

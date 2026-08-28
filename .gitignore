@@ -3,6 +3,7 @@ node_modules/
 .convex/
 .vercel/
 out/
+output/
 
 # Local environment and credentials. Keep the redacted template tracked.
 .env
@@ -28,6 +29,7 @@ out/
 coverage/
 playwright-report/
 test-results/
+tmp/
 *.tsbuildinfo
 *.log
 .DS_Store

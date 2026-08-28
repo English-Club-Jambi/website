@@ -15,7 +15,7 @@ test("the public development domain may load the Next client bundle", async ({
   expect(scriptPath).toBeTruthy();
 
   const script = await request.get(scriptPath!, {
-    headers: { Origin: "https://englishclub.mukhtada.my.id" },
+    headers: { Origin: "https://englishclubjambi.my.id" },
   });
   expect(script.status()).toBe(200);
   expect(script.headers()["content-type"]).toContain("javascript");

@@ -4,7 +4,7 @@ export const siteConfig = {
   name: "English Club",
   shortDescription:
     "A Universitas Jambi student English community formed through Perpustakaan Universitas Jambi for conversation, cultural exchange, and shared practice.",
-  url: "https://englishclub.mukhtada.my.id",
+  url: "https://englishclubjambi.my.id",
   locale: "en_US",
   language: "en",
 };

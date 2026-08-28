@@ -9,7 +9,7 @@ type NetworkInterfaceMap = Record<
 >;
 
 const exactOriginEnvironmentKey = "NEXT_ALLOWED_DEV_ORIGINS";
-const projectDevelopmentHosts = ["englishclub.mukhtada.my.id"] as const;
+const projectDevelopmentHosts = ["englishclubjambi.my.id"] as const;
 
 function isIPv4Address(value: string) {
   const octets = value.split(".");

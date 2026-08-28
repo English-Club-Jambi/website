@@ -4,7 +4,7 @@
   <p><strong>English grows in company.</strong></p>
   <p>A public home, practice lab, journal, member directory, and publishing desk for a club that treats language as something people do together.</p>
   <p>
-    <a href="https://englishclub.mukhtada.my.id">Visit the live site</a>
+    <a href="https://englishclubjambi.my.id">Visit the live site</a>
     ·
     <a href="#the-route-roll-call">Browse every route</a>
     ·

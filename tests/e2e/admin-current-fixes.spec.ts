@@ -271,6 +271,136 @@ test.describe("current administration fixes", () => {
     await expectHealthyAdminPage(page, clientErrors);
   });
 
+  test("keeps the member table vertical and uses a right-side editor on touch layouts", async ({
+    page,
+  }, testInfo) => {
+    const clientErrors: string[] = [];
+    page.on("pageerror", (error) => clientErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") clientErrors.push(message.text());
+    });
+
+    await signIn(page);
+    await page.goto("/admin/members");
+    await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
+
+    const table = page.getByRole("region", { name: "Member table" });
+    const rows = table.getByRole("button");
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.count()).toBeGreaterThan(2);
+
+    const tableGeometry = await rows.evaluateAll((elements) => {
+      const boxes = elements.slice(0, 3).map((element) => {
+        const box = element.getBoundingClientRect();
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+      });
+      const rail = elements[0]?.parentElement?.getBoundingClientRect();
+      return {
+        boxes,
+        rail: rail
+          ? { left: rail.left, right: rail.right, width: rail.width }
+          : null,
+        viewportWidth: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(tableGeometry.documentWidth).toBeLessThanOrEqual(
+      tableGeometry.viewportWidth + 1,
+    );
+    expect(tableGeometry.rail).not.toBeNull();
+    for (let index = 1; index < tableGeometry.boxes.length; index += 1) {
+      expect(tableGeometry.boxes[index].top).toBeGreaterThanOrEqual(
+        tableGeometry.boxes[index - 1].bottom - 1,
+      );
+      expect(tableGeometry.boxes[index].left).toBeCloseTo(
+        tableGeometry.boxes[0].left,
+        0,
+      );
+      expect(tableGeometry.boxes[index].right).toBeCloseTo(
+        tableGeometry.boxes[0].right,
+        0,
+      );
+    }
+
+    await table.scrollIntoViewIfNeeded();
+    await captureAdminEvidence(page, {
+      path: `docs/evidence/admin/member-table-${testInfo.project.name}.png`,
+      animations: "disabled",
+    });
+
+    const firstRow = rows.first();
+    await activate(firstRow, testInfo.project.name);
+
+    if (testInfo.project.name === "desktop-chromium") {
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(
+        page.getByText(/^Edit /, { exact: false }).first(),
+      ).toBeVisible();
+      await expectHealthyAdminPage(page, clientErrors);
+      return;
+    }
+
+    const drawer = page.getByRole("dialog", { name: /^Edit / });
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveAttribute("data-variant", "drawer");
+    const drawerGeometry = await drawer.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: box.right,
+        width: box.width,
+        viewportWidth: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(drawerGeometry.right).toBeCloseTo(drawerGeometry.viewportWidth, 0);
+    expect(drawerGeometry.left).toBeGreaterThanOrEqual(0);
+    expect(drawerGeometry.width).toBeLessThan(drawerGeometry.viewportWidth);
+    expect(drawerGeometry.documentWidth).toBeLessThanOrEqual(
+      drawerGeometry.viewportWidth + 1,
+    );
+    const entryDuration = await drawer.locator("section").evaluate((element) => {
+      const value = getComputedStyle(element).animationDuration;
+      return value.endsWith("ms") ? Number.parseFloat(value) / 1000 : Number.parseFloat(value);
+    });
+    expect(entryDuration).toBeGreaterThanOrEqual(0.16);
+
+    const drawerAccessibility = await new AxeBuilder({ page })
+      .include("dialog")
+      .analyze();
+    expect(
+      drawerAccessibility.violations.filter(
+        (violation) =>
+          violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+
+    await captureAdminEvidence(page, {
+      path: `docs/evidence/admin/member-table-drawer-${testInfo.project.name}.png`,
+      animations: "disabled",
+    });
+
+    await activate(
+      drawer.getByRole("button", { name: "Close member editor" }),
+      testInfo.project.name,
+    );
+    await expect(drawer).toBeHidden();
+    await expect(firstRow).toBeFocused();
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await activate(firstRow, testInfo.project.name);
+    await expect(drawer).toBeVisible();
+    const reducedDuration = await drawer.locator("section").evaluate((element) => {
+      const value = getComputedStyle(element).animationDuration;
+      return value.endsWith("ms") ? Number.parseFloat(value) / 1000 : Number.parseFloat(value);
+    });
+    expect(reducedDuration).toBeLessThanOrEqual(0.001);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await expect(firstRow).toBeFocused();
+    await expectHealthyAdminPage(page, clientErrors);
+  });
+
   test("creates, reassigns, protects, and removes a managed division", async ({
     page,
   }, testInfo) => {

@@ -216,13 +216,15 @@ export function ContactManager() {
   return (
     <>
       <AdminPageHeading
+        className={styles.contactPageHeading}
         title="Contact desk"
-        description="Review membership requests, collaboration proposals, and questions without mixing their purpose. Replies still leave through your email."
+        description="Triage membership, collaboration, and questions. Replies still leave through email."
       />
 
       <AdminSection
+        className={styles.contactSection}
         title="Incoming messages"
-        description="Choose a route first, then record what the club has done with each message."
+        description="Filter, open, and record follow-up."
       >
         <div className={styles.contactIntentRail} aria-label="Contact routes">
           {intentDefinitions.map((definition) => {
@@ -236,7 +238,7 @@ export function ContactManager() {
                 aria-pressed={intent === definition.value}
                 onClick={() => chooseIntent(definition.value)}
               >
-                <Icon aria-hidden width={22} height={22} strokeWidth={1.8} />
+                <Icon aria-hidden width={20} height={20} strokeWidth={1.8} />
                 <span>
                   <strong>{definition.label}</strong>
                   <small>{definition.description}</small>
@@ -248,6 +250,7 @@ export function ContactManager() {
 
         <div className={styles.contactToolbar}>
           <SelectField
+            className={styles.contactCompactSelect}
             label="Work status"
             value={status}
             options={statusOptions}
@@ -264,9 +267,7 @@ export function ContactManager() {
               {results.length} {results.length === 1 ? "message" : "messages"}
             </strong>
           </div>
-          <p>
-            Status is an internal work note. It never sends an email by itself.
-          </p>
+          <p>Status is internal. It never sends email.</p>
         </div>
 
         {error ? <AdminError>{error}</AdminError> : null}
@@ -301,8 +302,10 @@ export function ContactManager() {
                       {formatAdminDate(entry.createdAt)}
                     </time>
                   </span>
-                  <span data-contact-pii>{entry.email}</span>
-                  <small>{intentLabels[entry.intent]}</small>
+                  <span className={styles.contactListMeta}>
+                    <span data-contact-pii>{entry.email}</span>
+                    <small>{intentLabels[entry.intent]}</small>
+                  </span>
                   <AdminStatus tone={statusTone(entry.status)}>
                     {statusLabels[entry.status]}
                   </AdminStatus>
@@ -330,7 +333,7 @@ export function ContactManager() {
                     <h3 id="contact-detail-title" data-contact-pii>
                       {selected.name}
                     </h3>
-                  <a
+                    <a
                       href={`mailto:${mailtoRecipient(selected.email)}`}
                       data-contact-pii
                     >
@@ -365,6 +368,7 @@ export function ContactManager() {
 
                 <div className={styles.contactActionRow}>
                   <SelectField
+                    className={styles.contactCompactSelect}
                     label="Record work status"
                     value={selected.status}
                     options={workingStatusOptions}
@@ -374,14 +378,14 @@ export function ContactManager() {
                     }
                   />
                   <p>
-                    Use “Reply sent” only after a real reply has left your email
-                    account. “Complete” closes the internal follow-up.
+                    Use &quot;Reply sent&quot; after the email leaves your
+                    account. &quot;Complete&quot; ends follow-up.
                   </p>
                 </div>
                 <div className={styles.contactEraseRow}>
                   <p>
-                    Privacy request verified? Remove this record now instead of
-                    waiting for the 180-day retention limit.
+                    Verified privacy request? Erase now instead of waiting 180
+                    days.
                   </p>
                   <button
                     className={styles.dangerButton}

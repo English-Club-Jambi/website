@@ -117,6 +117,8 @@ export default async function PrivacyPage() {
                 <p>03 / Practice records</p>
                 <h2 id="privacy-practice-title">{copy.practiceTitle}</h2>
                 <p>{copy.practiceBody}</p>
+                <h3>{copy.practiceDeliveryTitle}</h3>
+                <p>{copy.practiceDeliveryBody}</p>
               </div>
             </section>
 

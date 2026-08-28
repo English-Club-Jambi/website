@@ -30,6 +30,10 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly BREVO_API_KEY: string | undefined;
+  readonly BREVO_REPLY_TO_EMAIL: string | undefined;
+  readonly BREVO_SENDER_EMAIL: string | undefined;
+  readonly BREVO_SENDER_NAME: string | undefined;
   readonly PRACTICE_FORMAT_CREATION_MODE: string | undefined;
   readonly R2_ACCESS_KEY_ID: string | undefined;
   readonly R2_ACCOUNT_ID: string | undefined;
@@ -39,6 +43,9 @@ type Env = {
   readonly R2_ASSESSMENT_SECRET_ACCESS_KEY: string | undefined;
   readonly R2_BUCKET_NAME: string | undefined;
   readonly R2_SECRET_ACCESS_KEY: string | undefined;
+  readonly RESULT_DELIVERY_PUBLIC_ORIGIN: string | undefined;
+  readonly RESULT_DELIVERY_RECIPIENT_HASH_KEY: string | undefined;
+  readonly TURNSTILE_SECRET_KEY: string | undefined;
 };
 
 /**

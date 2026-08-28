@@ -6,7 +6,7 @@ Primary stack: Next.js App Router, TypeScript, Convex, Cloudflare R2 Standard, p
 
 ## 1. System shape
 
-The product combines a server-rendered organisation profile, scoped reactive Practice and administration applications, and small public interactive islands. Next.js owns routes, metadata, image optimization, server HTML, and the visitor's light/dark preference. Convex owns published content, contact submissions, member consent records, administrator authorization, immutable theme and journal versions, Assessment definitions/attempts/results, and the metadata that points to R2 objects. Cloudflare R2 Standard owns media bytes. The named development deployment contains a target-locked 15-profile fictional Member seed; production has no local roster fallback and may expose only consent-cleared Convex records.
+The product combines a server-rendered organisation profile, scoped reactive Practice and administration applications, and small public interactive islands. Next.js owns routes, metadata, image optimization, server HTML, and the visitor's light/dark preference. Convex owns published content, contact submissions, member consent records, administrator authorization, immutable theme and journal versions, Assessment definitions/attempts/results, and result-delivery state. Cloudflare R2 Standard owns media bytes. Brevo receives the opted-in recipient name and email when a submitted Full Practice result is sent. The named development deployment contains a target-locked 15-profile fictional Member seed; production has no local roster fallback and may expose only consent-cleared Convex records.
 
 ```mermaid
 flowchart TB
@@ -18,9 +18,13 @@ flowchart TB
   S --> X["Convex public queries"]
   PC --> X
   PC --> AM["Owned attempt mutations"]
+  PC --> RD["Full Practice result delivery action"]
   AC --> AA["Permission-checked admin functions"]
   X --> D[("Convex tables")]
   AM --> D
+  RD --> D
+  RD --> TURN["Cloudflare Turnstile siteverify"]
+  RD --> BREV["Brevo transactional REST API"]
   AA --> D
   S --> TM["Typed media manifest"]
   TM --> PUB["Public R2 custom domain"]
@@ -47,7 +51,7 @@ Boundary rules:
 - Convex providers are scoped: `/practice` gets the Auth/Convex provider needed for Anonymous-owned attempts, and `/admin` gets the Auth/Convex provider needed for reactive protected work. Static organisation routes keep server adapters and discrete client leaves.
 - Raw HTML is disabled in Markdown rendering.
 - Admin route visibility is a UX gate only. Every protected Convex query, mutation, and action derives the signed identity, resolves an active `adminUsers` row through its stable Auth-account binding (with a legacy token fallback), and checks a server-owned permission.
-- Assessment results report exact outcomes for the published English Club bank. The active three-section paper profile may add a clearly labelled fixed-linear 310–677 estimate; quick forms remain raw-only, and legacy profiles keep their original model. Official, predicted, calibrated, equivalent, CEFR, certificate, and admission claims are outside the contract.
+- Assessment results report exact outcomes for the published English Club bank. The active three-section paper profile may add a clearly labelled fixed-linear estimate from 310 to 677; quick forms remain raw-only, and legacy profiles keep their original model. Official, predicted, calibrated, equivalent, CEFR, proficiency, and admission claims are outside the contract. A submitted Full Practice result may send an opt-in Certificate of practice completion that records only completion of one English Club form and retains this limit.
 
 ## 2. Route contract
 
@@ -62,6 +66,7 @@ Boundary rules:
 | `/contact` | Server shell plus client form | Local copy, query intent, Convex mutation | Intent-aware type field plus existing form cycle | Inline retry; fields remain populated |
 | `/practice` | Dynamic Server Component with scoped provider | Reviewed published Assessment catalog, maximum 12 per page | Answer Line overview, full/quick paths, claim boundary | Honest reviewed/unavailable state; never a local question fallback |
 | `/practice/full` | Dynamic server briefing plus client Start | First published full-practice definition | Timing/Listening choices, acknowledgement, Start/resume | Useful unavailable state when no reviewed form is published |
+| `/practice/review` | Static noindex/no-referrer wrapper with a scoped result client view | Scrubbed `#access=` fragment exchanged for a hashed, 30-minute review session | Read-only result and section-paginated review | One non-disclosing unavailable state for invalid, revoked, expired, or exhausted access |
 | `/practice/quick/[skill]` | Dynamic server briefing plus client Start | Published Listening, Structure, or Reading skill quiz | Skill-specific briefing and Start | Unknown skill is not found; missing content stays unavailable |
 | `/practice/attempt/[attemptId]` | Scoped authenticated client resolver/runner | Owned attempt/player DTO | Current section, stimulus, answer state, timer, navigator | Malformed, missing, and cross-owner IDs share one unavailable state; `noindex` |
 | `/practice/result/[attemptId]` | Scoped authenticated client resolver/result | Owned result and post-submit review pages | Exact bank outcome, optional bounded estimate, mode, section results, paginated review | Same non-disclosing unavailable state; `noindex` |
@@ -123,7 +128,7 @@ The URL query may preselect `join`, `partner`, or `ask`; the form still exposes 
 
 Browsing never creates an identity. After the visitor acknowledges the claim boundary and presses Start, the scoped provider creates an Anonymous Convex Auth identity when needed and starts one owned attempt with an idempotency key. The runner begins each section explicitly, saves bounded response shapes with optimistic revisions, keeps the current-section navigator bounded, and never receives an answer key before submission. Transcript support may be enabled at any time and persists as a result label.
 
-The result reports exact bank outcomes, mode, time, ordered section rows, and cursor-paginated review. A complete 50/40/50 form adds three fixed-linear section values and an integer total constrained to 310–677; quick forms stay raw-only. The interface identifies the total as an uncalibrated English Club estimate, never an official score, exact prediction, equivalence, CEFR band, certificate, or admission recommendation.
+The result reports exact bank outcomes, mode, time, ordered section rows, and cursor-paginated review. A complete 50/40/50 form adds three fixed-linear section values and an integer total constrained from 310 to 677; quick forms stay raw-only. The interface identifies the total as an uncalibrated English Club estimate, never an official score, exact prediction, equivalence, CEFR band, proficiency credential, or admission recommendation. A submitted Full Practice result may present an inline, opt-in delivery control after that limitation. A Convex action validates the owned result and exact-host Turnstile token, creates a temporary review grant, renders the attached completion record, and posts the transactional message to Brevo. It stores HMAC-SHA256 recipient and certificate-name digests under `RESULT_DELIVERY_RECIPIENT_HASH_KEY`, plus SHA-256 digests of random access and review-session tokens. The completion record says that one English Club form was completed, discloses that the participant supplied the name, and contains no private review URL.
 
 ### Administration
 
@@ -189,7 +194,12 @@ PracticeLayout
     │       ├── CurrentSectionNavigator [dialog]
     │       └── Section/SubmitConfirmation [dialog]
     └── ResultView [client]
+        ├── ResultEmailDelivery [client, Full Practice only]
         └── PaginatedReview
+
+SharedPracticeReviewPage
+└── SharedResultView [client]
+    └── PaginatedReview [read-only, token grant]
 
 AdminLayout
 └── AdminProvider [client, Convex Auth]
@@ -405,6 +415,16 @@ sequenceDiagram
 
 The browser never supplies an owner, deadline, score, reviewer, or publication actor. `resolveMine` normalizes route strings before a typed attempt ID reaches any player or result function.
 
+### Full Practice result delivery
+
+1. The owner of a submitted Full Practice result enters a certificate name, recipient email, consent, certificate design, client request ID, and a Cloudflare Turnstile response.
+2. The server first inspects exact-request replays. A previously accepted or uncertain request returns its stored state without calling Turnstile or Brevo again. For a new request, Convex checks the owned submitted Full Practice attempt, applies a six-per-owner and 500-global ten-minute Siteverify limit, then records a verification event retained for 24 hours.
+3. The server calls Siteverify and requires Turnstile's exact `full-practice-result-email` action plus the hostname derived from `RESULT_DELIVERY_PUBLIC_ORIGIN`. Convex then derives HMAC-SHA256 recipient and certificate-name digests with the dedicated key, applies delivery rate checks, and reserves one `preparing` delivery with a stable provider-attempt UUID and non-enumerable certificate ID.
+4. Convex creates a 30-day review grant. The raw 256-bit token appears only after `/practice/review#access=` in the email. The browser scrubs the fragment before redeeming it for a random session token; Convex stores only token digests, limits each session to 30 minutes, counts each redemption, and fails closed after five total redemptions.
+5. The Node action renders a one-page PDF completion record without the review URL, composes HTML and plain text, changes the delivery to `sending`, then calls Brevo's transactional REST API. The stable UUID belongs in the JSON payload's `headers.idempotencyKey`, and any exact transient retry reuses the same request body.
+6. A non-empty Brevo message ID changes the row to `accepted`. Definite generation/configuration/provider failures change it to `failed` and revoke the grant. An ambiguous response or exhausted transient retry changes it to `uncertain`, keeps the grant active, and never triggers an automatic resend.
+7. The current path does not receive provider delivery webhooks. The daily cleanup expires sessions and grants, marks stale sends, and removes delivery metadata older than 180 days in batches of at most 50.
+
 ### Assessment media
 
 1. The admin UI calls `assessmentMediaNode.getConfigStatus` before offering an upload.
@@ -501,6 +521,8 @@ Learner flags feed `assessmentQuestionFlagSignals` as aggregate editorial eviden
 
 Result DTOs contain raw `correct`, `possible`, and `omitted` counts; ordered section rows; timing and Listening modes; and a fixed claim disclaimer. Answer projections and explanations are available only through the owned, post-submit, section-ordered review query with a 20-item cursor page.
 
+Full Practice delivery adds no public recipient record. `assessmentResultVerificationEvents` keeps only attempt ID, owner token identifier, and creation time for the bounded pre-Siteverify limiter; daily cleanup removes it after 24 hours. `assessmentResultDeliveries` keeps ownership, a client request ID, stable provider-attempt UUID, non-enumerable certificate ID, selected template, HMAC-SHA256 recipient and certificate-name digests under the dedicated key, consent version, human-verification time, one of `preparing | sending | accepted | uncertain | failed`, bounded failure data, optional provider message ID, and timestamps. `assessmentResultReviewGrants` keeps delivery/attempt/result references, the SHA-256 digest of the 256-bit access token, state, redemption count, and 30-day expiry. `assessmentResultReviewSessions` keeps the grant reference, SHA-256 session-token digest, state, and expiry capped at 30 minutes. The certificate PDF is created for the send and is not stored. The submitted name, plain email, plain tokens, and review URL are not written to these tables or to the PDF.
+
 ### Public theme contract
 
 An administrator edits seven structured OKLCH anchors for both modes. Convex derives a complete 16-token snapshot, maps it into a safe gamut, checks required contrast and focus pairs, and stores immutable versions. The public query returns only `{ name, publicRevision, contractVersion, snapshot }`. Drafts, recipes, actor IDs, notes, and audit events remain protected.
@@ -588,6 +610,7 @@ An administrator edits seven structured OKLCH anchors for both modes. Convex der
 - Content conflicts preserve the stored revision; publication exposes only the immutable selected version.
 - Journal revision/media projection follows only published pointers and caps inline media at 40.
 - Assessment attempts isolate two Anonymous identities, keep keys private before submit, enforce section deadlines/revisions/idempotency, and delete only the owned bounded graph.
+- Result-delivery tests cover Full Practice and owner gating, exact-host Turnstile validation, request and provider idempotency, recipient-digest and attempt limits, accepted/uncertain/failed transitions, fragment redemption, 30-minute session and 30-day grant expiry, revocation, no plaintext PII/token/PDF persistence, and the 180-day cleanup boundary. Provider tests stub both Cloudflare and Brevo.
 - Assessment publication requires current validation plus academic, rights, accessibility, and bias approvals; published versions remain immutable.
 - Missing private Assessment R2 configuration rejects reservation before insertion; wrong access, purpose, MIME, version, key, or status never receives a public URL.
 - Growing Assessment, admin, journal, review, and audit lists use indexes plus cursor or documented hard bounds.
@@ -604,6 +627,7 @@ An administrator edits seven structured OKLCH anchors for both modes. Convex der
 - Reflow at `320x800`, common phone at `390x844`, tablet at `768x1024`, header stress widths at 880, 900, and 1024, plus desktop at `1440x1000`.
 - Explicit light, explicit dark, no saved theme, and reduced-motion modes.
 - Practice overview, Home programme quiz, dialogs, touch input, route-ID unavailable state, and 320/412px heading bounds.
+- Full Practice delivery at desktop and 320px, progressive certificate selection, consent validation, Turnstile unavailable/valid/invalid states, provider configuration and uncertain states, one operator-owned inbox smoke test after Brevo setup, fragment scrub, session expiry, and a read-only private-review unavailable state.
 - Authenticated data-isolated admin harness at desktop, Pixel 7, and 320px, including Assessment order/delete dialogs and private-media configuration state.
 - Screenshot review checks type wrapping, interactive state, image restraint, spacing rhythm, distinct route silhouettes, and accidental template patterns.
 
@@ -642,4 +666,4 @@ Admin and Assessment integration sequence:
 
 The application may be code-complete while public deployment remains blocked by photo consent, missing organisation facts, account policy, retention decisions, content review, or production-domain inputs. The generated placeholder derivatives are verified in the public bucket, but documentary photographs remain local because their consent is pending. The private Assessment bucket is not configured; confidential uploads must stay disabled and no public-bucket fallback is permitted.
 
-A release is valid only when the organisation confirms public consent for each included participant image, supplies the canonical public URL, uploads any newly cleared derivatives under immutable keys, configures separate production Auth keys and `SITE_URL`, proves the first-owner and recovery-owner path, approves attempt retention/cleanup, configures and smoke-tests the private Assessment R2 bucket/CORS, and publishes only original assessment content with current academic, rights, accessibility, and bias approvals. Follow `SETUP.md` and `R2-SETUP.md`; neither document authorizes a production deploy by itself.
+A release is valid only when the organisation confirms public consent for each included participant image, supplies the canonical public URL, uploads any newly cleared derivatives under immutable keys, configures separate production Auth keys and `SITE_URL`, proves the first-owner and recovery-owner path, approves attempt retention/cleanup, configures and smoke-tests the private Assessment R2 bucket/CORS, and publishes only original assessment content with current academic, rights, accessibility, and bias approvals. If Full Practice result delivery is enabled, the release also requires a verified Brevo sender/domain, all server-only values on the approved Convex deployment, the matching production Turnstile site key in Vercel, pre-Siteverify limit checks, an operator-owned inbox proof, and Brevo dashboard evidence for anonymous Transactional Email tracking or active per-contact consent, approved log retention, and `Never store previews`. Source cannot enforce those account settings. The release record must state that delivery webhooks are absent and uncertain sends are not automatically retried. Follow `SETUP.md` and `R2-SETUP.md`; neither document authorizes a production deploy by itself.

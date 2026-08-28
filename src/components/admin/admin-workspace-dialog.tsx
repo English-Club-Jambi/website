@@ -14,6 +14,7 @@ import styles from "./admin-shell.module.css";
 
 export function AdminWorkspaceDialog({
   open,
+  variant = "modal",
   eyebrow,
   title,
   description,
@@ -22,6 +23,7 @@ export function AdminWorkspaceDialog({
   children,
 }: {
   open: boolean;
+  variant?: "modal" | "drawer";
   eyebrow?: string;
   title: string;
   description?: string;
@@ -107,6 +109,7 @@ export function AdminWorkspaceDialog({
     <dialog
       ref={dialogRef}
       className={styles.workspaceDialog}
+      data-variant={variant}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       aria-modal="true"

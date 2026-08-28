@@ -252,7 +252,9 @@ The Assessment Lab uses the **Answer Line** direction: large but bounded heading
 
 The runner presents one current question and at most one related stimulus. Answer selection keeps focus in place; explicit navigation moves focus to the next prompt heading. The current-section navigator is a contained dialog rather than a wall of every question in a full form. Audio never autoplays. Transcript support is available through an explicit action and permanently labels that attempt and result.
 
-Results show exact bank outcomes, time used, mode, section order, and paginated review. Four-skill forms may add a clearly separated band and comparable-total estimate; quick forms may add only a section estimate. The interface does not use a score ring, percentage-as-level, official scale, CEFR band, certificate, exact prediction, equivalence, or admission recommendation. Review keys and explanations have no pre-submit path.
+Results show exact bank outcomes, time used, mode, section order, and paginated review. Four-skill forms may add a clearly separated band and comparable-total estimate; quick forms may add only a section estimate. Full Practice may offer an opt-in email package after the result-limit note and before review. It contains a summary, section detail, one attached practice-completion record, and a private review link. The default certificate choice stays compact: Mendalo Record is ready, with an explicit action to choose another design. The form keeps Cloudflare Turnstile in its own labelled verification row and stays disabled until the widget supplies a token. The certificate records completion of one English Club practice form, says that the participant supplied the printed name and that English Club did not verify it, and contains no private review link. It is not an official score, proof of English proficiency, prediction, calibrated equivalent, CEFR band, placement, or admission evidence. Quick Practice has no certificate delivery. Review keys and explanations have no pre-submit path.
+
+After a successful Brevo response, the inline section names provider acceptance, masks the address, states the grant expiry, and offers review-link revocation. A network or provider response that cannot prove acceptance uses a separate `Delivery status not confirmed` state; the interface does not retry the same send. `Prepare a separate copy` returns to the form and starts a new explicit request.
 
 ### Administration workspace
 
@@ -327,7 +329,7 @@ Do not use inflated claims, manufactured warmth, fake quotes, generic empowermen
 
 - Do not build equal icon cards, a bento dashboard, or a feature checklist.
 - Do not add fake scores, levels, streaks, metrics, schedules, testimonials, or partner marks.
-- Do not publish official, predicted, calibrated, CEFR, certificate, or admission language for an English Club raw practice result.
+- Do not publish official, predicted, calibrated, CEFR, proficiency, placement, or admission language for an English Club practice result. A Full Practice completion record is the one narrow exception: it may state that the learner completed one form, must retain the result limit, and must not look like a credential, award, pass result, university diploma, or verified qualification.
 - Do not present development-seeded fictional profiles as sourced roster evidence or copy them into production. Do not invent member totals, terms, achievements, testimonials, or contact details.
 - Do not turn the five role codes into a pyramid, prestige ladder, floating-card wall, or filter-heavy directory product. The contact sheet remains one ruled composition.
 - Do not use gradient text, decorative gradients, glow, glass, 3D letters, particles, or cursor-following images. The single hero media fade is the exception.
@@ -352,6 +354,7 @@ Do not use inflated claims, manufactured warmth, fake quotes, generic empowermen
 - [x] The expanded header is inspected at 880, 900, 1024, and 1440 px.
 - [x] Member desktop light, desktop dark, phone, 320 px, selected-role, and roster-detail screenshots are inspected.
 - [x] Practice overview, briefing, question controls, dialogs, result limits, and 320 px behavior have focused automated coverage.
+- [ ] Full Practice email delivery is checked with an approved Brevo configuration, active exact-host Turnstile widget, pre-Siteverify limiter, real attachment, fragment access link, 30-minute review-session expiry, 30-day grant expiry, uncertain-provider state, and a 320 px result-page review. Brevo account evidence also proves anonymous or per-contact consent-aware tracking, approved log retention, and `Never store previews`; source code cannot enforce those provider settings.
 - [x] Admin and Assessment workspaces use the rounded operational neobrutalist system, reusable controls, Heroicons, and reduced-motion rules.
 - [x] Public theme publication accepts only structured numeric tokens and preserves the visitor's independent light/dark choice.
 - [ ] Confidential Assessment upload remains disabled until the separate private R2 bucket and credentials are configured and smoke-tested.

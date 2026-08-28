@@ -19,6 +19,7 @@ import {
   requireAssessmentIdentity,
   requireOwnedAttempt,
 } from "./lib/assessmentAuth";
+import { projectAttemptResult } from "./lib/assessmentResult";
 import { finalizeSectionAndMaybeSubmit } from "./lib/assessmentEngine";
 import {
   assertDeliveredItem,
@@ -1074,89 +1075,7 @@ export const getResult = query({
   returns: v.union(attemptResultValidator, v.null()),
   handler: async (ctx, args) => {
     const { attempt } = await requireOwnedAttempt(ctx, args.attemptId);
-    if (attempt.currentResultId === undefined) return null;
-    const result = await ctx.db.get("assessmentResults", attempt.currentResultId);
-    if (result === null || result.attemptId !== attempt._id) return null;
-    const sectionResults = await ctx.db
-      .query("assessmentSectionResults")
-      .withIndex("by_result_id", (q) => q.eq("resultId", result._id))
-      .take(9);
-    if (sectionResults.length > 8) return null;
-    const sections = [];
-    for (const sectionResult of sectionResults) {
-      const section = await ctx.db.get("assessmentSections", sectionResult.sectionId);
-      if (section === null || section.versionId !== attempt.versionId) return null;
-      sections.push({
-        order: section.order,
-        skill: sectionResult.skill,
-        title: section.title,
-        correct: sectionResult.correct,
-        possible: sectionResult.possible,
-        answered: sectionResult.answeredCount,
-        items: sectionResult.itemCount,
-        elapsedSeconds: sectionResult.elapsedSeconds,
-        earnedPoints: sectionResult.earnedPoints ?? sectionResult.correct,
-        possiblePoints: sectionResult.possiblePoints ?? sectionResult.possible,
-        bandEstimate: sectionResult.bandEstimate ?? null,
-        comparableScoreEstimate:
-          sectionResult.comparableScoreEstimate ?? null,
-        confidence: sectionResult.estimateConfidence ?? null,
-        paperSectionEstimate: sectionResult.paperSectionEstimate ?? null,
-      });
-    }
-    sections.sort((left, right) => left.order - right.order);
-    if (sections.some((section, index) => section.order !== index)) return null;
-    const label =
-      attempt.listeningMode === "transcript-supported"
-        ? ("Transcript-supported practice result" as const)
-        : attempt.timingMode === "untimed"
-          ? ("Untimed practice result" as const)
-          : attempt.timingMode === "extended"
-            ? ("Extended-time practice result" as const)
-            : ("Practice result" as const);
-    const disclaimer =
-      result.scoringModel === "ec-ibt-style-v1"
-        ? "The raw result is exact for the original questions delivered in this attempt. The band and 0–120 values are English Club estimates, not an official ETS score, an exact test prediction, a certificate, or evidence for admission."
-        : result.scoringModel === "ec-paper-linear-v1"
-          ? "The raw correct counts are exact for the original questions delivered in this attempt. The 310–677 value uses a fixed English Club linear estimate. Official ETS results use form-specific statistical equating and may differ. This is not an official score, certificate, or admission evidence."
-          : "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.";
-
-    return {
-      status: result.status,
-      timingMode: attempt.timingMode,
-      listeningMode: attempt.listeningMode,
-      label,
-      objective: {
-        correct: result.correct,
-        possible: result.possible,
-        omitted: result.omitted,
-      },
-      weighted: {
-        earned: result.earnedPoints ?? result.correct,
-        possible: result.possiblePoints ?? result.possible,
-      },
-      estimate:
-        result.scoringModel === "ec-ibt-style-v1"
-          ? {
-              model: result.scoringModel,
-              overallBand: result.overallBandEstimate ?? null,
-              comparableTotal: result.comparableTotalEstimate ?? null,
-              confidence: result.estimateConfidence ?? "low",
-            }
-          : result.scoringModel === "ec-paper-linear-v1" &&
-              result.paperTotalEstimate !== undefined
-            ? {
-                model: result.scoringModel,
-                total: result.paperTotalEstimate,
-                minimum: 310 as const,
-                maximum: 677 as const,
-                method: "fixed-linear" as const,
-                confidence: "low" as const,
-              }
-            : null,
-      sections,
-      disclaimer,
-    };
+    return await projectAttemptResult(ctx, attempt);
   },
 });
 
@@ -1165,7 +1084,14 @@ export const deleteMine = mutation({
   returns: v.object({ deleted: v.literal(true) }),
   handler: async (ctx, args) => {
     const { attempt } = await requireOwnedAttempt(ctx, args.attemptId);
-    const [responses, progressRows, selectedItems, results] = await Promise.all([
+    const [
+      responses,
+      progressRows,
+      selectedItems,
+      results,
+      deliveries,
+      reviewGrants,
+    ] = await Promise.all([
       ctx.db
         .query("assessmentResponses")
         .withIndex("by_attempt_id_and_updated_at", (q) =>
@@ -1190,12 +1116,26 @@ export const deleteMine = mutation({
           q.eq("attemptId", attempt._id),
         )
         .take(9),
+      ctx.db
+        .query("assessmentResultDeliveries")
+        .withIndex("by_attempt_id_and_requested_at", (q) =>
+          q.eq("attemptId", attempt._id),
+        )
+        .take(7),
+      ctx.db
+        .query("assessmentResultReviewGrants")
+        .withIndex("by_attempt_id_and_created_at", (q) =>
+          q.eq("attemptId", attempt._id),
+        )
+        .take(7),
     ]);
     if (
       responses.length > 200 ||
       progressRows.length > 8 ||
       selectedItems.length > 200 ||
-      results.length > 8
+      results.length > 8 ||
+      deliveries.length > 6 ||
+      reviewGrants.length > 6
     ) {
       throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
     }
@@ -1227,6 +1167,24 @@ export const deleteMine = mutation({
     }
     for (const selectedItem of selectedItems) {
       await ctx.db.delete("assessmentAttemptItems", selectedItem._id);
+    }
+    for (const grant of reviewGrants) {
+      const reviewSessions = await ctx.db
+        .query("assessmentResultReviewSessions")
+        .withIndex("by_grant_id_and_created_at", (q) =>
+          q.eq("grantId", grant._id),
+        )
+        .take(6);
+      if (reviewSessions.length > 5) {
+        throw new ConvexError({ code: "ASSESSMENT_DATA_LIMIT_EXCEEDED" as const });
+      }
+      for (const session of reviewSessions) {
+        await ctx.db.delete("assessmentResultReviewSessions", session._id);
+      }
+      await ctx.db.delete("assessmentResultReviewGrants", grant._id);
+    }
+    for (const delivery of deliveries) {
+      await ctx.db.delete("assessmentResultDeliveries", delivery._id);
     }
     for (const result of results) {
       await ctx.db.delete("assessmentResults", result._id);

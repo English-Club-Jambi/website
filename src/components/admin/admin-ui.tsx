@@ -13,13 +13,15 @@ export function AdminPageHeading({
   title,
   description,
   actions,
+  className,
 }: {
   title: string;
   description: string;
   actions?: ReactNode;
+  className?: string;
 }) {
   return (
-    <header className={styles.pageHeading}>
+    <header className={classNames(styles.pageHeading, className)}>
       <div>
         <h1>{title}</h1>
         <p>{description}</p>

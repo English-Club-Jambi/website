@@ -197,7 +197,7 @@ export function AdminSignIn() {
       <section className={styles.authPanel} aria-labelledby="admin-auth-title">
         <div className={styles.authBrand}>
           <Image
-            src="/brand/english-club-mark-placeholder.svg"
+            src="/brand/english-club-mark.png"
             alt=""
             width={48}
             height={48}
@@ -462,7 +462,7 @@ export function AdminShellView({
           <aside className={styles.sidebar}>
             <Link href="/admin" className={styles.adminBrand} aria-label="English Club admin overview">
               <Image
-                src="/brand/english-club-mark-placeholder.svg"
+                src="/brand/english-club-mark.png"
                 alt=""
                 width={42}
                 height={42}
@@ -489,7 +489,7 @@ export function AdminShellView({
             <header className={styles.mobileTopbar}>
               <Link href="/admin" className={styles.mobileBrand} aria-label="English Club admin overview">
                 <Image
-                  src="/brand/english-club-mark-placeholder.svg"
+                  src="/brand/english-club-mark.png"
                   alt=""
                   width={38}
                   height={38}

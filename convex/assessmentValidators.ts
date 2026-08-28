@@ -159,6 +159,32 @@ export const resultStatusValidator = v.union(
   v.literal("adjusted"),
 );
 
+export const certificateTemplateValidator = v.union(
+  v.literal("mendalo-record"),
+  v.literal("cobalt-selvedge"),
+  v.literal("titik-folio"),
+);
+
+export const resultDeliveryStatusValidator = v.union(
+  v.literal("preparing"),
+  v.literal("sending"),
+  v.literal("accepted"),
+  v.literal("uncertain"),
+  v.literal("failed"),
+);
+
+export const resultDeliveryFailureValidator = v.union(
+  v.literal("certificate_unavailable"),
+  v.literal("provider_unavailable"),
+  v.literal("provider_uncertain"),
+  v.literal("configuration_unavailable"),
+);
+
+export const assessmentReviewGrantStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("revoked"),
+);
+
 export const mediaAccessValidator = v.union(
   v.literal("public"),
   v.literal("assessment-private"),
@@ -493,6 +519,10 @@ export const attemptPlayerValidator = v.object({
 
 export const attemptResultValidator = v.object({
   status: resultStatusValidator,
+  kind: assessmentKindValidator,
+  formTitle: v.string(),
+  completedAt: v.number(),
+  resultRevision: v.number(),
   timingMode: timingModeValidator,
   listeningMode: listeningModeValidator,
   label: v.union(

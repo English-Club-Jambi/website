@@ -17,10 +17,10 @@ This document describes the records and boundaries implemented in `convex/schema
 | CMS | Administrator authorization, page-copy drafts and versions, audit events | Only published values keyed by the code-owned manifest |
 | Media | Reviewed object metadata, access class, verification state, Assessment linkage, and public derivative lineage | Only an explicitly reviewed public object may resolve to a browser URL |
 | Assessment authoring | Definition, immutable version, checks, approvals, sections, stimuli, items, and protected answer keys | Only a published, validated version is projected to Practice |
-| Assessment participation | Owned attempts, per-section state, responses, result revisions, and per-section raw totals | Only the owning identity; answer keys remain absent before submit |
+| Assessment participation | Owned attempts, per-section state, responses, result revisions, per-section raw totals, and bounded Full Practice result-delivery records | Only the owning identity; answer keys remain absent before submit; a private review grant is token-gated and read-only |
 | Public theme | Saved recipe, immutable derived snapshot, active pointer, previous pointer, and audit events | One validated light/dark CSS-variable snapshot |
 
-The database does not store image or audio bytes, browser-only Sentence Playground state, Prompt Mixer responses, Activity Relay selection, the four-question Home programme quiz, Journal companion-image focus, visitor theme preference, analytics events, payments, attendance, credentials, certificates, or official/predicted language scores.
+The database does not store image or audio bytes, browser-only Sentence Playground state, Prompt Mixer responses, Activity Relay selection, the four-question Home programme quiz, Journal companion-image focus, visitor theme preference, analytics events, payments, attendance, credentials, certificate PDFs, submitted delivery names, plain recipient email addresses, plain private-review tokens, or official/predicted language scores.
 
 ## 2. Core rules
 
@@ -60,6 +60,9 @@ erDiagram
   ASSESSMENT_ATTEMPTS ||--o{ ASSESSMENT_RESPONSES : records
   ASSESSMENT_ATTEMPTS ||--o{ ASSESSMENT_RESULTS : revises
   ASSESSMENT_RESULTS ||--o{ ASSESSMENT_SECTION_RESULTS : totals
+  ASSESSMENT_ATTEMPTS ||--o{ ASSESSMENT_RESULT_DELIVERIES : requests
+  ASSESSMENT_RESULTS ||--o{ ASSESSMENT_RESULT_DELIVERIES : snapshots
+  ASSESSMENT_RESULT_DELIVERIES ||--o| ASSESSMENT_RESULT_REVIEW_GRANTS : grants
   MEDIA_ASSETS ||--o{ MEDIA_ASSETS : derives
   PUBLIC_THEME_DRAFTS ||--o{ PUBLIC_THEME_VERSIONS : publishes
   PUBLIC_THEME_STATE ||--|| PUBLIC_THEME_VERSIONS : points_to
@@ -150,6 +153,10 @@ A publisher can review and publish Assessments but cannot edit Assessment conten
 | `assessmentResponses` | One selected answer/flag state per owned item | Indexed by attempt and item |
 | `assessmentResults` | Immutable result revision with objective totals, optional weighted points and fixed-form estimates, status, completion, supersession, and claim contract | Available only after submit to the owner; legacy raw results project `estimate: null` |
 | `assessmentSectionResults` | Skill totals, answered/item counts, elapsed seconds, optional weighted points, and bounded estimate fields | Child of one owned result revision |
+| `assessmentResultVerificationEvents` | Pre-Siteverify abuse-control event with attempt ID, owner token identifier, and creation time | Internal mutation records one event only after confirming owned submitted Full Practice; no Turnstile token, recipient, name, IP, or provider body is stored. |
+| `assessmentResultDeliveries` | One idempotent Full Practice send attempt: owned attempt/result, client request ID, provider-attempt UUID, public certificate ID, selected design, HMAC-SHA256 recipient and certificate-name digests, consent version, human-verification time, status, optional provider message ID, bounded failure code, and timestamps | Only internal functions may create or update it after ownership, kind, Turnstile, and rate checks. It does not contain the submitted name, plain email address, access token, session token, or PDF. |
+| `assessmentResultReviewGrants` | Private review capability tied to one delivery and pinned attempt/result, SHA-256 digest of a random 256-bit access token, state, redemption count, creation time, and 30-day expiry | The raw token arrives only in the email URL fragment and is exchanged through a public action. Reads never accept the grant token directly; redemption fails closed after five successful exchanges. |
+| `assessmentResultReviewSessions` | One redeemed review session: grant reference, SHA-256 session-token digest, state, creation time, and expiry capped at 30 minutes | Public review actions hash the browser-held session token before lookup. The five-redemption grant bound also caps session creation. |
 
 Persisted practice creates or reuses Anonymous Convex Auth only after Start. Reading `/practice` or the Home programme quiz does not create an identity.
 
@@ -171,7 +178,7 @@ Attempt safeguards:
 - Reading imports use `seedBatch + status + updatedAt` for bounded verification. Each source passage is one `assessmentStimuli` row shared by its questions; stable bank keys and the source checksum make retries idempotent. Unverified source rights force `paused` and `fullPracticeEligible: false`, so ingestion alone cannot change a Live Practice manifest.
 - An attached illustration must resolve to a ready public `assessment-image` R2 record with an image MIME type and positive dimensions. Questions without an illustration store no media reference and render no empty frame.
 
-Results expose `correct`, `possible`, and `omitted`, with mode, time, per-section totals, and review. They never store or return percentage-as-level, predicted/official scores, CEFR bands, certificates, placement, or admission advice.
+Results expose `correct`, `possible`, and `omitted`, with mode, time, per-section totals, and review. They never store or return percentage-as-level, predicted/official scores, CEFR bands, proficiency certificates, placement, or admission advice. A Full Practice delivery can generate an attached completion record outside the database. It records that one English Club form was completed and keeps the result limit visible; it is not a credential.
 
 ### 4.5 Public theme
 
@@ -275,6 +282,16 @@ The public bucket/custom domain is working. The separate private Assessment buck
 | Assessment version children | version/section/order indexes | 9 sections, 200 items/stimuli/keys |
 | Assessment answer review | attempt/item indexes | 20 per cursor page |
 | Owned attempt history | owner/start index | 10 per cursor page |
+| Turnstile verification calls per owner | owner/creation index | 6 per 10 minutes |
+| Turnstile verification calls service-wide | creation index | 500 per 10 minutes |
+| Full Practice delivery retry | owner token/request ID index | 1 idempotent row |
+| Per-attempt delivery control | attempt/requested time index | 3 per 24 hours; 6 per attempt lifetime |
+| Per-recipient-digest delivery control | recipient digest/requested time index | 3 per 24 hours |
+| System delivery control | requested time index | 250 per 24 hours |
+| Private review token | token digest index | one matching active grant, 30 days |
+| Private review session | session digest index | one matching active session, at most 30 minutes |
+| Redemptions for one review grant | stored grant counter | at most 5 total |
+| Sessions for one review grant | grant/creation index | at most 5 created by the bounded grant |
 | Contact repeat check | normalized email/creation index | 3 |
 
 ## 9. Privacy and retention
@@ -287,6 +304,12 @@ The public bucket/custom domain is working. The separate private Assessment buck
 - Answer keys and confidential sources remain server-side before submit.
 - Administrator audit summaries must identify the operation without copying secrets, signed URLs, answer keys, contact message bodies, or private source content.
 - Contact submissions have an approved 180-day maximum and are removed by a bounded scheduled mutation; verified privacy requests may trigger earlier authorized deletion. Retention periods for Assessment attempts/results, audit events, and private media remain organizational decisions and are not invented.
+- A Full Practice result email sends the submitted name and recipient email to Brevo for that requested message. Convex stores HMAC-SHA256 digests of the normalized address and certificate name under the dedicated `RESULT_DELIVERY_RECIPIENT_HASH_KEY`; it never uses `BREVO_API_KEY` as the digest key. The optional provider message ID is operational metadata, not a recipient identifier.
+- Pre-Siteverify events store only the owned attempt reference, owner token identifier, and creation time. The daily bounded cleanup removes them after 24 hours. Their shorter retention is separate from 180-day delivery metadata.
+- The raw 256-bit access token appears only in `/practice/review#access=...`. The browser removes the fragment before redemption and stores the returned session token in `sessionStorage`; Convex stores only SHA-256 token digests. Neither token, the submitted name, plain address, review URL, nor certificate PDF is stored in application tables. The PDF has no review URL or URL annotation.
+- Active private review grants expire after 30 days, reject a sixth redemption, and issue sessions that expire after at most 30 minutes. A scheduled internal cleanup deletes expired sessions and grants, then removes delivery metadata older than 180 days in batches of at most 50. This does not define Brevo's provider-side log retention, which remains an operator setting.
+- New sends require server-verified Turnstile with the exact action and hostname. Delivery state moves through `preparing`, `sending`, and one terminal observation: `accepted`, `uncertain`, or `failed`. The current provider path has no delivery webhook. An uncertain send is not retried automatically.
+- Brevo account tracking, log retention, and preview storage are not database or source-code controls. Production evidence must prove anonymous Transactional Email tracking or active per-contact consent handling for the payload's `false` value, an approved log-retention period, and `Never store previews`; otherwise the provider may retain identifiable engagement or the message body containing the private fragment.
 
 ## 10. Migration policy
 

@@ -128,7 +128,12 @@ Convex remains the application database and authorization boundary. Cloudflare R
 - [x] Derive participant ownership from server auth, normalize route IDs before typed access, and return the same unavailable state for malformed, missing, and cross-owner IDs.
 - [x] Keep answer keys, explanations, provenance, draft media, admin IDs, and scoring authority out of pre-submit public payloads.
 - [x] Implement per-section deadlines, revision conflicts, idempotent Start/Submit, transcript-supported mode, owned deletion, and bounded result snapshots.
-- [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep the 310–677 paper estimate explicitly fixed-linear, non-official, and unusable as a certificate or admission evidence.
+- [x] Preserve exact correct, possible, omitted, and practice-point values with time and mode labels; keep the fixed-linear paper estimate from 310 to 677 non-official and unusable as a proficiency credential or admission evidence.
+- [x] Add the opt-in Full Practice result-email path: one server-validated delivery request, summary and section detail, a narrowly worded completion record, and a 30-day private review grant. Quick Practice remains outside this path.
+- [x] Require Cloudflare Turnstile for every new send, verify the exact action and hostname server-side, then apply indexed per-attempt, per-recipient-digest, and global limits before Brevo is called.
+- [x] Rate-limit Turnstile Siteverify before the provider call with bounded owner/global verification events, then remove those events after 24 hours through the existing daily cleanup.
+- [x] Keep the emailed access token in a URL fragment, scrub it before redemption, issue only hashed 30-minute review sessions, and fail closed after five total grant redemptions.
+- [ ] Configure the verified Brevo REST sender/domain, dedicated recipient-hash key, production Turnstile widget, and approved Convex/Vercel environment values. In Brevo, prove anonymous Transactional Email tracking or enabled per-contact consent handling for the payload's `false` value, set approved log retention, and select `Never store previews`. Then verify the attachment, JSON idempotency UUID, provider acceptance, 30-day link expiry, 30-minute session expiry, and 180-day delivery-record cleanup with an operator-owned mailbox.
 - [x] Add assessment authoring, current-revision validation, academic/rights/accessibility/bias approvals, immutable publication, safe reorder/delete, and bounded next-draft cloning.
 - [x] Lock the four active Practice Formats as an internally installed catalogue: one 50/40/50 paper form plus Listening, Structure, and Reading quick forms. Retire rather than delete the earlier four-skill catalogue.
 - [x] Add versioned per-format Question Bank allow/disable rules, fixed skill quotas, structured random draws pinned at Start, shortage validation, and privacy-safe aggregate flag review.
@@ -160,7 +165,7 @@ Convex remains the application database and authorization boundary. Cloudflare R
 8. Each verification gate runs explicitly and leaves evidence.
 9. Production media remains blocked until consent is cleared, regardless of local preview quality.
 10. Every admin capability rechecks the signed identity and permission inside Convex; route visibility is never authority.
-11. Assessment results describe original English Club practice only. Fixed-form estimates cannot be relabelled as an official score, predicted TOEFL score, calibrated equivalent, certificate, or admission evidence; legacy raw results retain their separate raw-only disclaimer.
+11. Assessment results describe original English Club practice only. Fixed-form estimates cannot be relabelled as an official score, predicted TOEFL score, calibrated equivalent, proficiency credential, or admission evidence. A Full Practice completion record may state only that one English Club form was completed and must retain that boundary; legacy raw results retain their separate raw-only disclaimer.
 12. Public R2 media and confidential Assessment sources use separate access boundaries. Missing private configuration blocks the write before a reservation row is created.
 
 ## Workflow
@@ -295,6 +300,8 @@ Exit condition: source, cloud behavior, documents, and evidence describe the sam
 | An assessment draft leaks through the public R2 bucket | Medium until configured | High | Separate private bucket and credentials; confidential reservation and upload controls stay blocked when absent |
 | Practice wording implies an official score | Medium until copy review | High | Exact bank outcomes, model-specific disclaimers, no predicted-TOEFL claim, and an explicit warning that the linear/rule-based estimate is uncalibrated |
 | Anonymous attempts outlive the promised retention period | Medium | High | Do not promise automatic deletion; approve and test cleanup before public launch |
+| Public result-email action is abused or sends from an unauthenticated domain | Medium | High | Verify Brevo sender/domain, keep the dedicated digest key server-only, require exact-host Turnstile validation, and retain bounded per-attempt, recipient-digest, and global limits |
+| A provider timeout causes a duplicate result email | Medium | Medium | Keep the same Brevo JSON idempotency UUID for the exact retry, record the outcome as `uncertain`, and require the learner to request a separate copy instead of retrying automatically |
 | CMS page growth truncates Practice copy | Low | Medium | Indexed read of 201, explicit failure above 200, and refusal to create a 201st entry |
 
 ## Release boundaries

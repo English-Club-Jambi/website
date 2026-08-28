@@ -356,6 +356,10 @@ The composition may change on hover or focus, but no JavaScript is needed.
 - The current-section navigator is a focus-contained dialog; answered, unanswered, flagged, and current states use text and shape in addition to colour.
 - Transcript support is explicit, persists for the attempt, and is reflected in the result label.
 - Result rows show raw correct/possible/omitted counts and time. Post-submit review is section ordered and cursor paginated.
+- A submitted Full Practice result may add one inline delivery field after the result limitation and before review. It asks for a certificate name, recipient email, and explicit consent. The initial certificate row names the default, Mendalo Record, then offers `Choose another design`; the three designs are a labelled radio group only after that action. Selecting a design never sends the email. A labelled Cloudflare Turnstile row follows consent, and the primary action stays disabled until verification completes.
+- The delivery package contains a short result statement, score detail, an attached practice-completion record, and a private review link. The certificate is an English Club completion record, not a proficiency credential, university document, pass result, admission document, ETS document, or score verification. It says `Practice record prepared for` and `Name supplied by participant; identity not verified.` The PDF never contains the private review URL, QR code, or URL annotation. Quick Practice has no delivery control.
+- The available designs are Mendalo Record (`mendalo-record`), Cobalt Selvedge (`cobalt-selvedge`), and Titik Folio (`titik-folio`). They share one fact pattern and differ only in composition. Their batik influence is an original dot-and-line detail, not a named motif, heritage claim, imitation seal, or decorative fabric texture.
+- Delivery feedback names the requested action and remains in the result flow. Accepted copy states provider acceptance rather than inbox delivery, masks the address, and offers review-link revocation. An ambiguous provider outcome gets a persistent uncertain state with no automatic retry; only `Prepare a separate copy` starts another request. It does not use a celebration screen, a score ring, a fake seal, a signature, or a decorative certificate preview that resembles an external credential.
 
 ### Administration shell
 
@@ -492,7 +496,7 @@ Reject before review:
 - decorative section numbers;
 - fake UI, fake metrics, or fake quotes;
 - development Member seed material presented as reviewed roster evidence or copied into production, or any invented count, tenure, achievement, or contact detail;
-- score rings, accuracy-as-proficiency, official-scale conversions, CEFR badges, certificate graphics, or admission language for Practice;
+- score rings, accuracy-as-proficiency, official-scale conversions, CEFR badges, or admission language for Practice; a Full Practice completion record is allowed only when it records completion, keeps its limitation visible, and avoids credential, award, pass, university-diploma, or proficiency claims;
 - decorative admin dashboard cards, giant outlined headings, sticker piles, or publication progress that is not tied to stored state;
 - hierarchy pyramids, orbiting face walls, or three equal profile cards;
 - 3D, particles, WebGL, canvas-only hero, and custom cursor;
@@ -518,6 +522,7 @@ Reject before review:
 - [x] The five-link header fits at the tested tablet and desktop stress widths and collapses before controls collide.
 - [x] Member light, dark, phone, 320px, selected-role, and roster-detail screenshots are manually inspected.
 - [x] Practice overview and Home programme quiz reflow without horizontal overflow at desktop, Pixel 7, 412px, and 320px evidence widths.
+- [ ] Full Practice result delivery shows an inline consent form, progressive certificate choice, exact-host human verification, accepted/uncertain/failed copy, review-link revocation, and readable 320px reflow. A configured operator-owned send, pre-Siteverify bounds, PDF attachment, fragment scrub, 30-minute session expiry, expired grant check, and Brevo anonymous/per-contact tracking plus `Never store previews` evidence remain required before release.
 - [x] Assessment authoring uses reusable order controls, a reusable confirmation dialog, version-scoped media selectors, and visible clone/configuration states.
 - [x] Public theme drafts, immutable versions, validation, publish, rollback, and checked-in fallback use one semantic contract.
 - [x] CMS public/admin reads fail explicitly above 200 entries and refuse a 201st new key.

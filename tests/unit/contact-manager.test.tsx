@@ -118,7 +118,7 @@ describe("ContactManager", () => {
       expect.stringContaining("mailto:alya@example.com"),
     );
     expect(
-      screen.getByText("Status is an internal work note. It never sends an email by itself."),
+      screen.getByText("Status is internal. It never sends email."),
     ).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: /Bima Pratama/ }));

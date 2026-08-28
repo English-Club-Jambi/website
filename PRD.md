@@ -26,6 +26,7 @@ The public organisation profile is working, but the complete product must also r
 - Offer one original paper-format practice with Listening, Structure and Written Expression, and Reading, plus one short practice for each section under the English Club Assessment Lab name.
 - Preserve participant ownership through Anonymous Convex Auth only after Start and keep answer keys private until submission.
 - Report correct, possible, omitted, and English Club practice-point values with mode/time context; keep any external-scale estimate visibly fixed-form and non-official.
+- Let the owner of a submitted Full Practice result request one transactional email with a summary, section detail, an attached completion record, and a temporary private review link.
 - Explain all five user-supplied role codes and publish only verified member profiles with explicit consent.
 - Keep media bytes in R2 while Convex remains the database authority for product records.
 - Preserve privacy and uncertainty in both visible copy and machine-readable metadata.
@@ -40,7 +41,7 @@ The public organisation profile is working, but the complete product must also r
 - Comments, newsletter automation, event ticketing, payment, chat, or social feed embedding.
 - Publishing the donation photo or video that contains children.
 - A complete Indonesian translation. The architecture must leave room for one later.
-- Uploaded speech recordings, automatic speech recognition, camera capture, official or calibrated scores, exact score prediction, CEFR placement, certificates, admission advice, streaks, or personalised learning claims.
+- Uploaded speech recordings, automatic speech recognition, camera capture, official or calibrated scores, exact score prediction, CEFR placement, proficiency certificates, admission advice, streaks, or personalised learning claims. The sole certificate exception is an opted-in Full Practice completion record that states only that a learner completed an English Club form and carries the result limit.
 - Adaptive routing, remote proctoring, browser lockdown, webcam monitoring, device fingerprinting, or AI-published questions.
 - Public Assessment questions before original-content, academic, rights, accessibility, and bias review gates pass.
 - WebGL, a canvas-only hero, scroll hijacking, a custom cursor, or decorative pointer physics.
@@ -102,6 +103,7 @@ Jobs:
 - Understand the format, timing, Listening support, privacy boundary, and result limitation before Start.
 - Complete one current section with reliable save, resume, timer, transcript, and navigation states.
 - See exact correct, possible, omitted, and practice-point values, understand any bounded fixed-form estimate, then review answers after submission.
+- For a submitted Full Practice result, request an email copy without turning an entered email address into a site account or public profile.
 - Delete the owned attempt when desired without assuming that the Anonymous Auth row is also deleted.
 
 ## Experience principles
@@ -428,7 +430,13 @@ Acceptance:
 - Support idempotent start and submit request IDs, per-section timers, explicit transcript enablement, response save, navigation, resume, final-section-only submission, owned attempt listing, result review, and bounded graph deletion.
 - Keep answer keys outside every pre-submit response. After submission, expose exact correct, possible, omitted, and practice-point values plus section/time/mode context and a 20-item paginated answer review.
 - The full `ec-itp-level-1-aligned-v1` definition binds to `paper-estimate-v1`; its three section estimates span 31–68, 31–68, and 31–67. The total is `round((L + S + R) × 10 ÷ 3)` and is constrained to 310–677. Quick forms use `raw-objective` only.
-- The section conversion is an explicit English Club fixed-linear recipe, not ETS equating. Never label it as an official score, exact prediction, calibrated equivalent, CEFR band, certificate, placement, admission guidance, or personalised learning claim. Historical four-skill results retain their original model and wording.
+- The section conversion is an explicit English Club fixed-linear recipe, not ETS equating. Never label it as an official score, exact prediction, calibrated equivalent, CEFR band, proficiency credential, placement, admission guidance, or personalised learning claim. The separate Full Practice completion record may state form completion only and must retain that boundary. Historical four-skill results retain their original model and wording.
+- Only the owner of a submitted `full-practice` attempt may request the result email. The action validates the name, recipient email, consent version, request ID, and Cloudflare Turnstile token server-side. Before calling Siteverify, it records a bounded owner/global verification event; the event expires after 24 hours. It then requires the exact `full-practice-result-email` Turnstile action and public hostname before reserving a new delivery. The package contains a result statement, score and section detail, an attached practice-completion record, and a private full-review link sent through Brevo's transactional REST endpoint. Quick Practice does not expose this path.
+- The completion record may state the learner's chosen name, form, completion date, timing/listening mode, raw result, and the bounded English Club estimate when the stored result contains one. It must say that it records completion of one English Club practice form. It must not claim ETS affiliation, an official score, English proficiency, CEFR placement, a predicted result, calibrated equivalence, admission value, passing status, accreditation, or university endorsement.
+- The result page begins with the default Mendalo Record certificate design and exposes alternatives only after `Choose another design`. A certificate choice never triggers delivery. The sender receives no browser-side provider secret.
+- A random 256-bit access token appears only in the email URL fragment at `/practice/review#access=...`; it never belongs in a route path, query string, server request, analytics event, log, or certificate PDF. The client scrubs the fragment before redemption, then stores a random review-session token only in `sessionStorage`. Convex stores SHA-256 digests of both tokens. The grant expires after 30 days and permits at most five redemptions in total; each issued session expires after at most 30 minutes.
+- Convex stores HMAC-SHA256 digests of the normalized recipient email and certificate name under the dedicated `RESULT_DELIVERY_RECIPIENT_HASH_KEY`. It stores the consent contract, human-verification time, random public certificate ID, provider-attempt UUID, delivery status, timestamps, and optional provider message ID. It does not persist the submitted name, plain email address, plain token, session token, or certificate PDF. Delivery metadata is removed after 180 days.
+- Brevo idempotency uses the stable provider-attempt UUID in the transactional request body's `headers.idempotencyKey`; it is not an HTTP header. The state machine is `preparing` to `sending`, then `accepted`, `uncertain`, or `failed`. An uncertain provider outcome keeps the review grant active but never triggers an automatic resend. This release has no delivery webhook.
 - Keep definitions, immutable versions, checks, approvals, sections, stimuli, items, answer keys, attempts, responses, and result revisions as separate Convex records.
 - Keep the four active Practice Formats fixed. The protected catalogue has no public create action; an operator-only maintenance gate protects the server creation function, while retired formats remain immutable for historical attempts.
 - Treat Question Bank as reusable inventory and each Practice Format as a versioned delivery rule. Admins can allow or disable eligible questions per working revision without changing a live published attempt.
@@ -502,6 +510,9 @@ Seed stories may explain visible scenes and general speaking-practice ideas. Sou
 - Keep secrets in deployment environment variables.
 - Minimise personal data: name, email, intent, message, consent time, and status only.
 - Delete contact submissions automatically after 180 days in bounded batches; allow earlier authorized erasure for a verified privacy request. Never copy contact PII into the retained audit summary.
+- Send Full Practice results through Brevo only after explicit delivery consent and successful Turnstile validation. Brevo receives the entered name and email for the requested message. The learner address is the recipient, never `From` or `Reply-To`. Optional `BREVO_REPLY_TO_EMAIL` names the monitored English Club mailbox that receives a reply; omit it when the verified sender inbox already receives replies.
+- Keep Brevo credentials, sender configuration, `RESULT_DELIVERY_RECIPIENT_HASH_KEY`, and `TURNSTILE_SECRET_KEY` in Convex deployment environment variables. Only the matching `NEXT_PUBLIC_TURNSTILE_SITE_KEY` may be public in Next.js. The REST path records acceptance when Brevo returns a message ID, classifies ambiguous responses or exhausted transient retries as `uncertain`, and does not consume delivery webhooks.
+- Treat Brevo tracking and retention as provider-account release gates. The payload's `contactPixelTrackingConsent: false` is effective only when Brevo's per-contact consent feature is active; otherwise the provider ignores it. Before release, enable anonymous tracking for Transactional Emails or enable and prove per-contact consent handling, configure approved transactional-log retention, and select `Never store previews` because the private review fragment appears in the message body. Source code cannot enforce these Brevo dashboard settings.
 - Public member records use a separate purpose and consent contract from contact submissions. Profile-text consent does not imply portrait consent.
 - Administrator identity comes from Convex Auth and authorization comes from the active `adminUsers` record resolved by token identifier. A browser-supplied role never grants access.
 - Persisted Practice uses Anonymous Convex Auth only after Start. Attempt, response, transcript, and result reads require the owning token identifier; answer keys remain private before submit.
@@ -553,6 +564,7 @@ Set targets only after enough real traffic exists to establish a baseline.
 - Public media contains no sensitive EXIF and no held asset.
 - Lint, types, unit/backend tests, production build, browser tests, and accessibility scan pass.
 - Desktop and mobile screenshots have received a manual visual audit.
+- Full Practice email delivery has passed an operator-owned mailbox smoke test with a verified Brevo sender/domain, active exact-host Turnstile widget, attached completion record, fragment-based access link, 30-minute session expiry, and explicit `uncertain` outcome check. Until then, it remains a configuration-gated capability rather than a released communication promise.
 - No unsupported organisation claim appears in HTML, alt text, metadata, JSON-LD, seed content, or test fixtures.
 - `PLAN.md`, `DESIGN.md`, `DESIGN-SYSTEM.md`, `BLUEPRINT.md`, `DATABASE.md`, and evidence ledgers match the implemented routes, tokens, and fields.
 - A real cloud round trip proves administrator sign-in, initial-owner provisioning, permission enforcement, draft/publish behavior, and audit capture without exposing credentials.

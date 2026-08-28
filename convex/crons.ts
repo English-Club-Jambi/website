@@ -11,4 +11,11 @@ crons.interval(
   {},
 );
 
+crons.interval(
+  "purge expired result delivery records",
+  { hours: 24 },
+  internal.assessmentResultDelivery.purgeExpired,
+  {},
+);
+
 export default crons;

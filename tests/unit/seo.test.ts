@@ -20,13 +20,13 @@ afterEach(() => {
 describe("public SEO metadata", () => {
   it("never emits a localhost or HTTP canonical origin", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3987";
-    expect(getSiteUrl().toString()).toBe("https://englishclub.mukhtada.my.id/");
+    expect(getSiteUrl().toString()).toBe("https://englishclubjambi.my.id/");
     expect(absoluteUrl("/journal/story")).toBe(
-      "https://englishclub.mukhtada.my.id/journal/story",
+      "https://englishclubjambi.my.id/journal/story",
     );
 
     process.env.NEXT_PUBLIC_SITE_URL = "not a URL";
-    expect(getSiteUrl().toString()).toBe("https://englishclub.mukhtada.my.id/");
+    expect(getSiteUrl().toString()).toBe("https://englishclubjambi.my.id/");
   });
 
   it("accepts an explicit HTTPS production origin and strips extra path state", () => {
@@ -42,11 +42,11 @@ describe("public SEO metadata", () => {
     });
 
     expect(metadata.alternates?.canonical).toBe(
-      "https://englishclub.mukhtada.my.id/about",
+      "https://englishclubjambi.my.id/about",
     );
     expect(metadata.openGraph).toMatchObject({
       type: "website",
-      url: "https://englishclub.mukhtada.my.id/about",
+      url: "https://englishclubjambi.my.id/about",
       siteName: "English Club",
       locale: "en_US",
     });

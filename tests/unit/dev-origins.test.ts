@@ -58,7 +58,7 @@ describe("development origin allowlist", () => {
     ).toEqual([
       "localhost",
       "127.0.0.1",
-      "englishclub.mukhtada.my.id",
+      "englishclubjambi.my.id",
       "192.168.1.7",
       "192.168.1.9",
       "qa-phone.local",

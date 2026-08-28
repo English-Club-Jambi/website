@@ -428,6 +428,27 @@
   animation: admin-dialog-enter 180ms var(--admin-ease) both;
 }
 
+.workspaceDialog[data-variant="drawer"] {
+  width: min(calc(100% - 0.75rem), 38rem);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+}
+
+.workspaceDialog[data-variant="drawer"]::backdrop {
+  animation: admin-backdrop-enter 220ms var(--admin-ease) both;
+}
+
+.workspaceDialog[data-variant="drawer"] .workspaceDialogPanel {
+  height: 100%;
+  border-block: 0;
+  border-right: 0;
+  border-radius: var(--admin-radius) 0 0 var(--admin-radius);
+  box-shadow: -0.5rem 0 0 color-mix(in oklch, var(--admin-ink) 14%, transparent);
+  animation-duration: 240ms;
+  animation-name: admin-drawer-enter;
+}
+
 .workspaceDialogPanel > header {
   min-width: 0;
   display: flex;
@@ -1155,6 +1176,64 @@
   background: var(--admin-cobalt-wash);
 }
 
+.memberTableHeader {
+  display: none;
+}
+
+.memberTableRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.3rem 0.65rem;
+  transition:
+    background-color 160ms var(--admin-ease),
+    box-shadow 160ms var(--admin-ease);
+}
+
+.memberTablePrimary,
+.memberTableResponsibility {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.memberTablePrimary {
+  grid-column: 1 / -1;
+}
+
+.memberTableResponsibility strong {
+  color: var(--admin-cobalt-dark);
+  font-size: 0.74rem;
+}
+
+.memberTablePrimary small,
+.memberTableResponsibility small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.memberTableAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: end;
+  gap: 0.4rem;
+}
+
+.memberTableAction > svg {
+  flex: 0 0 auto;
+  color: var(--admin-cobalt-dark);
+  transition: transform 160ms var(--admin-ease);
+}
+
+.memberTableRow:is(:hover, :focus-visible) .memberTableAction > svg {
+  transform: translate3d(0.2rem, 0, 0);
+}
+
+.memberTableRow[data-active="true"] {
+  box-shadow: inset 4px 0 0 var(--admin-cobalt);
+}
+
 .notice {
   display: flex;
   align-items: start;
@@ -1423,6 +1502,46 @@
   gap: 0.55rem;
 }
 
+.contactPageHeading {
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+}
+
+.contactPageHeading h1 {
+  margin-bottom: 0.25rem;
+  font-size: 1.85rem;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.contactPageHeading p {
+  max-width: 72ch;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.contactSection .sectionHeader {
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+}
+
+.contactSection .sectionHeader h2 {
+  margin-bottom: 0.08rem;
+  font-size: 0.96rem;
+}
+
+.contactSection .sectionHeader p {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.contactSection .emptyState {
+  min-height: 11rem;
+  padding: 1.25rem;
+}
+
 .contactIntentRail {
   min-width: 0;
   display: grid;
@@ -1434,13 +1553,13 @@
 
 .contactIntentButton {
   min-width: 0;
-  min-height: 78px;
+  min-height: 58px;
   display: grid;
   grid-template-columns: 1.45rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.55rem;
   border: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.55rem 0.75rem;
   background: var(--admin-paper);
   color: var(--admin-ink);
   font: inherit;
@@ -1471,31 +1590,45 @@
 }
 
 .contactIntentButton strong {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   line-height: 1.2;
 }
 
 .contactIntentButton small {
   color: var(--admin-muted);
-  font-size: 0.7rem;
-  line-height: 1.3;
+  font-size: 0.66rem;
+  line-height: 1.25;
 }
 
 .contactToolbar {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(13rem, 0.7fr) minmax(10rem, auto) minmax(18rem, 1.3fr);
-  align-items: end;
-  gap: 1rem;
+  grid-template-columns: minmax(12rem, 0.65fr) minmax(8rem, auto) minmax(16rem, 1.35fr);
+  align-items: center;
+  gap: 0.75rem;
   border-bottom: 2px solid var(--admin-line);
-  padding: 1rem 1.15rem;
+  padding: 0.6rem 0.9rem;
 }
 
 .contactToolbar > p {
-  margin: 0 0 0.15rem;
+  margin: 0;
   color: var(--admin-muted);
-  font-size: 0.76rem;
-  line-height: 1.45;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.contactCompactSelect {
+  gap: 0.22rem;
+}
+
+.contactCompactSelect > label {
+  font-size: 0.64rem;
+}
+
+.contactCompactSelect [data-select-trigger] {
+  min-height: 44px;
+  padding-block: 0.48rem;
+  font-size: 0.82rem;
 }
 
 .contactNotice {
@@ -1510,7 +1643,7 @@
 
 .contactDesk {
   min-width: 0;
-  height: clamp(34rem, calc(100dvh - 15rem), 48rem);
+  height: clamp(34rem, calc(100dvh - 13.5rem), 50rem);
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(19rem, 0.8fr) minmax(0, 1.2fr);
@@ -1528,14 +1661,14 @@
 .contactListRow {
   width: 100%;
   min-width: 0;
-  min-height: 116px;
+  min-height: 76px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-content: center;
-  gap: 0.25rem 0.75rem;
+  gap: 0.18rem 0.65rem;
   border: 0;
   border-bottom: 1px solid var(--admin-soft-line);
-  padding: 0.9rem 1rem;
+  padding: 0.55rem 0.75rem;
   background: var(--admin-paper);
   color: var(--admin-ink);
   font: inherit;
@@ -1555,23 +1688,39 @@
   box-shadow: inset 4px 0 0 var(--admin-cobalt);
 }
 
-.contactListRow > span:not(.contactListHead) {
+.contactListMeta {
+  min-width: 0;
+  display: grid;
+  gap: 0.06rem;
+}
+
+.contactListMeta > span {
   min-width: 0;
   overflow: hidden;
   color: var(--admin-muted);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.contactListRow > small {
-  align-self: center;
+.contactListMeta > small {
+  overflow: hidden;
   color: var(--admin-muted);
-  font-size: 0.7rem;
+  font-size: 0.64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .contactListRow > :last-child {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
   justify-self: end;
+}
+
+.contactListRow .statusBadge {
+  padding: 0.16rem 0.42rem;
+  font-size: 0.64rem;
 }
 
 .contactListHead {
@@ -1586,7 +1735,7 @@
 .contactListHead strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1594,7 +1743,7 @@
 .contactListHead time {
   flex: 0 0 auto;
   color: var(--admin-muted);
-  font-size: 0.66rem;
+  font-size: 0.61rem;
 }
 
 .contactLoadMore {
@@ -1606,6 +1755,8 @@
 .contactDetail {
   min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(8rem, 1fr) auto auto;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -1613,12 +1764,13 @@
 
 .contactDetailHeader {
   min-width: 0;
-  display: flex;
-  align-items: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   justify-content: space-between;
-  gap: 1.25rem;
+  gap: 0.85rem;
   border-bottom: 1px solid var(--admin-soft-line);
-  padding: clamp(1.15rem, 3vw, 2rem);
+  padding: 0.8rem 1rem;
 }
 
 .contactDetailHeader > div {
@@ -1638,10 +1790,10 @@
 
 .contactDetailHeader h3 {
   overflow-wrap: anywhere;
-  margin: 0.15rem 0 0;
-  font-size: clamp(1.75rem, 4vw, 3.3rem);
-  letter-spacing: -0.04em;
-  line-height: 0.98;
+  margin: 0.08rem 0 0;
+  font-size: 1.75rem;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
 .contactDetailHeader > div > a {
@@ -1660,9 +1812,11 @@
 }
 
 .contactFacts > div {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.85rem clamp(1.15rem, 3vw, 2rem);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.55rem 1rem;
 }
 
 .contactFacts > div + div {
@@ -1671,27 +1825,29 @@
 
 .contactFacts dt {
   color: var(--admin-muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 720;
 }
 
 .contactFacts dd {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  text-align: right;
 }
 
 .contactMessage {
   display: grid;
-  gap: 0.7rem;
-  padding: clamp(1.25rem, 4vw, 2.5rem) clamp(1.15rem, 3vw, 2rem);
+  align-content: start;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
 }
 
 .contactMessage p {
   max-width: 68ch;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: clamp(1rem, 2vw, 1.16rem);
-  line-height: 1.65;
+  font-size: 0.94rem;
+  line-height: 1.5;
   white-space: pre-wrap;
 }
 
@@ -1700,17 +1856,17 @@
   display: grid;
   grid-template-columns: minmax(13rem, 0.75fr) minmax(16rem, 1.25fr);
   align-items: end;
-  gap: 1rem;
+  gap: 0.75rem;
   border-top: 2px solid var(--admin-line);
-  padding: 1rem clamp(1.15rem, 3vw, 2rem);
+  padding: 0.6rem 1rem;
   background: color-mix(in oklch, var(--admin-cobalt-wash) 34%, var(--admin-paper));
 }
 
 .contactActionRow > p {
-  margin: 0 0 0.2rem;
+  margin: 0;
   color: var(--admin-muted);
-  font-size: 0.74rem;
-  line-height: 1.45;
+  font-size: 0.69rem;
+  line-height: 1.35;
 }
 
 .contactEraseRow {
@@ -1719,15 +1875,15 @@
   justify-content: space-between;
   gap: 1rem;
   border-top: 1px solid var(--admin-soft-line);
-  padding: 1rem clamp(1.15rem, 3vw, 2rem);
+  padding: 0.6rem 1rem;
 }
 
 .contactEraseRow > p {
   max-width: 54ch;
   margin: 0;
   color: var(--admin-muted);
-  font-size: 0.72rem;
-  line-height: 1.45;
+  font-size: 0.68rem;
+  line-height: 1.35;
 }
 
 .storyWorkspaceHeader {
@@ -2201,6 +2357,24 @@
   color: var(--admin-muted);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.memberDrawerStatus {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  border-bottom: 1px solid var(--admin-soft-line);
+  padding: 0.65rem 0.9rem;
+  background: color-mix(in oklch, var(--admin-cobalt-wash) 42%, var(--admin-paper));
+}
+
+.memberDrawerStatus > span:first-child {
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  font-weight: 720;
 }
 
 .programEditorHeader {
@@ -3148,6 +3322,24 @@
   }
 }
 
+@keyframes admin-drawer-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(1.25rem, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes admin-backdrop-enter {
+  from {
+    background: transparent;
+    backdrop-filter: blur(0);
+  }
+}
+
 @media (max-width: 980px) {
   .adminRoot {
     display: block;
@@ -3202,6 +3394,86 @@
     border-right: 1px solid var(--admin-soft-line);
     border-bottom: 0;
     scroll-snap-align: start;
+  }
+
+  .memberWorkspace .memberDirectory {
+    max-height: min(34rem, 58dvh);
+    display: block;
+    border-right: 0;
+    border-bottom: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scroll-snap-type: none;
+  }
+
+  .memberTableHeader {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(7.25rem, 0.9fr);
+    gap: 0.75rem;
+    border-bottom: 2px solid var(--admin-line);
+    padding: 0.55rem 0.75rem;
+    background: var(--admin-paper);
+    color: var(--admin-muted);
+    font-size: 0.64rem;
+    font-weight: 780;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .memberTableRow {
+    min-width: 0;
+    min-height: 74px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(7.25rem, 0.9fr);
+    align-items: center;
+    gap: 0.2rem 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--admin-soft-line);
+    padding: 0.65rem 0.75rem;
+    scroll-snap-align: none;
+  }
+
+  .memberTablePrimary {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .memberTablePrimary strong {
+    overflow-wrap: anywhere;
+    font-size: 0.8rem;
+    line-height: 1.25;
+  }
+
+  .memberTableResponsibility {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .memberTableResponsibility strong,
+  .memberTableResponsibility small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .memberTableAction {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: space-between;
+  }
+
+  .memberTableAction .statusBadge {
+    padding: 0.14rem 0.4rem;
+    font-size: 0.62rem;
+  }
+
+  .memberDesktopCanvas {
+    display: none;
   }
 
   .contentPicker {
@@ -3333,9 +3605,54 @@
     grid-template-columns: 1fr;
   }
 
-  .contactIntentRail,
-  .contactToolbar,
-  .contactFacts,
+  .contactPageHeading {
+    display: flex;
+    align-items: start;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .contactPageHeading h1 {
+    max-width: none;
+    margin-bottom: 0.2rem;
+    font-size: 1.55rem;
+  }
+
+  .contactPageHeading p {
+    font-size: 0.75rem;
+  }
+
+  .contactIntentRail {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: thin;
+  }
+
+  .contactIntentButton {
+    flex: 0 0 50%;
+    min-height: 56px;
+    border-right: 1px solid var(--admin-soft-line);
+    scroll-snap-align: start;
+  }
+
+  .contactIntentButton small {
+    display: none;
+  }
+
+  .contactToolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem 0.75rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .contactToolbar > p {
+    grid-column: 1 / -1;
+  }
+
   .contactActionRow {
     grid-template-columns: 1fr;
   }
@@ -3357,13 +3674,23 @@
     width: 100%;
   }
 
-  .contactFacts > div + div {
-    border-top: 1px solid var(--admin-soft-line);
-    border-left: 0;
+  .contactFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .contactToolbar > p {
-    grid-column: 1;
+  .contactFacts > div {
+    display: grid;
+    gap: 0.16rem;
+    padding-inline: 0.75rem;
+  }
+
+  .contactFacts > div + div {
+    border-top: 0;
+    border-left: 1px solid var(--admin-soft-line);
+  }
+
+  .contactFacts dd {
+    text-align: left;
   }
 
   .dataTable {

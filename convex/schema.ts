@@ -12,6 +12,7 @@ import {
   assessmentQuestionBankStatusValidator,
   assessmentQuestionDifficultyValidator,
   assessmentResponseValidator,
+  assessmentReviewGrantStatusValidator,
   assessmentReviewDecisionValidator,
   assessmentReviewTypeValidator,
   attemptSectionStatusValidator,
@@ -25,6 +26,9 @@ import {
   listeningModeValidator,
   mediaAccessValidator,
   resultStatusValidator,
+  certificateTemplateValidator,
+  resultDeliveryFailureValidator,
+  resultDeliveryStatusValidator,
   reviewPolicyValidator,
   scorePolicyValidator,
   stimulusKindValidator,
@@ -779,6 +783,75 @@ export default defineSchema({
   })
     .index("by_result_id_and_section_id", ["resultId", "sectionId"])
     .index("by_result_id", ["resultId"]),
+
+  assessmentResultVerificationEvents: defineTable({
+    attemptId: v.id("assessmentAttempts"),
+    ownerTokenIdentifier: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_owner_token_identifier_and_created_at", [
+      "ownerTokenIdentifier",
+      "createdAt",
+    ])
+    .index("by_created_at", ["createdAt"]),
+
+  assessmentResultDeliveries: defineTable({
+    attemptId: v.id("assessmentAttempts"),
+    resultId: v.id("assessmentResults"),
+    ownerTokenIdentifier: v.string(),
+    requestId: v.string(),
+    providerAttemptId: v.optional(v.string()),
+    publicCertificateId: v.optional(v.string()),
+    certificateTemplate: certificateTemplateValidator,
+    recipientHash: v.string(),
+    certificateNameHash: v.optional(v.string()),
+    consentVersion: v.optional(v.literal(1)),
+    humanVerifiedAt: v.optional(v.number()),
+    status: resultDeliveryStatusValidator,
+    failureCode: v.optional(resultDeliveryFailureValidator),
+    providerMessageId: v.optional(v.string()),
+    requestedAt: v.number(),
+    updatedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+  })
+    .index("by_owner_token_identifier_and_request_id", [
+      "ownerTokenIdentifier",
+      "requestId",
+    ])
+    .index("by_attempt_id_and_requested_at", ["attemptId", "requestedAt"])
+    .index("by_recipient_hash_and_requested_at", [
+      "recipientHash",
+      "requestedAt",
+    ])
+    .index("by_requested_at", ["requestedAt"])
+    .index("by_status_and_updated_at", ["status", "updatedAt"])
+    .index("by_updated_at", ["updatedAt"]),
+
+  assessmentResultReviewSessions: defineTable({
+    grantId: v.id("assessmentResultReviewGrants"),
+    sessionHash: v.string(),
+    status: assessmentReviewGrantStatusValidator,
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_session_hash", ["sessionHash"])
+    .index("by_grant_id_and_created_at", ["grantId", "createdAt"])
+    .index("by_expires_at", ["expiresAt"]),
+
+  assessmentResultReviewGrants: defineTable({
+    deliveryId: v.id("assessmentResultDeliveries"),
+    attemptId: v.id("assessmentAttempts"),
+    resultId: v.id("assessmentResults"),
+    tokenHash: v.string(),
+    status: assessmentReviewGrantStatusValidator,
+    redemptionCount: v.optional(v.number()),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_delivery_id", ["deliveryId"])
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_attempt_id_and_created_at", ["attemptId", "createdAt"])
+    .index("by_expires_at", ["expiresAt"]),
 
   publicThemeDrafts: defineTable({
     siteKey: v.literal("public"),

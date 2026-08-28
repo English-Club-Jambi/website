@@ -4,6 +4,7 @@ import {
   ArchiveBoxIcon,
   BuildingOffice2Icon,
   CheckCircleIcon,
+  ChevronRightIcon,
   FunnelIcon,
   PhotoIcon,
   PlusIcon,
@@ -13,7 +14,7 @@ import {
 import type { FunctionReturnType } from "convex/server";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import Image from "next/image";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { SelectField, type SelectFieldOption } from "@/components/forms/select-field";
 import {
@@ -46,6 +47,7 @@ import {
   humanizeError,
 } from "./admin-ui";
 import { useAdminConfirm } from "./admin-confirm-dialog";
+import { AdminWorkspaceDialog } from "./admin-workspace-dialog";
 import styles from "./admin-shell.module.css";
 import { useAdminMediaUpload } from "./use-admin-media-upload";
 
@@ -156,14 +158,30 @@ function memberStatusTone(status: ProfileStatus) {
   return "warning" as const;
 }
 
+function useCompactMemberWorkspace() {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 980px)");
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return matches;
+}
+
 function MemberEditor({
   member,
   divisions,
+  surface = "workspace",
   onSaved,
   onArchived,
 }: {
   member: MemberRecord | null;
   divisions: ReadonlyArray<DivisionRecord>;
+  surface?: "workspace" | "drawer";
   onSaved: (memberId: Id<"members">) => void;
   onArchived: () => void;
 }) {
@@ -292,20 +310,32 @@ function MemberEditor({
 
   return (
     <form onSubmit={handleSave}>
-      <div className={styles.memberEditorHeading}>
-        <div>
-          <strong>{member ? `Edit ${member.displayName}` : "Add a member profile"}</strong>
-          <span>{getMemberRoleDefinition(form.roleLevel).scope}</span>
+      {surface === "workspace" ? (
+        <div className={styles.memberEditorHeading}>
+          <div>
+            <strong>{member ? `Edit ${member.displayName}` : "Add a member profile"}</strong>
+            <span>{getMemberRoleDefinition(form.roleLevel).scope}</span>
+          </div>
+          {member ? (
+            <div className={styles.buttonRow}>
+              {member.recordOrigin === "development-seed" ? (
+                <AdminStatus tone="neutral">Development seed</AdminStatus>
+              ) : null}
+              <AdminStatus tone={memberStatusTone(member.profileStatus)}>{member.profileStatus}</AdminStatus>
+            </div>
+          ) : null}
         </div>
-        {member ? (
+      ) : member ? (
+        <div className={styles.memberDrawerStatus} aria-label="Profile record state">
+          <span>{getMemberRoleDefinition(form.roleLevel).label}</span>
           <div className={styles.buttonRow}>
             {member.recordOrigin === "development-seed" ? (
               <AdminStatus tone="neutral">Development seed</AdminStatus>
             ) : null}
             <AdminStatus tone={memberStatusTone(member.profileStatus)}>{member.profileStatus}</AdminStatus>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className={styles.formGridWide}>
         <label className={`${styles.field} ${styles.spanSix}`}>
@@ -854,6 +884,8 @@ export function MemberManager() {
     defaultAdminMemberFilters,
   );
   const [selectedId, setSelectedId] = useState<string | "new" | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const compactWorkspace = useCompactMemberWorkspace();
   const divisions = useQuery(api.adminMemberDivisions.list, {});
   const queryArgs = status === "all" ? {} : { status };
   const { results, status: pageStatus, loadMore } = usePaginatedQuery(
@@ -922,7 +954,47 @@ export function MemberManager() {
   function chooseView(next: "profiles" | "divisions") {
     setView(next);
     setSelectedId(null);
+    setEditorOpen(false);
   }
+
+  function chooseMember(memberId: string | "new") {
+    setSelectedId(memberId);
+    if (compactWorkspace) setEditorOpen(true);
+  }
+
+  const editorState =
+    selectedId === null ? (
+      <AdminEmpty title="Choose a member" description="Select a profile from the member table or start a new member record." />
+    ) : selectedId !== "new" && selected === undefined ? (
+      <AdminLoadingRows label="Loading the selected member" />
+    ) : divisions === undefined ? (
+      <AdminLoadingRows label="Loading managed divisions" />
+    ) : selectedId !== "new" && selected === null ? (
+      <AdminEmpty title="Member record unavailable" description="Choose another profile from the member table." />
+    ) : (
+      <MemberEditor
+        key={selectedId}
+        member={selectedId === "new" ? null : selected ?? null}
+        divisions={divisions}
+        surface={compactWorkspace ? "drawer" : "workspace"}
+        onSaved={(memberId) => setSelectedId(memberId)}
+        onArchived={() => {
+          setSelectedId(null);
+          setEditorOpen(false);
+        }}
+      />
+    );
+
+  const selectedEditorTitle =
+    selectedId === "new"
+      ? "Add member"
+      : selected && selectedId !== null
+        ? `Edit ${selected.displayName}`
+        : "Member profile";
+  const selectedEditorDescription =
+    selected && selectedId !== "new"
+      ? getMemberRoleDefinition(selected.roleLevel).scope
+      : "Review identity, responsibility, consent, and publication details.";
 
   return (
     <>
@@ -952,7 +1024,7 @@ export function MemberManager() {
               </button>
             </div>
             {view === "profiles" ? (
-              <button className={styles.primaryButton} type="button" onClick={() => setSelectedId("new")}>
+              <button className={styles.primaryButton} type="button" onClick={() => chooseMember("new")}>
                 <PlusIcon aria-hidden width={18} height={18} />
                 Add member
               </button>
@@ -980,6 +1052,7 @@ export function MemberManager() {
               onValueChange={(next) => {
                 setStatus(next as typeof status);
                 setSelectedId(null);
+                setEditorOpen(false);
               }}
             />
             <SelectField
@@ -1030,8 +1103,12 @@ export function MemberManager() {
               <strong>{filteredResults.length} / {results.length}</strong>
             </div>
           </div>
-          <div className={styles.splitWorkspace}>
-            <div className={styles.workspaceRail}>
+          <div className={`${styles.splitWorkspace} ${styles.memberWorkspace}`}>
+            <div className={`${styles.workspaceRail} ${styles.memberDirectory}`} role="region" aria-label="Member table">
+              <div className={styles.memberTableHeader} aria-hidden="true">
+                <span>Member</span>
+                <span>Responsibility</span>
+              </div>
               {pageStatus === "LoadingFirstPage" ? (
                 <AdminLoadingRows label="Loading member profiles" />
               ) : results.length === 0 ? (
@@ -1047,16 +1124,24 @@ export function MemberManager() {
                   return (
                     <button
                       key={member._id}
-                      className={styles.railButton}
+                      className={`${styles.railButton} ${styles.memberTableRow}`}
                       type="button"
                       data-active={selectedId === member._id}
                       aria-current={selectedId === member._id ? "true" : undefined}
-                      onClick={() => setSelectedId(member._id)}
+                      onClick={() => chooseMember(member._id)}
                     >
-                      <strong>{member.displayName}</strong>
-                      <small>
-                        {getMemberRoleDefinition(member.roleLevel).label}{assignment ? ` · ${assignment}` : ""} / {member.recordOrigin === "development-seed" ? "Development seed / " : ""}Updated {formatAdminDate(member.updatedAt)}
-                      </small>
+                      <span className={styles.memberTablePrimary}>
+                        <strong>{member.displayName}</strong>
+                        <small>Updated {formatAdminDate(member.updatedAt)}</small>
+                      </span>
+                      <span className={styles.memberTableResponsibility}>
+                        <strong>{getMemberRoleDefinition(member.roleLevel).label}</strong>
+                        <small>{assignment ?? "General membership"}</small>
+                      </span>
+                      <span className={styles.memberTableAction}>
+                        <AdminStatus tone={memberStatusTone(member.profileStatus)}>{member.profileStatus}</AdminStatus>
+                        <ChevronRightIcon aria-hidden width={18} height={18} />
+                      </span>
                     </button>
                   );
                 })
@@ -1067,26 +1152,21 @@ export function MemberManager() {
                 </div>
               ) : null}
             </div>
-            <div className={styles.workspaceCanvas}>
-              {selectedId === null ? (
-                <AdminEmpty title="Choose a member" description="Select a profile from the directory rail or start a new member record." />
-              ) : selectedId !== "new" && selected === undefined ? (
-                <AdminLoadingRows label="Loading the selected member" />
-              ) : divisions === undefined ? (
-                <AdminLoadingRows label="Loading managed divisions" />
-              ) : selectedId !== "new" && selected === null ? (
-                <AdminEmpty title="Member record unavailable" description="Choose another profile from the directory rail." />
-              ) : (
-                <MemberEditor
-                  key={selectedId}
-                  member={selectedId === "new" ? null : selected ?? null}
-                  divisions={divisions}
-                  onSaved={(memberId) => setSelectedId(memberId)}
-                  onArchived={() => setSelectedId(null)}
-                />
-              )}
+            <div className={`${styles.workspaceCanvas} ${styles.memberDesktopCanvas}`}>
+              {editorState}
             </div>
           </div>
+          <AdminWorkspaceDialog
+            open={compactWorkspace && editorOpen && selectedId !== null}
+            variant="drawer"
+            eyebrow={selectedId === "new" ? "New profile" : "Member record"}
+            title={selectedEditorTitle}
+            description={selectedEditorDescription}
+            closeLabel="Close member editor"
+            onClose={() => setEditorOpen(false)}
+          >
+            {compactWorkspace ? editorState : null}
+          </AdminWorkspaceDialog>
         </AdminSection>
       )}
     </>

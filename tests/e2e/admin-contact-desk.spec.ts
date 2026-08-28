@@ -69,6 +69,7 @@ test.describe("admin contact desk", () => {
       const route = page.getByRole("button", { name: label, exact: true });
       const box = await route.boundingBox();
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(64);
       expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
       await activate(route, Boolean(testInfo.project.use.hasTouch));
       await expect(route).toHaveAttribute("aria-pressed", "true");
@@ -90,6 +91,9 @@ test.describe("admin contact desk", () => {
 
     const rows = page.locator('[aria-label="Contact messages"] > button');
     if ((await rows.count()) > 0) {
+      const rowBox = await rows.first().boundingBox();
+      expect(rowBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(rowBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(84);
       await activate(rows.first(), Boolean(testInfo.project.use.hasTouch));
       await expect(page.getByRole("link", { name: /Write an email to/ })).toBeVisible();
       await expect(page.getByRole("combobox", { name: "Record work status" })).toBeVisible();

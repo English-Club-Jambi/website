@@ -9,6 +9,7 @@ import {
   publicAssessmentDerivativeKey,
 } from "../../convex/lib/assessmentMedia";
 import { publicAssessmentR2UrlForMedia } from "../../convex/lib/media";
+import { sha256Hex } from "../../convex/lib/resultDeliverySecurity";
 import schema from "../../convex/schema";
 
 const rawModules = import.meta.glob("../../convex/**/*.ts");
@@ -31,6 +32,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 function createHarness() {
@@ -322,6 +324,41 @@ async function startAttempt(
   });
 }
 
+async function submitFixtureAttempt(
+  learner: Awaited<ReturnType<typeof anonymousIdentity>>,
+  fixture: PublishedFixture,
+  requestSuffix: string,
+) {
+  const started = await startAttempt(
+    learner,
+    fixture,
+    `delivery-start-${requestSuffix}`,
+  );
+  const firstBegun = await learner.mutation(
+    api.assessmentAttempts.beginSection,
+    { attemptId: started.attemptId },
+  );
+  const firstDone = await learner.mutation(
+    api.assessmentAttempts.finalizeCurrentSection,
+    {
+      attemptId: started.attemptId,
+      expectedRevision: firstBegun.revision,
+    },
+  );
+  if (!firstDone.ok) throw new Error("delivery fixture revision conflicted");
+  const secondBegun = await learner.mutation(
+    api.assessmentAttempts.beginSection,
+    { attemptId: started.attemptId },
+  );
+  const submitted = await learner.mutation(api.assessmentAttempts.submit, {
+    attemptId: started.attemptId,
+    submitRequestId: `delivery-submit-${requestSuffix}`,
+    expectedRevision: secondBegun.revision,
+  });
+  if (!submitted.ok) throw new Error("delivery fixture submit conflicted");
+  return { attemptId: started.attemptId, resultId: submitted.resultId };
+}
+
 describe("assessment participant authorization and response privacy", () => {
   it("derives ownership from Convex Auth and never leaks private keys before submit", async () => {
     const t = createHarness();
@@ -556,7 +593,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
       label: "Transcript-supported practice result",
       objective: { correct: 1, possible: 2, omitted: 1 },
       disclaimer:
-        "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.",
+        "This is an English Club practice result based on original questions. It is not an official or predicted score. A requested completion certificate records participation only; it does not certify proficiency or admission eligibility.",
     });
     expect(result?.disclaimer).not.toMatch(/TOEFL/i);
     expect(result?.estimate).toBeNull();
@@ -639,7 +676,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
         confidence: "low",
       },
       disclaimer:
-        "The raw result is exact for the original questions delivered in this attempt. The band and 0–120 values are English Club estimates, not an official ETS score, an exact test prediction, a certificate, or evidence for admission.",
+        "The raw result is exact for the original questions delivered in this attempt. The band and 0-120 values are English Club estimates, not an official ETS score or an exact test prediction. A requested completion certificate records participation only; it does not certify this estimate, proficiency, or admission eligibility.",
     });
     expect(result?.disclaimer).toMatch(/not an official ETS score/i);
     expect(result?.disclaimer).not.toMatch(/predicted TOEFL score/i);
@@ -690,7 +727,7 @@ describe("assessment lifecycle, transcript support, and review", () => {
       objective: { possible: 2 },
       estimate: null,
       disclaimer:
-        "This is an English Club practice result based on original questions. It is not an official or predicted score, a certificate, or evidence for admission.",
+        "This is an English Club practice result based on original questions. It is not an official or predicted score. A requested completion certificate records participation only; it does not certify proficiency or admission eligibility.",
     });
     expect(result?.sections.every((section) => section.paperSectionEstimate === null)).toBe(true);
   });
@@ -731,6 +768,795 @@ describe("assessment lifecycle, transcript support, and review", () => {
         .collect(),
     );
     expect(rows.map((row) => row.status)).toEqual(["completed", "not-started"]);
+  });
+});
+
+describe("Full Practice result delivery grants", () => {
+  const providerAttemptId = (sequence: number) =>
+    `00000000-0000-4000-8000-${String(sequence).padStart(12, "0")}`;
+  const publicCertificateId = (sequence: number) =>
+    `EC-${sequence.toString(16).toUpperCase().padStart(32, "0")}`;
+
+  function stubDeliveryEnvironment() {
+    vi.stubEnv("BREVO_API_KEY", "brevo-test-key-with-enough-entropy");
+    vi.stubEnv("BREVO_SENDER_EMAIL", "results@english-club.example");
+    vi.stubEnv("BREVO_SENDER_NAME", "English Club");
+    vi.stubEnv("BREVO_REPLY_TO_EMAIL", "hello@english-club.example");
+    vi.stubEnv(
+      "RESULT_DELIVERY_PUBLIC_ORIGIN",
+      "https://english-club.example",
+    );
+    vi.stubEnv(
+      "RESULT_DELIVERY_RECIPIENT_HASH_KEY",
+      "result-delivery-test-hmac-key-with-32-characters",
+    );
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "turnstile-test-secret");
+  }
+
+  async function reservationInput(args: {
+    attemptId: Id<"assessmentAttempts">;
+    ownerTokenIdentifier: string;
+    requestId: string;
+    reviewToken: string;
+    recipientEmail?: string;
+    recipientName?: string;
+    sequence: number;
+  }) {
+    return {
+      attemptId: args.attemptId,
+      ownerTokenIdentifier: args.ownerTokenIdentifier,
+      requestId: args.requestId,
+      certificateTemplate: "mendalo-record" as const,
+      recipientHash: await sha256Hex(
+        args.recipientEmail ?? "siti.rahma@example.com",
+      ),
+      certificateNameHash: await sha256Hex(args.recipientName ?? "Siti Rahma"),
+      tokenHash: await sha256Hex(args.reviewToken),
+      providerAttemptId: providerAttemptId(args.sequence),
+      publicCertificateId: publicCertificateId(args.sequence),
+      consentVersion: 1 as const,
+      humanVerifiedAt: Date.now(),
+    };
+  }
+
+  it("sends one owner-scoped Brevo message without storing recipient PII", async () => {
+    stubDeliveryEnvironment();
+    const providerFetch = vi.fn<typeof fetch>(async (input) => {
+      const endpoint = String(input);
+      if (endpoint.includes("challenges.cloudflare.com")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            action: "full-practice-result-email",
+            hostname: "english-club.example",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ messageId: "brevo-message-live-0001" }),
+        { status: 201, headers: { "content-type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", providerFetch);
+
+    const t = createHarness();
+    const ownerTokenIdentifier = "delivery-action-owner";
+    const fixture = await seedPublishedFixture(t);
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "action-contract-0001",
+    );
+    const recipientEmail = "alya.rahman@example.com";
+    const outcome = await learner.action(api.assessmentResultEmail.send, {
+      attemptId: submitted.attemptId,
+      recipientName: "Alya Rahman",
+      recipientEmail,
+      certificateTemplate: "mendalo-record",
+      requestId: "delivery-action-0001",
+      consent: true,
+      consentVersion: 1,
+      turnstileToken: "turnstile-test-token-that-is-long-enough",
+    });
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      maskedEmail: "a•••••••@example.com",
+    });
+    expect(providerFetch).toHaveBeenCalledTimes(2);
+    const turnstileCall = providerFetch.mock.calls.find(([endpoint]) =>
+      String(endpoint).includes("challenges.cloudflare.com"),
+    );
+    expect(turnstileCall).toBeDefined();
+    const turnstileBody = new URLSearchParams(
+      String(turnstileCall?.[1]?.body),
+    );
+    expect(turnstileBody.get("response")).toBe(
+      "turnstile-test-token-that-is-long-enough",
+    );
+    expect(turnstileBody.get("idempotency_key")).toMatch(
+      /^[0-9a-f-]{36}$/iu,
+    );
+    const brevoCall = providerFetch.mock.calls.find(
+      ([endpoint]) => endpoint === "https://api.brevo.com/v3/smtp/email",
+    );
+    expect(brevoCall).toBeDefined();
+    const [endpoint, init] = brevoCall!;
+    expect(endpoint).toBe("https://api.brevo.com/v3/smtp/email");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({
+      "api-key": "brevo-test-key-with-enough-entropy",
+    });
+    expect(init?.headers).not.toHaveProperty("Idempotency-Key");
+    const body = String(init?.body);
+    expect(body).toContain(recipientEmail);
+    expect(body).toContain("Alya Rahman");
+    expect(body).toContain("hello@english-club.example");
+    expect(body).toContain(
+      "https://english-club.example/practice/review#access=",
+    );
+    expect(body).not.toContain("brevo-test-key-with-enough-entropy");
+    const providerPayload = JSON.parse(body) as {
+      headers: { idempotencyKey: string; "X-Ec-Delivery": string };
+      to: Array<{ contactPixelTrackingConsent: boolean }>;
+      attachment: Array<{ name: string; content: string }>;
+    };
+    expect(providerPayload.headers.idempotencyKey).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+    expect(providerPayload.headers["X-Ec-Delivery"]).toMatch(
+      /^EC-[A-F0-9]{32}$/u,
+    );
+    expect(providerPayload.to[0]?.contactPixelTrackingConsent).toBe(false);
+    expect(providerPayload.attachment).toHaveLength(1);
+    expect(providerPayload.attachment[0]?.name).toMatch(
+      /^english-club-full-practice-EC-[A-F0-9]{32}\.pdf$/u,
+    );
+    expect(providerPayload.attachment[0]?.content).toMatch(/^JVBER/u);
+
+    const stored = await t.run(async (ctx) => {
+      const deliveries = await ctx.db
+        .query("assessmentResultDeliveries")
+        .withIndex("by_attempt_id_and_requested_at", (q) =>
+          q.eq("attemptId", submitted.attemptId),
+        )
+        .take(2);
+      const grants = await ctx.db
+        .query("assessmentResultReviewGrants")
+        .withIndex("by_attempt_id_and_created_at", (q) =>
+          q.eq("attemptId", submitted.attemptId),
+        )
+        .take(2);
+      return { deliveries, grants };
+    });
+    expect(stored.deliveries).toHaveLength(1);
+    expect(stored.deliveries[0]).toMatchObject({
+      status: "accepted",
+      providerMessageId: "brevo-message-live-0001",
+      providerAttemptId: providerPayload.headers.idempotencyKey,
+      publicCertificateId: providerPayload.headers["X-Ec-Delivery"],
+      consentVersion: 1,
+    });
+    expect(stored.deliveries[0]?.recipientHash).not.toBe(
+      await sha256Hex(recipientEmail),
+    );
+    expect(JSON.stringify(stored)).not.toContain(recipientEmail);
+    expect(JSON.stringify(stored)).not.toContain("Alya Rahman");
+
+    const replay = await learner.action(api.assessmentResultEmail.send, {
+      attemptId: submitted.attemptId,
+      recipientName: "Alya Rahman",
+      recipientEmail,
+      certificateTemplate: "mendalo-record",
+      requestId: "delivery-action-0001",
+      consent: true,
+      consentVersion: 1,
+      turnstileToken: "deliberately-invalid-on-accepted-replay",
+    });
+    expect(replay).toMatchObject({ ok: true });
+    expect(providerFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects unsubmitted and missing attempts before recording or fetching verification", async () => {
+    stubDeliveryEnvironment();
+    const providerFetch = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", providerFetch);
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const ownerTokenIdentifier = "verification-attempt-owner";
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const unsubmitted = await startAttempt(
+      learner,
+      fixture,
+      "verification-unsubmitted-start",
+    );
+    const missing = await startAttempt(
+      learner,
+      fixture,
+      "verification-missing-start",
+    );
+    await t.run(async (ctx) => {
+      await ctx.db.delete("assessmentAttempts", missing.attemptId);
+    });
+    const baseInput = {
+      recipientName: "Alya Rahman",
+      recipientEmail: "alya@example.com",
+      certificateTemplate: "mendalo-record" as const,
+      consent: true,
+      consentVersion: 1 as const,
+      turnstileToken: "turnstile-attempt-check-token-long-enough",
+    };
+
+    await expect(
+      learner.action(api.assessmentResultEmail.send, {
+        ...baseInput,
+        attemptId: unsubmitted.attemptId,
+        requestId: "verification-unsubmitted-request",
+      }),
+    ).resolves.toEqual({ ok: false, code: "not_available" });
+    await expect(
+      learner.action(api.assessmentResultEmail.send, {
+        ...baseInput,
+        attemptId: missing.attemptId,
+        requestId: "verification-missing-request",
+      }),
+    ).resolves.toEqual({ ok: false, code: "not_available" });
+
+    expect(providerFetch).not.toHaveBeenCalled();
+    const verificationEvents = await t.run(async (ctx) =>
+      await ctx.db.query("assessmentResultVerificationEvents").take(1),
+    );
+    expect(verificationEvents).toHaveLength(0);
+  });
+
+  it("allows six invalid Turnstile checks and rate limits the seventh before Siteverify", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-28T04:00:00.000Z"));
+    stubDeliveryEnvironment();
+    const providerFetch = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          action: "wrong-action",
+          hostname: "english-club.example",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", providerFetch);
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const learner = await anonymousIdentity(t, "verification-rate-owner");
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "verification-rate-submit",
+    );
+    const baseInput = {
+      attemptId: submitted.attemptId,
+      recipientName: "Alya Rahman",
+      recipientEmail: "alya@example.com",
+      certificateTemplate: "mendalo-record" as const,
+      consent: true,
+      consentVersion: 1 as const,
+      turnstileToken: "turnstile-rate-limit-token-long-enough",
+    };
+
+    for (let index = 0; index < 6; index += 1) {
+      await expect(
+        learner.action(api.assessmentResultEmail.send, {
+          ...baseInput,
+          requestId: `verification-rate-request-${index}`,
+        }),
+      ).resolves.toEqual({ ok: false, code: "invalid" });
+    }
+    expect(providerFetch).toHaveBeenCalledTimes(6);
+
+    await expect(
+      learner.action(api.assessmentResultEmail.send, {
+        ...baseInput,
+        requestId: "verification-rate-request-6",
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      code: "rate_limited",
+      retryAt: Date.parse("2026-08-28T04:10:00.000Z"),
+    });
+    expect(providerFetch).toHaveBeenCalledTimes(6);
+    const verificationEvents = await t.run(async (ctx) =>
+      await ctx.db
+        .query("assessmentResultVerificationEvents")
+        .withIndex("by_owner_token_identifier_and_created_at", (q) =>
+          q.eq("ownerTokenIdentifier", "verification-rate-owner"),
+        )
+        .collect(),
+    );
+    expect(verificationEvents).toHaveLength(6);
+    const deliveries = await t.run(async (ctx) =>
+      await ctx.db.query("assessmentResultDeliveries").take(1),
+    );
+    expect(deliveries).toHaveLength(0);
+  });
+
+  it("rejects unauthenticated review revocation", async () => {
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const learner = await anonymousIdentity(t, "revoke-auth-owner");
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "revoke-auth-submit",
+    );
+
+    await expect(
+      t.action(api.assessmentResultEmail.revokeReviewLinks, {
+        attemptId: submitted.attemptId,
+      }),
+    ).rejects.toMatchObject({ data: { code: "AUTH_REQUIRED" } });
+  });
+
+  it.each([
+    {
+      label: "action",
+      verification: {
+        success: true,
+        action: "wrong-action",
+        hostname: "english-club.example",
+      },
+    },
+    {
+      label: "hostname",
+      verification: {
+        success: true,
+        action: "full-practice-result-email",
+        hostname: "attacker.example",
+      },
+    },
+  ])(
+    "fails closed when Turnstile returns the wrong $label before reserving delivery",
+    async ({ verification }) => {
+      stubDeliveryEnvironment();
+      const providerFetch = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify(verification), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", providerFetch);
+      const t = createHarness();
+      const fixture = await seedPublishedFixture(t);
+      const learner = await anonymousIdentity(t, "turnstile-negative-owner");
+      const submitted = await submitFixtureAttempt(
+        learner,
+        fixture,
+        `turnstile-negative-${verification.hostname}`,
+      );
+
+      await expect(
+        learner.action(api.assessmentResultEmail.send, {
+          attemptId: submitted.attemptId,
+          recipientName: "Alya Rahman",
+          recipientEmail: "alya@example.com",
+          certificateTemplate: "mendalo-record",
+          requestId: `turnstile-request-${verification.action}`,
+          consent: true,
+          consentVersion: 1,
+          turnstileToken: "turnstile-negative-token-long-enough",
+        }),
+      ).resolves.toEqual({ ok: false, code: "invalid" });
+      expect(providerFetch).toHaveBeenCalledOnce();
+      expect(String(providerFetch.mock.calls[0]?.[0])).toContain(
+        "challenges.cloudflare.com",
+      );
+      const deliveries = await t.run(async (ctx) =>
+        await ctx.db.query("assessmentResultDeliveries").take(1),
+      );
+      expect(deliveries).toHaveLength(0);
+    },
+  );
+
+  it("keeps one provider UUID and exact payload across a bounded retry, then freezes an uncertain delivery", async () => {
+    stubDeliveryEnvironment();
+    const brevoBodies: string[] = [];
+    const providerFetch = vi.fn<typeof fetch>(async (input, init) => {
+      const endpoint = String(input);
+      if (endpoint.includes("challenges.cloudflare.com")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            action: "full-practice-result-email",
+            hostname: "english-club.example",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      brevoBodies.push(String(init?.body));
+      return new Response(JSON.stringify({ code: "temporary_failure" }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", providerFetch);
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const learner = await anonymousIdentity(t, "delivery-uncertain-owner");
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "delivery-uncertain-submit",
+    );
+    const input = {
+      attemptId: submitted.attemptId,
+      recipientName: "Alya Rahman",
+      recipientEmail: "alya@example.com",
+      certificateTemplate: "mendalo-record" as const,
+      requestId: "delivery-uncertain-request",
+      consent: true,
+      consentVersion: 1 as const,
+      turnstileToken: "turnstile-uncertain-token-long-enough",
+    };
+
+    await expect(
+      learner.action(api.assessmentResultEmail.send, input),
+    ).resolves.toEqual({ ok: false, code: "delivery_uncertain" });
+    expect(brevoBodies).toHaveLength(2);
+    expect(brevoBodies[1]).toBe(brevoBodies[0]);
+    const payload = JSON.parse(brevoBodies[0]!) as {
+      headers: { idempotencyKey: string };
+    };
+    const stored = await t.run(async (ctx) =>
+      await ctx.db
+        .query("assessmentResultDeliveries")
+        .withIndex("by_attempt_id_and_requested_at", (q) =>
+          q.eq("attemptId", submitted.attemptId),
+        )
+        .unique(),
+    );
+    expect(stored).toMatchObject({
+      status: "uncertain",
+      failureCode: "provider_uncertain",
+      providerAttemptId: payload.headers.idempotencyKey,
+    });
+
+    const fetchCountAfterAmbiguousProvider = providerFetch.mock.calls.length;
+    await expect(
+      learner.action(api.assessmentResultEmail.send, {
+        ...input,
+        turnstileToken: "invalid-replay-token-is-never-submitted",
+      }),
+    ).resolves.toEqual({ ok: false, code: "delivery_uncertain" });
+    expect(providerFetch).toHaveBeenCalledTimes(fetchCountAfterAmbiguousProvider);
+  });
+
+  it("binds one hashed delivery to its owner, payload, result, and expiring review", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-28T02:00:00.000Z"));
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const ownerTokenIdentifier = "delivery-result-owner";
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "grant-contract-0001",
+    );
+    const reviewToken = "A".repeat(43);
+    const recipientEmail = "siti.rahma@example.com";
+    const request = await reservationInput({
+      attemptId: submitted.attemptId,
+      ownerTokenIdentifier,
+      requestId: "delivery-request-0001",
+      reviewToken,
+      recipientEmail,
+      sequence: 101,
+    });
+
+    const reserved = await t.mutation(
+      internal.assessmentResultDelivery.reserve,
+      request,
+    );
+    expect(reserved).toMatchObject({ state: "created" });
+    if (reserved.state !== "created") throw new Error("delivery was not created");
+
+    const stored = await t.run(async (ctx) => ({
+      delivery: await ctx.db.get("assessmentResultDeliveries", reserved.deliveryId),
+      grant: await ctx.db.get("assessmentResultReviewGrants", reserved.grantId),
+    }));
+    expect(stored.delivery).toMatchObject({
+      attemptId: submitted.attemptId,
+      resultId: submitted.resultId,
+      recipientHash: request.recipientHash,
+      status: "preparing",
+    });
+    expect(stored.grant).toMatchObject({
+      tokenHash: request.tokenHash,
+      status: "active",
+    });
+    expect(JSON.stringify(stored)).not.toContain(recipientEmail);
+    expect(JSON.stringify(stored)).not.toContain(reviewToken);
+
+    const snapshot = await t.query(
+      internal.assessmentResultDelivery.getSnapshot,
+      {
+        deliveryId: reserved.deliveryId,
+        ownerTokenIdentifier,
+      },
+    );
+    expect(snapshot).toMatchObject({
+      certificateTemplate: "mendalo-record",
+      result: { kind: "full-practice", objective: { possible: 2 } },
+    });
+
+    const redeemed = await t.action(api.assessmentResultDelivery.redeem, {
+      token: reviewToken,
+    });
+    expect(redeemed).toMatchObject({ ok: true });
+    if (!redeemed.ok) throw new Error("review grant did not redeem");
+    expect(redeemed.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+    const shared = await t.action(
+      api.assessmentResultDelivery.getSharedResult,
+      { sessionToken: redeemed.sessionToken },
+    );
+    expect(shared).toMatchObject({
+      result: { kind: "full-practice", objective: { possible: 2 } },
+    });
+    const review = await t.action(
+      api.assessmentResultDelivery.listSharedReviewPage,
+      {
+        sessionToken: redeemed.sessionToken,
+        sectionOrder: 1,
+        paginationOpts: { cursor: null, numItems: 20 },
+      },
+    );
+    expect(review.page).toHaveLength(1);
+    expect(review.page[0]).toMatchObject({
+      item: { id: fixture.readingItemId },
+      correctAnswer: { kind: "choice", selectedChoiceKey: "a" },
+    });
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: "B".repeat(43),
+      }),
+    ).resolves.toBeNull();
+
+    await t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
+      deliveryId: reserved.deliveryId,
+      providerAttemptId: request.providerAttemptId,
+    });
+    await t.mutation(internal.assessmentResultDelivery.markAccepted, {
+      deliveryId: reserved.deliveryId,
+      providerAttemptId: request.providerAttemptId,
+      providerMessageId: "brevo-message-0001",
+    });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.reserve, {
+        ...request,
+        tokenHash: await sha256Hex("C".repeat(43)),
+      }),
+    ).resolves.toMatchObject({
+      state: "accepted",
+      deliveryId: reserved.deliveryId,
+    });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.reserve, {
+        ...request,
+        recipientHash: await sha256Hex("other@example.com"),
+      }),
+    ).rejects.toThrow();
+
+    vi.setSystemTime(new Date("2026-08-28T02:30:01.000Z"));
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: redeemed.sessionToken,
+      }),
+    ).resolves.toBeNull();
+    const refreshedSession = await t.action(
+      api.assessmentResultDelivery.redeem,
+      { token: reviewToken },
+    );
+    expect(refreshedSession).toMatchObject({ ok: true });
+    if (!refreshedSession.ok) throw new Error("review grant did not redeem");
+
+    vi.setSystemTime(new Date("2026-09-28T02:00:01.000Z"));
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: refreshedSession.sessionToken,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      t.action(api.assessmentResultDelivery.redeem, { token: reviewToken }),
+    ).resolves.toEqual({ ok: false, code: "unavailable" });
+  });
+
+  it("caps private review sessions at five and revokes the grant and every live session", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-28T02:30:00.000Z"));
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const ownerTokenIdentifier = "delivery-session-owner";
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "delivery-session-submit",
+    );
+    const reviewToken = "R".repeat(43);
+    const request = await reservationInput({
+      attemptId: submitted.attemptId,
+      ownerTokenIdentifier,
+      requestId: "delivery-session-request",
+      reviewToken,
+      sequence: 202,
+    });
+    const reserved = await t.mutation(
+      internal.assessmentResultDelivery.reserve,
+      request,
+    );
+    if (reserved.state !== "created") throw new Error("delivery was not created");
+    await t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
+      deliveryId: reserved.deliveryId,
+      providerAttemptId: request.providerAttemptId,
+    });
+    await t.mutation(internal.assessmentResultDelivery.markAccepted, {
+      deliveryId: reserved.deliveryId,
+      providerAttemptId: request.providerAttemptId,
+      providerMessageId: "brevo-session-message",
+    });
+
+    const sessionTokens: string[] = [];
+    for (let index = 0; index < 5; index += 1) {
+      vi.setSystemTime(new Date(Date.now() + 1));
+      const redeemed = await t.action(api.assessmentResultDelivery.redeem, {
+        token: reviewToken,
+      });
+      if (!redeemed.ok) throw new Error("review grant did not redeem");
+      sessionTokens.push(redeemed.sessionToken);
+    }
+    await expect(
+      t.action(api.assessmentResultDelivery.redeem, { token: reviewToken }),
+    ).resolves.toEqual({ ok: false, code: "unavailable" });
+    const sessions = await t.run(async (ctx) =>
+      await ctx.db
+        .query("assessmentResultReviewSessions")
+        .withIndex("by_grant_id_and_created_at", (q) =>
+          q.eq("grantId", reserved.grantId),
+        )
+        .collect(),
+    );
+    expect(sessions).toHaveLength(5);
+    for (const sessionToken of sessionTokens) {
+      expect(JSON.stringify(sessions)).not.toContain(sessionToken);
+    }
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: sessionTokens[0]!,
+      }),
+    ).resolves.toMatchObject({ result: { kind: "full-practice" } });
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: sessionTokens.at(-1)!,
+      }),
+    ).resolves.toMatchObject({ result: { kind: "full-practice" } });
+
+    await expect(
+      learner.action(api.assessmentResultEmail.revokeReviewLinks, {
+        attemptId: submitted.attemptId,
+      }),
+    ).resolves.toEqual({ revoked: 1 });
+    await expect(
+      t.action(api.assessmentResultDelivery.getSharedResult, {
+        sessionToken: sessionTokens.at(-1)!,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      t.action(api.assessmentResultDelivery.redeem, { token: reviewToken }),
+    ).resolves.toEqual({ ok: false, code: "unavailable" });
+  });
+
+  it("moves a provider attempt through preparing, sending, and frozen uncertain states", async () => {
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const ownerTokenIdentifier = "delivery-state-owner";
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "delivery-state-submit",
+    );
+    const request = await reservationInput({
+      attemptId: submitted.attemptId,
+      ownerTokenIdentifier,
+      requestId: "delivery-state-request",
+      reviewToken: "S".repeat(43),
+      sequence: 303,
+    });
+    const reserved = await t.mutation(
+      internal.assessmentResultDelivery.reserve,
+      request,
+    );
+    if (reserved.state !== "created") throw new Error("delivery was not created");
+
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
+        deliveryId: reserved.deliveryId,
+        providerAttemptId: request.providerAttemptId,
+      }),
+    ).resolves.toEqual({ state: "send" });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
+        deliveryId: reserved.deliveryId,
+        providerAttemptId: request.providerAttemptId,
+      }),
+    ).resolves.toEqual({ state: "in_progress" });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.beginProviderAttempt, {
+        deliveryId: reserved.deliveryId,
+        providerAttemptId: providerAttemptId(999),
+      }),
+    ).rejects.toThrow();
+    await t.mutation(internal.assessmentResultDelivery.markUncertain, {
+      deliveryId: reserved.deliveryId,
+      providerAttemptId: request.providerAttemptId,
+    });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.reserve, request),
+    ).resolves.toMatchObject({
+      state: "uncertain",
+      deliveryId: reserved.deliveryId,
+    });
+    await expect(
+      t.query(internal.assessmentResultDelivery.inspect, {
+        attemptId: submitted.attemptId,
+        ownerTokenIdentifier,
+        requestId: request.requestId,
+        certificateTemplate: request.certificateTemplate,
+        recipientHash: request.recipientHash,
+        certificateNameHash: request.certificateNameHash,
+        consentVersion: 1,
+        now: Date.now(),
+      }),
+    ).resolves.toMatchObject({ state: "uncertain" });
+  });
+
+  it("rate limits repeated delivery reservations before provider work starts", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-28T03:00:00.000Z"));
+    const t = createHarness();
+    const fixture = await seedPublishedFixture(t);
+    const ownerTokenIdentifier = "delivery-rate-owner";
+    const learner = await anonymousIdentity(t, ownerTokenIdentifier);
+    const submitted = await submitFixtureAttempt(
+      learner,
+      fixture,
+      "rate-contract-0001",
+    );
+    for (let index = 0; index < 3; index += 1) {
+      const request = await reservationInput({
+        attemptId: submitted.attemptId,
+        ownerTokenIdentifier,
+        requestId: `delivery-rate-000${index}`,
+        reviewToken: String(index).repeat(43),
+        recipientEmail: "rate@example.com",
+        sequence: 400 + index,
+      });
+      await expect(
+        t.mutation(internal.assessmentResultDelivery.reserve, request),
+      ).resolves.toMatchObject({ state: "created" });
+    }
+
+    const limitedRequest = await reservationInput({
+      attemptId: submitted.attemptId,
+      ownerTokenIdentifier,
+      requestId: "delivery-rate-0004",
+      reviewToken: "Z".repeat(43),
+      recipientEmail: "rate@example.com",
+      sequence: 404,
+    });
+    await expect(
+      t.mutation(internal.assessmentResultDelivery.reserve, limitedRequest),
+    ).resolves.toMatchObject({ state: "rate_limited" });
   });
 });
 

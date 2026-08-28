@@ -13,7 +13,7 @@ export function SiteHeader({ copy }: { copy: PublicContentFor<"global"> }) {
         <Link href="/" className="wordmark" aria-label={copy.homeLabel}>
           <span className="wordmark-mark">
             <Image
-              src="/brand/english-club-mark-placeholder.svg"
+              src="/brand/english-club-mark.png"
               alt=""
               width={38}
               height={38}

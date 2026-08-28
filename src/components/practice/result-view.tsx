@@ -9,16 +9,21 @@ import {
   MinusCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useAction, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Image from "next/image";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { SelectField } from "@/components/forms/select-field";
+import {
+  ResultEmailDelivery,
+  type ResultEmailDeliveryInput,
+  type ResultEmailDeliveryOutcome,
+} from "./result-email-delivery";
 import type {
   PublicAssessmentItem,
   PublicAssessmentResponse,
@@ -32,10 +37,15 @@ import styles from "./practice.module.css";
 type Result = NonNullable<
   FunctionReturnType<typeof api.assessmentAttempts.getResult>
 >;
-type ReviewPage = FunctionReturnType<
+type OwnedReviewPage = FunctionReturnType<
   typeof api.assessmentReviews.listMinePage
 >;
-type ReviewItem = ReviewPage["page"][number];
+type SharedReviewPage = FunctionReturnType<
+  typeof api.assessmentResultDelivery.listSharedReviewPage
+>;
+type ReviewItem =
+  | OwnedReviewPage["page"][number]
+  | SharedReviewPage["page"][number];
 
 export function formatElapsed(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds));
@@ -154,7 +164,6 @@ function ReviewedAnswers({
   attemptId: Id<"assessmentAttempts">;
   sectionOrder: number;
 }) {
-  const { copy } = usePracticeContext();
   const { results, status, loadMore } = usePaginatedQuery(
     api.assessmentReviews.listMinePage,
     { attemptId, sectionOrder },
@@ -162,8 +171,30 @@ function ReviewedAnswers({
   );
 
   return (
-    <div className={styles.reviewList} aria-busy={status === "LoadingFirstPage"}>
-      {results.map((entry, index) => {
+    <ReviewEntries
+      entries={results}
+      loading={status === "LoadingFirstPage"}
+      canLoadMore={status === "CanLoadMore"}
+      onLoadMore={() => loadMore(20)}
+    />
+  );
+}
+
+function ReviewEntries({
+  entries,
+  loading,
+  canLoadMore,
+  onLoadMore,
+}: {
+  entries: ReviewItem[];
+  loading: boolean;
+  canLoadMore: boolean;
+  onLoadMore: () => void;
+}) {
+  const { copy } = usePracticeContext();
+  return (
+    <div className={styles.reviewList} aria-busy={loading}>
+      {entries.map((entry, index) => {
         const constructed = entry.item.type === "constructed-response";
         const state = constructed && entry.answered
           ? copy.reviewScored
@@ -209,8 +240,8 @@ function ReviewedAnswers({
           </article>
         );
       })}
-      {status === "CanLoadMore" ? (
-        <button type="button" className={styles.quietButton} onClick={() => loadMore(20)}>
+      {canLoadMore ? (
+        <button type="button" className={styles.quietButton} onClick={onLoadMore}>
           {copy.loadMoreReview}
         </button>
       ) : null}
@@ -218,14 +249,104 @@ function ReviewedAnswers({
   );
 }
 
+function SharedReviewedAnswers({
+  token,
+  sectionOrder,
+}: {
+  token: string;
+  sectionOrder: number;
+}) {
+  const { copy } = usePracticeContext();
+  const listSharedReviewPage = useAction(
+    api.assessmentResultDelivery.listSharedReviewPage,
+  );
+  const [state, setState] = useState<
+    | { kind: "loading" }
+    | { kind: "ready"; page: ReviewItem[]; cursor: string; isDone: boolean }
+    | { kind: "unavailable" }
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    void listSharedReviewPage({
+      sessionToken: token,
+      sectionOrder,
+      paginationOpts: {
+        cursor: null,
+        numItems: 20,
+        maximumRowsRead: 20,
+      },
+    })
+      .then((result: SharedReviewPage) => {
+        if (!cancelled) {
+          setState({
+            kind: "ready",
+            page: result.page,
+            cursor: result.continueCursor,
+            isDone: result.isDone,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setState({ kind: "unavailable" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listSharedReviewPage, sectionOrder, token]);
+
+  if (state.kind === "unavailable") {
+    return (
+      <p className={styles.sharedReviewUnavailable} role="status">
+        {copy.sharedReviewUnavailableBody}
+      </p>
+    );
+  }
+
+  return (
+    <ReviewEntries
+      entries={state.kind === "ready" ? state.page : []}
+      loading={state.kind === "loading"}
+      canLoadMore={state.kind === "ready" && !state.isDone}
+      onLoadMore={() => {
+        if (state.kind !== "ready" || state.isDone) return;
+        void listSharedReviewPage({
+          sessionToken: token,
+          sectionOrder,
+          paginationOpts: {
+            cursor: state.cursor,
+            numItems: 20,
+            maximumRowsRead: 20,
+          },
+        })
+          .then((result: SharedReviewPage) => {
+            setState({
+              kind: "ready",
+              page: [...state.page, ...result.page],
+              cursor: result.continueCursor,
+              isDone: result.isDone,
+            });
+          })
+          .catch(() => setState({ kind: "unavailable" }));
+      }}
+    />
+  );
+}
+
 function ResultReport({
   result,
   attemptId,
+  sharedToken,
 }: {
   result: Result;
-  attemptId: Id<"assessmentAttempts">;
+  attemptId?: Id<"assessmentAttempts">;
+  sharedToken?: string;
 }) {
   const { copy } = usePracticeContext();
+  const sendResultEmail = useAction(api.assessmentResultEmail.send);
+  const revokeReviewLinks = useAction(
+    api.assessmentResultEmail.revokeReviewLinks,
+  );
   const [sectionIndex, setSectionIndex] = useState(0);
   const possible = result.objective.possible;
   const elapsed = result.sections.reduce((total, section) => total + section.elapsedSeconds, 0);
@@ -241,6 +362,61 @@ function ResultReport({
     result.sections[0]?.comparableScoreEstimate ??
     null;
   const confidence = result.estimate?.confidence ?? result.sections[0]?.confidence ?? null;
+
+  async function handleDelivery(
+    input: ResultEmailDeliveryInput,
+  ): Promise<ResultEmailDeliveryOutcome> {
+    if (attemptId === undefined) {
+      return { status: "rejected", code: "ownership_unavailable" };
+    }
+    try {
+      const outcome = await sendResultEmail({
+        attemptId,
+        recipientName: input.recipientName,
+        recipientEmail: input.recipientEmail,
+        certificateTemplate: input.certificateTemplate,
+        requestId: input.requestId,
+        consent: input.consent,
+        consentVersion: input.consentVersion,
+        turnstileToken: input.turnstileToken,
+      });
+      if (outcome.ok) {
+        return {
+          status: "accepted",
+          maskedEmail: outcome.maskedEmail,
+          reviewHref: "#answer-review-title",
+          reviewExpiresAt: outcome.expiresAt,
+        };
+      }
+      if (
+        outcome.code === "rate_limited" ||
+        outcome.code === "limit_reached"
+      ) {
+        return { status: "rejected", code: "rate_limited" };
+      }
+      if (outcome.code === "certificate_unavailable") {
+        return { status: "rejected", code: "certificate_failed" };
+      }
+      if (outcome.code === "certificate_name_invalid") {
+        return { status: "rejected", code: "certificate_name_invalid" };
+      }
+      if (outcome.code === "delivery_uncertain") {
+        return { status: "rejected", code: "delivery_uncertain" };
+      }
+      if (
+        outcome.code === "provider_unavailable" ||
+        outcome.code === "configuration_unavailable"
+      ) {
+        return { status: "rejected", code: "provider_unavailable" };
+      }
+      if (outcome.code === "not_available" || outcome.code === "invalid") {
+        return { status: "rejected", code: "ownership_unavailable" };
+      }
+      return { status: "rejected", code: "unknown" };
+    } catch {
+      return { status: "rejected", code: "delivery_uncertain" };
+    }
+  }
 
   return (
     <div className={styles.resultPage}>
@@ -300,6 +476,41 @@ function ResultReport({
           </p>
         ) : null}
 
+        {result.kind === "full-practice" && attemptId !== undefined ? (
+          <ResultEmailDelivery
+            onSend={handleDelivery}
+            onRevokeReviewLinks={async () => {
+              const revoked = await revokeReviewLinks({ attemptId });
+              return revoked.revoked;
+            }}
+            privacyHref="/privacy"
+            copy={{
+              title: copy.deliveryTitle,
+              support: copy.deliverySupport,
+              nameLabel: copy.certificateNameLabel,
+              nameHelp: copy.certificateNameHelp,
+              emailLabel: copy.deliveryEmailLabel,
+              emailHelp: copy.deliveryEmailHelp,
+              designLabel: copy.certificateDesignLabel,
+              changeDesign: copy.certificateChoose,
+              pickerTitle: copy.certificateChooserTitle,
+              pickerSupport: copy.certificateChooserSupport,
+              closePicker: copy.certificateChooserClose,
+              keepCurrentDesign: copy.certificateKeepDesign,
+              useDesign: copy.certificateUseDesign,
+              consent: copy.deliveryConsent,
+              retention: copy.deliveryRetention,
+              send: copy.deliveryAction,
+              preparingStatus: copy.deliveryPending,
+              acceptedTitle: copy.deliverySuccessTitle,
+              acceptedBody: copy.deliverySuccessBody,
+              sendAnother: copy.deliverySendAnother,
+              certificateNameError: copy.certificateNameError,
+              unknownError: copy.deliveryGenericError,
+            }}
+          />
+        ) : null}
+
         <section className={styles.sectionResults} aria-labelledby="section-results-title">
           <h2 id="section-results-title">{copy.sectionResults}</h2>
           <div className={styles.sectionResultRows}>
@@ -338,11 +549,19 @@ function ResultReport({
                 />
               </div>
             </div>
-            <ReviewedAnswers
-              key={sectionIndex}
-              attemptId={attemptId}
-              sectionOrder={selected.order}
-            />
+            {sharedToken !== undefined ? (
+              <SharedReviewedAnswers
+                key={sectionIndex}
+                token={sharedToken}
+                sectionOrder={selected.order}
+              />
+            ) : attemptId !== undefined ? (
+              <ReviewedAnswers
+                key={sectionIndex}
+                attemptId={attemptId}
+                sectionOrder={selected.order}
+              />
+            ) : null}
           </section>
         ) : null}
       </div>
@@ -390,4 +609,142 @@ export function ResultView({ attemptId }: { attemptId: string }) {
       )}
     </AttemptRouteResolver>
   );
+}
+
+export function SharedResultView({ token }: { token: string }) {
+  const { copy } = usePracticeContext();
+  const getSharedResult = useAction(
+    api.assessmentResultDelivery.getSharedResult,
+  );
+  const [shared, setShared] = useState<
+    | { kind: "loading" }
+    | { kind: "ready"; value: NonNullable<FunctionReturnType<typeof api.assessmentResultDelivery.getSharedResult>> }
+    | { kind: "unavailable" }
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    void getSharedResult({ sessionToken: token })
+      .then((value) => {
+        if (cancelled) return;
+        if (value === null) {
+          window.sessionStorage.removeItem("ec-practice-review-access");
+        }
+        setShared(
+          value === null
+            ? { kind: "unavailable" }
+            : { kind: "ready", value },
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          window.sessionStorage.removeItem("ec-practice-review-access");
+          setShared({ kind: "unavailable" });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [getSharedResult, token]);
+
+  if (shared.kind === "loading") {
+    return (
+      <div
+        className={`page-container ${styles.practiceLoading}`}
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <p>{copy.sessionCheck}</p>
+        <div className={styles.loadingRule} />
+      </div>
+    );
+  }
+  if (shared.kind === "unavailable") {
+    return (
+      <section className={styles.unavailablePage}>
+        <div className={`page-container ${styles.unavailableFrame}`}>
+          <h1>{copy.sharedReviewUnavailableTitle}</h1>
+          <p>{copy.sharedReviewUnavailableBody}</p>
+          <Link href="/practice" className={styles.primaryLink}>
+            <ArrowLeftIcon width={19} height={19} strokeWidth={2} aria-hidden />
+            {copy.returnLab}
+          </Link>
+        </div>
+      </section>
+    );
+  }
+  return <ResultReport result={shared.value.result} sharedToken={token} />;
+}
+
+export function SharedReviewEntry() {
+  const { copy } = usePracticeContext();
+  const redeemReview = useAction(api.assessmentResultDelivery.redeem);
+  const [token, setToken] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const fromFragment = hash.get("access");
+    const normalized =
+      fromFragment && /^[A-Za-z0-9_-]{43}$/u.test(fromFragment)
+        ? fromFragment
+        : null;
+    if (normalized !== null) {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+    const storedSessionToken = window.sessionStorage.getItem(
+      "ec-practice-review-access",
+    );
+    const existingSession =
+      storedSessionToken && /^[A-Za-z0-9_-]{43}$/u.test(storedSessionToken)
+        ? storedSessionToken
+        : null;
+    if (normalized === null) {
+      queueMicrotask(() => {
+        if (!cancelled) setToken(existingSession);
+      });
+    } else {
+      void redeemReview({ token: normalized })
+        .then((result) => {
+          if (cancelled) return;
+          if (!result.ok) {
+            window.sessionStorage.removeItem("ec-practice-review-access");
+            setToken(null);
+            return;
+          }
+          window.sessionStorage.setItem(
+            "ec-practice-review-access",
+            result.sessionToken,
+          );
+          setToken(result.sessionToken);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            window.sessionStorage.removeItem("ec-practice-review-access");
+            setToken(null);
+          }
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [redeemReview]);
+
+  if (token === undefined) {
+    return (
+      <div
+        className={`page-container ${styles.practiceLoading}`}
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <p>{copy.sessionCheck}</p>
+        <div className={styles.loadingRule} />
+      </div>
+    );
+  }
+  return <SharedResultView token={token ?? "invalid"} />;
 }
