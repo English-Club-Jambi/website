@@ -1,6 +1,21 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 vi.mock("next/script", async () => {
   const React = await import("react");
@@ -73,7 +88,10 @@ async function waitForHumanVerification() {
 
 async function completeForm(user: ReturnType<typeof userEvent.setup>) {
   await waitForHumanVerification();
-  await user.type(screen.getByLabelText("Name on certificate"), "  Siti   Rahma  ");
+  await user.type(
+    screen.getByLabelText("Name on certificate"),
+    "  Siti   Rahma  ",
+  );
   await user.type(screen.getByLabelText("Email address"), "siti@example.com");
   await user.click(
     screen.getByRole("checkbox", {
@@ -95,7 +113,9 @@ describe("ResultEmailDelivery", () => {
     expect(screen.getByText("Mendalo Record is ready.")).toBeVisible();
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    const trigger = screen.getByRole("button", { name: "Choose another design" });
+    const trigger = screen.getByRole("button", {
+      name: "Choose another design",
+    });
     await user.click(trigger);
 
     const dialog = screen.getByRole("dialog", {
@@ -105,7 +125,9 @@ describe("ResultEmailDelivery", () => {
     expect(screen.getAllByRole("radio")).toHaveLength(3);
     expect(screen.getByRole("radio", { name: /Mendalo Record/ })).toBeChecked();
     await waitFor(() =>
-      expect(screen.getByRole("radio", { name: /Mendalo Record/ })).toHaveFocus(),
+      expect(
+        screen.getByRole("radio", { name: /Mendalo Record/ }),
+      ).toHaveFocus(),
     );
 
     await user.click(screen.getByRole("radio", { name: /Cobalt Selvedge/ }));
@@ -126,7 +148,9 @@ describe("ResultEmailDelivery", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: "Choose another design" });
+    const trigger = screen.getByRole("button", {
+      name: "Choose another design",
+    });
     await user.click(trigger);
     await user.click(screen.getByRole("radio", { name: /Titik Folio/ }));
 
@@ -153,13 +177,17 @@ describe("ResultEmailDelivery", () => {
     await waitForHumanVerification();
 
     await user.click(screen.getByRole("button", { name: "Email my result" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Check the marked delivery details.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Check the marked delivery details.",
+    );
     expect(screen.getByLabelText("Name on certificate")).toHaveFocus();
     expect(scrollIntoViewMock).toHaveBeenLastCalledWith({
       block: "center",
       inline: "nearest",
     });
-    expect(screen.getByText("Enter the name to print on the certificate.")).toBeVisible();
+    expect(
+      screen.getByText("Enter the name to print on the certificate."),
+    ).toBeVisible();
 
     await user.type(screen.getByLabelText("Name on certificate"), "Siti Rahma");
     await user.click(screen.getByRole("button", { name: "Email my result" }));
@@ -170,14 +198,17 @@ describe("ResultEmailDelivery", () => {
     await user.click(screen.getByRole("button", { name: "Email my result" }));
     expect(screen.getByRole("checkbox")).toHaveFocus();
     expect(
-      screen.getByText("Confirm that we may use these details for this delivery."),
+      screen.getByText(
+        "Confirm that we may use these details for this delivery.",
+      ),
     ).toBeVisible();
     expect(onSend).not.toHaveBeenCalled();
   });
 
   it("locks duplicate input while pending and renders the provider-accepted state", async () => {
     const user = userEvent.setup();
-    let resolveDelivery: ((outcome: ResultEmailDeliveryOutcome) => void) | undefined;
+    let resolveDelivery:
+      ((outcome: ResultEmailDeliveryOutcome) => void) | undefined;
     const onSend = vi.fn<
       (input: ResultEmailDeliveryInput) => Promise<ResultEmailDeliveryOutcome>
     >(
@@ -198,7 +229,9 @@ describe("ResultEmailDelivery", () => {
 
     await user.click(screen.getByRole("button", { name: "Email my result" }));
 
-    expect(screen.getByRole("button", { name: "Preparing email" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Preparing email" }),
+    ).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent(
       "Preparing your certificate and email.",
     );
@@ -226,11 +259,12 @@ describe("ResultEmailDelivery", () => {
       block: "center",
       inline: "nearest",
     });
-    expect(screen.getByText(/Brevo accepted the message for s•••@example.com/)).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open review here" })).toHaveAttribute(
-      "href",
-      "#answer-review-title",
-    );
+    expect(
+      screen.getByText(/Brevo accepted the message for s•••@example.com/),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Open review here" }),
+    ).toHaveAttribute("href", "#answer-review-title");
     expect(screen.getByText("27 September 2026")).toBeVisible();
 
     await user.click(
@@ -243,14 +277,21 @@ describe("ResultEmailDelivery", () => {
 
     await user.click(screen.getByRole("button", { name: "Send another copy" }));
     expect(screen.getByLabelText("Email address")).toHaveValue("");
-    expect(screen.getByLabelText("Name on certificate")).toHaveValue("  Siti   Rahma  ");
+    expect(screen.getByLabelText("Name on certificate")).toHaveValue(
+      "  Siti   Rahma  ",
+    );
   });
 
   it("keeps a failed delivery recoverable and starts a fresh confirmed attempt", async () => {
     const user = userEvent.setup();
     const onSend = vi
-      .fn<(input: ResultEmailDeliveryInput) => Promise<ResultEmailDeliveryOutcome>>()
-      .mockResolvedValueOnce({ status: "rejected", code: "provider_unavailable" })
+      .fn<
+        (input: ResultEmailDeliveryInput) => Promise<ResultEmailDeliveryOutcome>
+      >()
+      .mockResolvedValueOnce({
+        status: "rejected",
+        code: "provider_unavailable",
+      })
       .mockResolvedValueOnce(accepted);
     render(
       <ResultEmailDelivery
@@ -279,7 +320,9 @@ describe("ResultEmailDelivery", () => {
   it("does not auto-retry an ambiguous provider result and requires a separate-copy action", async () => {
     const user = userEvent.setup();
     const onSend = vi
-      .fn<(input: ResultEmailDeliveryInput) => Promise<ResultEmailDeliveryOutcome>>()
+      .fn<
+        (input: ResultEmailDeliveryInput) => Promise<ResultEmailDeliveryOutcome>
+      >()
       .mockResolvedValueOnce({ status: "rejected", code: "delivery_uncertain" })
       .mockResolvedValueOnce(accepted);
     render(
@@ -292,7 +335,9 @@ describe("ResultEmailDelivery", () => {
 
     await user.click(screen.getByRole("button", { name: "Email my result" }));
     expect(
-      await screen.findByRole("heading", { name: "Delivery status is unclear." }),
+      await screen.findByRole("heading", {
+        name: "Delivery status is unclear.",
+      }),
     ).toBeVisible();
     expect(onSend).toHaveBeenCalledOnce();
     expect(
@@ -342,11 +387,50 @@ describe("ResultEmailDelivery", () => {
       action: "full-practice-result-email",
       theme: "auto",
       size: "flexible",
+      retry: "never",
     });
 
     act(() => options["expired-callback"]());
     expect(
       screen.getByRole("button", { name: "Email my result" }),
     ).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The verification expired. Complete it again before sending.",
+    );
+  });
+
+  it("shows the Turnstile error code and recovers through an explicit retry", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultEmailDelivery
+        onSend={vi.fn()}
+        turnstileSiteKey={turnstileSiteKey}
+      />,
+    );
+    await waitForHumanVerification();
+
+    const renderTurnstile = vi.mocked(window.turnstile!.render);
+    const options = renderTurnstile.mock.calls[0]![1];
+
+    act(() => options["error-callback"]("600010"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Cloudflare could not complete this check (code 600010).",
+    );
+    expect(
+      screen.getByRole("button", { name: "Email my result" }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("button", { name: "Retry verification" }),
+    );
+
+    expect(window.turnstile!.reset).toHaveBeenCalledWith("turnstile-widget-1");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    act(() => options.callback("new-turnstile-token-that-is-long-enough"));
+    expect(
+      screen.getByRole("button", { name: "Email my result" }),
+    ).toBeEnabled();
   });
 });

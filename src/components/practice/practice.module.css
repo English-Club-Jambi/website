@@ -1189,7 +1189,8 @@
   grid-template-rows: auto auto minmax(0, 1fr);
   margin-left: auto;
   border-left: 1px solid var(--practice-rule);
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: max(1rem, env(safe-area-inset-top)) 1rem
+    max(1rem, env(safe-area-inset-bottom));
   background: var(--surface);
   animation: navigator-enter var(--duration-state) var(--ease-out) both;
 }
@@ -1293,7 +1294,8 @@
 .confirmDialog {
   display: none;
   place-items: center;
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: max(1rem, env(safe-area-inset-top)) 1rem
+    max(1rem, env(safe-area-inset-bottom));
 }
 
 .confirmDialog[open] {
@@ -2366,15 +2368,36 @@
   font-weight: 680;
 }
 
-.deliveryVerification > div {
+.deliveryVerificationWidget {
   max-width: 100%;
   overflow: hidden;
 }
 
-.deliveryVerification p {
+.deliveryVerification > p,
+.deliveryVerificationIssue p {
   margin: 0;
   color: var(--danger);
   font-size: 0.86rem;
+}
+
+.deliveryVerificationIssue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border-block: 1px solid var(--practice-rule);
+  padding-block: 0.75rem;
+}
+
+.deliveryVerificationIssue p {
+  max-width: 60ch;
+  flex: 1 1 28rem;
+  line-height: 1.45;
+}
+
+.deliveryVerificationIssue button {
+  flex: 0 0 auto;
 }
 
 .deliveryStatus,
@@ -2816,7 +2839,9 @@
   transform-origin: center;
 }
 
-.certificatePreview[data-template="mendalo-record"] .certificatePreviewPage > .certificatePattern {
+.certificatePreview[data-template="mendalo-record"]
+  .certificatePreviewPage
+  > .certificatePattern {
   background: var(--certificate-wash);
 }
 
@@ -2836,7 +2861,9 @@
   font-weight: 680;
 }
 
-.certificatePreview[data-template="cobalt-selvedge"] .certificatePreviewRail .certificatePattern {
+.certificatePreview[data-template="cobalt-selvedge"]
+  .certificatePreviewRail
+  .certificatePattern {
   grid-template-columns: 1fr;
   grid-template-rows: repeat(12, minmax(0, 1fr));
   flex: 1;
@@ -2844,12 +2871,18 @@
   opacity: 0.36;
 }
 
-.certificatePreview[data-template="cobalt-selvedge"] .certificatePreviewRail .certificatePatternCell::before,
-.certificatePreview[data-template="cobalt-selvedge"] .certificatePreviewRail .certificatePatternCell::after {
+.certificatePreview[data-template="cobalt-selvedge"]
+  .certificatePreviewRail
+  .certificatePatternCell::before,
+.certificatePreview[data-template="cobalt-selvedge"]
+  .certificatePreviewRail
+  .certificatePatternCell::after {
   background: #ffffff;
 }
 
-.certificatePreview[data-template="cobalt-selvedge"] .certificatePreviewPage > .certificatePattern {
+.certificatePreview[data-template="cobalt-selvedge"]
+  .certificatePreviewPage
+  > .certificatePattern {
   display: none;
 }
 
@@ -2880,7 +2913,9 @@
   text-align: center;
 }
 
-.certificatePreview[data-template="titik-folio"] .certificatePreviewPage > .certificatePattern {
+.certificatePreview[data-template="titik-folio"]
+  .certificatePreviewPage
+  > .certificatePattern {
   top: clamp(0.5rem, 1.2vw, 0.9rem);
   right: clamp(0.5rem, 1.2vw, 0.9rem);
   bottom: auto;
@@ -2966,10 +3001,8 @@
   }
 
   .certificateDialogHeader {
-    padding:
-      max(1rem, env(safe-area-inset-top))
-      max(1rem, env(safe-area-inset-right))
-      1rem
+    padding: max(1rem, env(safe-area-inset-top))
+      max(1rem, env(safe-area-inset-right)) 1rem
       max(1rem, env(safe-area-inset-left));
   }
 
@@ -2985,9 +3018,7 @@
   .certificateDialogActions {
     align-items: stretch;
     flex-direction: column-reverse;
-    padding:
-      1rem
-      max(1rem, env(safe-area-inset-right))
+    padding: 1rem max(1rem, env(safe-area-inset-right))
       max(1rem, env(safe-area-inset-bottom))
       max(1rem, env(safe-area-inset-left));
   }

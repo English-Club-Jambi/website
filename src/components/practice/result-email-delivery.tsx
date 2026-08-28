@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowPathIcon,
   CheckCircleIcon,
   EnvelopeIcon,
   ExclamationCircleIcon,
@@ -99,6 +100,9 @@ export type ResultEmailDeliveryCopy = {
   sendSeparateCopy: string;
   verificationLabel: string;
   verificationUnavailable: string;
+  verificationFailed: string;
+  verificationExpired: string;
+  verificationRetry: string;
   revokeReview: string;
   revokedReview: string;
   revokeReviewError: string;
@@ -133,7 +137,8 @@ const defaultCopy: ResultEmailDeliveryCopy = {
   designLabel: "Certificate design",
   changeDesign: "Choose another design",
   pickerTitle: "Choose a certificate design",
-  pickerSupport: "The wording and result stay the same. Only the layout changes.",
+  pickerSupport:
+    "The wording and result stay the same. Only the layout changes.",
   pickerLegend: "Certificate layouts",
   closePicker: "Close certificate chooser",
   keepCurrentDesign: "Keep current design",
@@ -153,7 +158,8 @@ const defaultCopy: ResultEmailDeliveryCopy = {
   consentError: "Confirm that we may use these details for this delivery.",
   validationSummary: "Check the marked delivery details.",
   acceptedTitle: "Your email is on its way.",
-  acceptedBody: "Brevo accepted the message for {email}. It may take a few minutes to arrive.",
+  acceptedBody:
+    "Brevo accepted the message for {email}. It may take a few minutes to arrive.",
   expiryLead: "The private review link expires on",
   openReview: "Open review here",
   sendAnother: "Send another copy",
@@ -167,11 +173,17 @@ const defaultCopy: ResultEmailDeliveryCopy = {
   verificationLabel: "Human verification",
   verificationUnavailable:
     "Email delivery is not configured for this site yet.",
+  verificationFailed:
+    "Cloudflare could not complete this check (code {code}). Retry it. If it fails again, disable privacy extensions or a VPN, or use another network.",
+  verificationExpired:
+    "The verification expired. Complete it again before sending.",
+  verificationRetry: "Retry verification",
   revokeReview: "Revoke private review link",
   revokedReview: "The emailed review link has been revoked.",
   revokeReviewError:
     "The review link could not be revoked just now. It remains active until you try again or it expires.",
-  certificateError: "The certificate could not be prepared, so no email was sent.",
+  certificateError:
+    "The certificate could not be prepared, so no email was sent.",
   certificateNameError:
     "That name cannot fit this certificate yet. Shorten it or use Latin letters and common diacritics.",
   rateLimitError:
@@ -198,6 +210,9 @@ type DeliveryState =
       reviewExpiresAt: number;
     };
 
+type TurnstileIssue =
+  { kind: "failed"; code: string } | { kind: "expired" } | { kind: "script" };
+
 type TurnstileApi = {
   render: (
     container: HTMLElement,
@@ -208,7 +223,8 @@ type TurnstileApi = {
       size: "flexible";
       callback: (token: string) => void;
       "expired-callback": () => void;
-      "error-callback": () => void;
+      "error-callback": (errorCode: string) => boolean;
+      retry: "never";
     },
   ) => string;
   reset: (widgetId: string) => void;
@@ -234,7 +250,9 @@ function normalizeName(value: string) {
 function isValidName(value: string) {
   const normalized = normalizeName(value);
   const length = Array.from(normalized).length;
-  return length >= 2 && length <= 80 && !/[\u0000-\u001f\u007f]/u.test(normalized);
+  return (
+    length >= 2 && length <= 80 && !/[\u0000-\u001f\u007f]/u.test(normalized)
+  );
 }
 
 function isValidEmail(value: string) {
@@ -252,7 +270,9 @@ function newRequestId() {
   }
   if (typeof globalThis.crypto?.getRandomValues === "function") {
     const values = globalThis.crypto.getRandomValues(new Uint32Array(4));
-    return Array.from(values, (value) => value.toString(16).padStart(8, "0")).join("");
+    return Array.from(values, (value) =>
+      value.toString(16).padStart(8, "0"),
+    ).join("");
   }
   return `delivery-${Date.now().toString(36)}`;
 }
@@ -272,7 +292,10 @@ function focusInView(element: HTMLElement | null) {
   element.scrollIntoView?.({ block: "center", inline: "nearest" });
 }
 
-function errorMessage(code: ResultEmailDeliveryFailureCode, copy: ResultEmailDeliveryCopy) {
+function errorMessage(
+  code: ResultEmailDeliveryFailureCode,
+  copy: ResultEmailDeliveryCopy,
+) {
   switch (code) {
     case "provider_unavailable":
       return copy.providerError;
@@ -439,7 +462,12 @@ function CertificateDesignDialog({
             <p id={supportId}>{copy.pickerSupport}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={copy.closePicker}>
-            <XMarkIcon width={22} height={22} strokeWidth={1.8} aria-hidden="true" />
+            <XMarkIcon
+              width={22}
+              height={22}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
           </button>
         </header>
 
@@ -473,7 +501,9 @@ function CertificateDesignDialog({
                 <span className={styles.certificateOptionCopy}>
                   <strong>
                     {template.name}
-                    {template.isDefault ? <small>{copy.defaultLabel}</small> : null}
+                    {template.isDefault ? (
+                      <small>{copy.defaultLabel}</small>
+                    ) : null}
                   </strong>
                   <span>{template.description}</span>
                 </span>
@@ -483,7 +513,11 @@ function CertificateDesignDialog({
         </div>
 
         <footer className={styles.certificateDialogActions}>
-          <button type="button" className={styles.quietButton} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.quietButton}
+            onClick={onClose}
+          >
             {copy.keepCurrentDesign}
           </button>
           <button
@@ -491,7 +525,12 @@ function CertificateDesignDialog({
             className={styles.primaryButton}
             onClick={() => onApply(draft)}
           >
-            <CheckCircleIcon width={20} height={20} strokeWidth={1.9} aria-hidden="true" />
+            <CheckCircleIcon
+              width={20}
+              height={20}
+              strokeWidth={1.9}
+              aria-hidden="true"
+            />
             {copy.useDesign}
           </button>
         </footer>
@@ -510,7 +549,9 @@ export function ResultEmailDelivery({
   disabled = false,
 }: ResultEmailDeliveryProps) {
   const copy = { ...defaultCopy, ...copyOverrides };
-  const [certificateName, setCertificateName] = useState(initialCertificateName);
+  const [certificateName, setCertificateName] = useState(
+    initialCertificateName,
+  );
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [selectedTemplate, setSelectedTemplate] =
@@ -522,6 +563,9 @@ export function ResultEmailDelivery({
   const [delivery, setDelivery] = useState<DeliveryState>({ kind: "idle" });
   const [turnstileScriptReady, setTurnstileScriptReady] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileIssue, setTurnstileIssue] = useState<TurnstileIssue | null>(
+    null,
+  );
   const [reviewRevoked, setReviewRevoked] = useState(false);
   const [revokeError, setRevokeError] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -569,9 +613,20 @@ export function ResultEmailDelivery({
       action: "full-practice-result-email",
       theme: "auto",
       size: "flexible",
-      callback: (token) => setTurnstileToken(token),
-      "expired-callback": () => setTurnstileToken(""),
-      "error-callback": () => setTurnstileToken(""),
+      retry: "never",
+      callback: (token) => {
+        setTurnstileIssue(null);
+        setTurnstileToken(token);
+      },
+      "expired-callback": () => {
+        setTurnstileToken("");
+        setTurnstileIssue({ kind: "expired" });
+      },
+      "error-callback": (errorCode) => {
+        setTurnstileToken("");
+        setTurnstileIssue({ kind: "failed", code: errorCode });
+        return true;
+      },
     });
     turnstileWidgetRef.current = widgetId;
     return () => {
@@ -593,6 +648,7 @@ export function ResultEmailDelivery({
 
   function resetHumanVerification() {
     setTurnstileToken("");
+    setTurnstileIssue(null);
     const widgetId = turnstileWidgetRef.current;
     if (widgetId !== null) window.turnstile?.reset(widgetId);
   }
@@ -662,7 +718,12 @@ export function ResultEmailDelivery({
     return (
       <section className={styles.deliverySection} aria-labelledby={titleId}>
         <div className={styles.deliveryUncertain}>
-          <ExclamationCircleIcon width={30} height={30} strokeWidth={1.7} aria-hidden="true" />
+          <ExclamationCircleIcon
+            width={30}
+            height={30}
+            strokeWidth={1.7}
+            aria-hidden="true"
+          />
           <div>
             <h2 id={titleId}>{copy.uncertainTitle}</h2>
             <p>{copy.uncertainBody}</p>
@@ -674,7 +735,12 @@ export function ResultEmailDelivery({
                 setDelivery({ kind: "idle" });
               }}
             >
-              <EnvelopeIcon width={20} height={20} strokeWidth={1.8} aria-hidden="true" />
+              <EnvelopeIcon
+                width={20}
+                height={20}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               {copy.sendSeparateCopy}
             </button>
           </div>
@@ -687,7 +753,12 @@ export function ResultEmailDelivery({
     return (
       <section className={styles.deliverySection} aria-labelledby={titleId}>
         <div className={styles.deliveryAccepted}>
-          <CheckCircleIcon width={30} height={30} strokeWidth={1.7} aria-hidden="true" />
+          <CheckCircleIcon
+            width={30}
+            height={30}
+            strokeWidth={1.7}
+            aria-hidden="true"
+          />
           <div>
             <h2 ref={acceptedHeadingRef} id={titleId} tabIndex={-1}>
               {copy.acceptedTitle}
@@ -701,7 +772,10 @@ export function ResultEmailDelivery({
               .
             </p>
             <div className={styles.deliveryAcceptedActions}>
-              <Link className={styles.primaryLink} href={delivery.reviewHref as Route}>
+              <Link
+                className={styles.primaryLink}
+                href={delivery.reviewHref as Route}
+              >
                 {copy.openReview}
               </Link>
               <button
@@ -719,7 +793,12 @@ export function ResultEmailDelivery({
                   setDelivery({ kind: "idle" });
                 }}
               >
-                <EnvelopeIcon width={20} height={20} strokeWidth={1.8} aria-hidden="true" />
+                <EnvelopeIcon
+                  width={20}
+                  height={20}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
                 {copy.sendAnother}
               </button>
               {onRevokeReviewLinks && !reviewRevoked ? (
@@ -759,18 +838,35 @@ export function ResultEmailDelivery({
       aria-busy={pending}
     >
       <div className={styles.deliveryIntro}>
-        <EnvelopeIcon width={27} height={27} strokeWidth={1.65} aria-hidden="true" />
+        <EnvelopeIcon
+          width={27}
+          height={27}
+          strokeWidth={1.65}
+          aria-hidden="true"
+        />
         <h2 id={titleId}>{copy.title}</h2>
         <p>{copy.support}</p>
       </div>
 
-      <form className={styles.deliveryForm} noValidate onSubmit={(event) => void submit(event)}>
+      <form
+        className={styles.deliveryForm}
+        noValidate
+        onSubmit={(event) => void submit(event)}
+      >
         {turnstileSiteKey ? (
           <Script
             src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
             strategy="afterInteractive"
-            onReady={() => setTurnstileScriptReady(true)}
-            onError={() => setTurnstileScriptReady(false)}
+            onReady={() => {
+              setTurnstileScriptReady(true);
+              setTurnstileIssue((current) =>
+                current?.kind === "script" ? null : current,
+              );
+            }}
+            onError={() => {
+              setTurnstileScriptReady(false);
+              setTurnstileIssue({ kind: "script" });
+            }}
           />
         ) : null}
         {validationAttempted && Object.keys(fieldErrors).length > 0 ? (
@@ -834,7 +930,12 @@ export function ResultEmailDelivery({
         </div>
 
         <div className={styles.deliveryDesignRow}>
-          <SwatchIcon width={22} height={22} strokeWidth={1.75} aria-hidden="true" />
+          <SwatchIcon
+            width={22}
+            height={22}
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
           <div>
             <span>{copy.designLabel}</span>
             <strong>{selected.name} is ready.</strong>
@@ -881,15 +982,48 @@ export function ResultEmailDelivery({
         <div className={styles.deliveryVerification}>
           <span>{copy.verificationLabel}</span>
           {turnstileSiteKey ? (
-            <div ref={turnstileHostRef} />
+            <div
+              className={styles.deliveryVerificationWidget}
+              ref={turnstileHostRef}
+            />
           ) : (
             <p role="status">{copy.verificationUnavailable}</p>
           )}
+          {turnstileIssue ? (
+            <div className={styles.deliveryVerificationIssue}>
+              <p role="alert">
+                {turnstileIssue.kind === "failed"
+                  ? copy.verificationFailed.replace(
+                      "{code}",
+                      turnstileIssue.code,
+                    )
+                  : turnstileIssue.kind === "expired"
+                    ? copy.verificationExpired
+                    : copy.verificationUnavailable}
+              </p>
+              {turnstileIssue.kind !== "script" ? (
+                <button
+                  type="button"
+                  className={styles.quietButton}
+                  onClick={resetHumanVerification}
+                >
+                  <ArrowPathIcon
+                    width={20}
+                    height={20}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  {copy.verificationRetry}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <p className={styles.deliveryPrivacy}>
           {copy.privacyLead}{" "}
-          <Link href={privacyHref as Route}>{copy.privacyLink}</Link>. {copy.retention}
+          <Link href={privacyHref as Route}>{copy.privacyLink}</Link>.{" "}
+          {copy.retention}
         </p>
 
         {delivery.kind === "pending" ? (
@@ -900,7 +1034,12 @@ export function ResultEmailDelivery({
 
         {delivery.kind === "error" ? (
           <p className={styles.deliveryError} role="alert">
-            <ExclamationCircleIcon width={21} height={21} strokeWidth={1.8} aria-hidden="true" />
+            <ExclamationCircleIcon
+              width={21}
+              height={21}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
             {errorMessage(delivery.code, copy)}
           </p>
         ) : null}
@@ -910,8 +1049,17 @@ export function ResultEmailDelivery({
           className={`${styles.primaryButton} ${styles.deliverySubmit}`}
           disabled={controlsDisabled || !turnstileToken}
         >
-          <PaperAirplaneIcon width={20} height={20} strokeWidth={1.85} aria-hidden="true" />
-          {pending ? copy.preparing : delivery.kind === "error" ? copy.retry : copy.send}
+          <PaperAirplaneIcon
+            width={20}
+            height={20}
+            strokeWidth={1.85}
+            aria-hidden="true"
+          />
+          {pending
+            ? copy.preparing
+            : delivery.kind === "error"
+              ? copy.retry
+              : copy.send}
         </button>
       </form>
 
