@@ -1368,27 +1368,46 @@
 }
 
 .resultHeader {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--grid-gap);
   border-bottom: 1px solid var(--practice-rule);
-  padding-block: clamp(4rem, 8vw, 7rem) clamp(3rem, 5vw, 4rem);
+  padding-block: clamp(2.75rem, 5vw, 4.5rem) clamp(2.25rem, 4vw, 3.5rem);
+}
+
+.resultHeader > .backLink {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.resultHeader > .resultKicker {
+  grid-column: 1 / span 6;
+  margin-bottom: 0.7rem;
 }
 
 .resultHeader h1 {
-  max-width: 10ch;
-  margin-bottom: 1.3rem;
-  font-size: clamp(3.5rem, 8vw, 6rem);
+  grid-column: 1 / span 6;
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(3rem, 5.6vw, 4.75rem);
   font-weight: 680;
-  line-height: 0.85;
+  line-height: 0.88;
   letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 .resultHeader > p:last-child {
-  max-width: 68ch;
+  grid-column: 7 / -1;
+  align-self: end;
+  max-width: 58ch;
   margin: 0;
   color: var(--muted);
+  text-wrap: pretty;
 }
 
 .resultBody {
-  padding-block: clamp(3rem, 7vw, 7rem);
+  padding-block: clamp(2.25rem, 4.5vw, 4.5rem);
 }
 
 .rawResult {
@@ -1397,7 +1416,7 @@
   gap: var(--grid-gap);
   align-items: end;
   border-bottom: 1px solid var(--practice-rule);
-  padding-bottom: clamp(3rem, 6vw, 5rem);
+  padding-bottom: clamp(2.25rem, 4vw, 3.75rem);
 }
 
 .ruleBasedNote {
@@ -1414,7 +1433,7 @@
 
 .rawResultLead strong {
   color: var(--primary);
-  font-size: clamp(6rem, 13vw, 13rem);
+  font-size: clamp(5.5rem, 10vw, 9.5rem);
   font-weight: 680;
   line-height: 0.72;
   letter-spacing: -0.08em;
@@ -1454,13 +1473,13 @@
 
 .sectionResults,
 .answerReview {
-  padding-block: clamp(4rem, 8vw, 7rem);
+  padding-block: clamp(3rem, 5.5vw, 5rem);
 }
 
 .sectionResults > h2,
 .answerReviewHeading > h2 {
-  margin-bottom: 2rem;
-  font-size: clamp(2.7rem, 5.5vw, 5.4rem);
+  margin-bottom: 1.5rem;
+  font-size: clamp(2.4rem, 4.5vw, 4.35rem);
   line-height: 0.9;
   letter-spacing: -0.04em;
 }
@@ -1765,7 +1784,7 @@
 
   .practiceHeroCopy h1 {
     max-width: 10ch;
-    font-size: clamp(2.75rem, 13.8vw, 6rem);
+    font-size: clamp(2.75rem, 10vw, 5.25rem);
   }
 
   .practiceHeroVisual {
@@ -1858,6 +1877,21 @@
     grid-template-columns: 1fr;
   }
 
+  .resultHeader {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resultHeader > .backLink,
+  .resultHeader > .resultKicker,
+  .resultHeader h1,
+  .resultHeader > p:last-child {
+    grid-column: 1;
+  }
+
+  .resultHeader > p:last-child {
+    margin-top: 1.25rem;
+  }
+
   .rawResult {
     gap: 3rem;
   }
@@ -1892,7 +1926,7 @@
   }
 
   .practiceHeroCopy h1 {
-    font-size: clamp(2.75rem, 13.8vw, 4.5rem);
+    font-size: var(--mobile-display-size);
     line-height: 0.86;
     margin-bottom: 2.25rem;
   }
@@ -1907,7 +1941,7 @@
 
   .pathHeading h2,
   .practiceScopeFrame h2 {
-    font-size: clamp(2.85rem, 14.5vw, 4.5rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .fullPracticeRow,
@@ -1937,7 +1971,7 @@
 
   .briefingHeader h1,
   .unavailableFrame h1 {
-    font-size: clamp(3rem, 14vw, 4.6rem);
+    font-size: var(--mobile-display-size);
   }
 
   .briefingFacts > div {
@@ -1975,7 +2009,7 @@
   }
 
   .programmeQuizIntro h2 {
-    font-size: clamp(2.7rem, 13.5vw, 4.1rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .optionLine,
@@ -2055,11 +2089,11 @@
   }
 
   .resultHeader h1 {
-    font-size: clamp(3.2rem, 15vw, 5rem);
+    font-size: var(--mobile-display-size);
   }
 
   .rawResultLead strong {
-    font-size: clamp(6rem, 34vw, 9rem);
+    font-size: clamp(5.25rem, 26vw, 7rem);
   }
 
   .sectionResultRows > div {

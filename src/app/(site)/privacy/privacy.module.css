@@ -248,7 +248,8 @@
   }
 
   .summary > h2 {
-    font-size: clamp(1.8rem, 9vw, 2.8rem);
+    font-size: clamp(1.4rem, 5.8vw, 1.75rem);
+    line-height: 1.18;
   }
 
   .ledger h2 {
@@ -264,6 +265,6 @@
   }
 
   .request h2 {
-    font-size: clamp(2.7rem, 14vw, 4.2rem);
+    font-size: var(--mobile-heading-large);
   }
 }

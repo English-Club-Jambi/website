@@ -26,6 +26,9 @@
   --duration-scene: 520ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mobile-display-size: clamp(2.45rem, 10.8vw, 3.7rem);
+  --mobile-heading-size: clamp(2.1rem, 9vw, 3rem);
+  --mobile-heading-large: clamp(2.25rem, 9.8vw, 3.25rem);
 }
 
 html[data-theme="dark"] {
@@ -62,6 +65,7 @@ html {
   scroll-padding-top: calc(var(--header-height) + 1rem);
   background: var(--page);
   text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -1613,6 +1617,19 @@ dd {
   position: relative;
 }
 
+.not-found-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.8fr);
+  column-gap: clamp(2rem, 6vw, 7rem);
+  align-items: center;
+}
+
+.not-found-inner h1,
+.not-found-inner > p:not(.not-found-code),
+.not-found-actions {
+  grid-column: 1;
+}
+
 .error-inner h1,
 .not-found-inner h1 {
   max-width: 10ch;
@@ -1632,12 +1649,14 @@ dd {
 }
 
 .not-found-code {
-  position: absolute;
-  right: 0;
-  bottom: -0.1em;
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: end;
+  justify-self: end;
   margin: 0;
   color: var(--primary-wash);
-  font-size: clamp(8rem, 28vw, 25rem);
+  font-size: clamp(8rem, 20vw, 18rem);
   font-weight: 800;
   line-height: 0.7;
   letter-spacing: -0.08em;
@@ -1750,7 +1769,7 @@ dd {
   }
 
   .route-stage h1 {
-    font-size: clamp(3.5rem, 12.5vw, 7rem);
+    font-size: clamp(3rem, 9vw, 5.25rem);
   }
 
   .route-stage-support {
@@ -1872,7 +1891,7 @@ dd {
   }
 
   .article-header h1 {
-    font-size: clamp(3.2rem, 11vw, 6rem);
+    font-size: clamp(3rem, 8.5vw, 5rem);
   }
 
   .article-rail {
@@ -1933,7 +1952,7 @@ dd {
   }
 
   .route-stage {
-    min-height: calc(100svh - var(--header-height));
+    min-height: min(42rem, calc(82svh - var(--header-height)));
   }
 
   .route-stage-frame {
@@ -1945,7 +1964,7 @@ dd {
   }
 
   .route-stage h1 {
-    font-size: clamp(3.15rem, 16vw, 5.4rem);
+    font-size: var(--mobile-display-size);
   }
 
   .route-stage h1 span {
@@ -1960,14 +1979,14 @@ dd {
   .journal-chapter-heading h2,
   .about-purpose h2,
   .activity-page-heading h2 {
-    font-size: clamp(2.5rem, 12vw, 4rem);
+    font-size: var(--mobile-heading-size);
   }
 
   .handoff-copy h2,
   .intent-close h2,
   .evidence-boundary-copy h2,
   .activity-caution h2 {
-    font-size: clamp(2.7rem, 13vw, 4.5rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .handoff-image,
@@ -2008,7 +2027,7 @@ dd {
   }
 
   .article-header h1 {
-    font-size: clamp(2.9rem, 13vw, 4.7rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .article-cover-wrap {
@@ -2029,6 +2048,10 @@ dd {
     gap: 0.4rem;
   }
 
+  .contact-context h2 {
+    font-size: var(--mobile-heading-size);
+  }
+
   .contact-form {
     gap: 1.6rem;
   }
@@ -2037,9 +2060,19 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .error-inner h1,
+  .not-found-inner h1 {
+    font-size: var(--mobile-display-size);
+  }
+
   .not-found-code {
-    top: 0;
-    bottom: auto;
+    margin: 0 0 1.25rem;
+    font-size: clamp(4.5rem, 24vw, 7rem);
+    line-height: 0.72;
+  }
+
+  .not-found-inner {
+    display: block;
   }
 
   .error-actions,

@@ -317,7 +317,7 @@
   }
 
   .archiveHeader h2 {
-    font-size: clamp(2.6rem, 12vw, 3.8rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .archiveHeader > p {

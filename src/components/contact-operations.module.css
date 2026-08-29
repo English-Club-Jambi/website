@@ -194,3 +194,9 @@
     margin-top: 2rem;
   }
 }
+
+@media (max-width: 639px) {
+  .intro h2 {
+    font-size: var(--mobile-heading-large);
+  }
+}

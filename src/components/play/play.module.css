@@ -762,7 +762,7 @@
   }
 
   .sentenceTitle {
-    font-size: clamp(3.35rem, 14.7vw, 7.6rem);
+    font-size: clamp(3.1rem, 10vw, 6rem);
   }
 
   .sentenceLower {
@@ -871,7 +871,7 @@
   .sentenceTitle {
     width: 100%;
     max-width: none;
-    font-size: clamp(2.75rem, 13.85vw, 4.5rem);
+    font-size: var(--mobile-display-size);
     line-height: 0.88;
     letter-spacing: -0.04em;
   }
@@ -951,7 +951,7 @@
   }
 
   .promptIntro h2 {
-    font-size: 2.6rem;
+    font-size: var(--mobile-heading-size);
   }
 
   .promptInstrument {

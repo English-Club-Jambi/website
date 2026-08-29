@@ -196,7 +196,7 @@
   }
 
   .copyColumn h2 {
-    font-size: clamp(2.8rem, 14vw, 4.3rem);
+    font-size: var(--mobile-heading-large);
   }
 
   .officialName div,
